@@ -1,19 +1,111 @@
-// app/futur.tsx
-import { Link } from "expo-router";
-import { Image, Text, View } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import { useEffect, useRef, useState } from "react";
+import { Button, Image, StyleSheet, Text, View } from "react-native";
 
-export default function FuturScreen() {
-  return (
-    <View className="flex-1 bg-[#111] justify-center items-center">
-      <Image source={require("@/assets/images/icon.png")} className="w-64 h-64 rounded-full mb-4" />
+export default function PresensiScreen() {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [capturedImage, setCapturedImage] = useState(null);
+  const cameraRef = useRef(null);
 
-      <Text className="text-white text-2xl font-bold">🚀 Future page reached!</Text>
+  // Minta izin saat komponen pertama kali dimuat
+  useEffect(() => {
+    if (!permission) {
+      requestPermission();
+    }
+  }, [permission]);
 
-      <Link href="/" asChild>
-        <View className=" mt-6 px-6 py-3 rounded-md self-center bg-cyan-400/20 border border-cyan-400 active:scale-95">
-          <Text className="text-cyan-300 font-semibold text-center">Go Back Home</Text>
+  // Tampilkan pesan jika izin belum diberikan atau sedang loading
+  if (!permission) {
+    // Izin sedang dimuat
+    return <View />;
+  }
+
+  if (!permission.granted) {
+    // Izin ditolak
+    return (
+      <View style={styles.container}>
+        <Text style={{ textAlign: "center" }}>Kami butuh izin Anda untuk menampilkan kamera</Text>
+        <Button onPress={requestPermission} title="Berikan Izin" />
+      </View>
+    );
+  }
+
+  // Fungsi untuk mengambil gambar
+  //   const takePicture = async () => {
+  //     if (cameraRef.current) {
+  //       const photo = await cameraRef.current.takePictureAsync();
+  //       setCapturedImage(photo.uri);
+  //     }
+  //   };
+
+  // Jika sudah ada gambar yang ditangkap, tampilkan hasilnya
+  if (capturedImage) {
+    return (
+      <View style={styles.container}>
+        <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+        <View style={styles.buttonContainer}>
+          <Button title="Ambil Ulang" onPress={() => setCapturedImage(null)} />
+          {/* Di sini Anda bisa menambahkan tombol "Kirim" atau "Simpan" */}
+          <Button title="Kirim Presensi" onPress={() => alert("Presensi terkirim!")} />
         </View>
-      </Link>
+      </View>
+    );
+  }
+
+  // Tampilan utama kamera
+  return (
+    <View style={styles.container}>
+      <CameraView style={styles.camera} facing="front" ref={cameraRef}>
+        <View style={styles.buttonContainer}>
+          {/* <TouchableOpacity style={styles.button} onPress={takePicture}>
+            <View style={styles.outerCircle}>
+              <View style={styles.innerCircle}></View>
+            </View>
+          </TouchableOpacity> */}
+        </View>
+      </CameraView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "#000",
+  },
+  camera: {
+    flex: 1,
+  },
+  buttonContainer: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    margin: 64,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  button: {
+    alignSelf: "flex-end",
+    alignItems: "center",
+  },
+  outerCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 4,
+    borderColor: "white",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  innerCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "white",
+  },
+  previewImage: {
+    flex: 1,
+    resizeMode: "contain",
+  },
+});

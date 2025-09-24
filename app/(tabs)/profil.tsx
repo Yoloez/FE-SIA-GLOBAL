@@ -2,8 +2,14 @@ import { ChevronRight, GraduationCap, Mail, User } from "lucide-react-native";
 import React from "react";
 import { Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../context/AuthContext"; // 1. Impor useAuth
 
 const Profil = () => {
+  const { logout } = useAuth(); // 2. Ambil fungsi logout dari "wadah"
+  const handleLogout = () => {
+    console.log("Tombol Logout Ditekan!");
+    logout(); // 3. Panggil fungsi logout
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -38,7 +44,7 @@ const Profil = () => {
         </View>
 
         {/* --- Logout Button --- */}
-        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -142,6 +148,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#ef4444",
     paddingVertical: 16,
     borderRadius: 16,
+    bottom: 60,
+    position: "absolute",
     alignItems: "center",
     shadowColor: "#ef4444",
     shadowOffset: { width: 0, height: 6 },

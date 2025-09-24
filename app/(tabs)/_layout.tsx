@@ -6,16 +6,20 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarShowLabel: true, // Tampilkan label untuk tab lain
         tabBarStyle: {
           position: "absolute",
-          bottom: 0,
           left: 1,
           right: 1,
           elevation: 0,
           backgroundColor: "white",
-          borderRadius: 15,
-          height: 70,
+          borderRadius: 0,
+          borderTopLeftRadius: 15,
+          borderTopRightRadius: 15,
+          marginVertical: "auto",
+          borderColor: "transparent",
+          height: 65,
         },
       }}
     >
@@ -23,19 +27,19 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Dashboad",
           tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
         }}
       />
 
       {/* Tab 2 */}
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="explore"
         options={{
           title: "Explore",
           tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" color={color} size={size} />,
         }}
-      />
+      /> */}
 
       {/* === TAB PRESENSI (DI TENGAH) === */}
       <Tabs.Screen
@@ -53,13 +57,13 @@ export default function TabLayout() {
       />
 
       {/* Tab 4 */}
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="futur"
         options={{
           title: "Future",
           tabBarIcon: ({ color, size }) => <Ionicons name="rocket-outline" color={color} size={size} />,
         }}
-      />
+      /> */}
 
       {/* Tab 5 */}
       <Tabs.Screen

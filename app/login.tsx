@@ -1,25 +1,20 @@
 // app/(auth)/login.tsx
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router"; // 1. Impor useRouter
-import React, { useState } from "react";
-import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
-import { useAuth } from "../context/AuthContext";
 
-// Path ini disesuaikan lagi jika perlu
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Alert, Image, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useAuth();
-  const router = useRouter(); // 2. Panggil useRouter di sini
+  const router = useRouter();
 
   const handleLogin = () => {
-    // Simulasi validasi
     if (email === "user@mail.com" && password === "123456") {
-      // Panggil fungsi login dari context
       login();
-
-      // 3. TAMBAHKAN PERINTAH PINDAH HALAMAN DI SINI
       router.replace("/");
     } else {
       Alert.alert("Login Gagal", "Email atau password salah!");
@@ -27,64 +22,87 @@ export default function LoginScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={["#1C352D", "#0D1B1E"]} // warna grada  i
-      start={{ x: 10, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
-    >
-      <Image source={require("../assets/images/logo-ugn.png")} style={styles.logo} />
-      <Text style={styles.ugnTitle}>Universitas Global Nusantara</Text>
-      <Text style={styles.title}>Login</Text>
-      <TextInput style={styles.input} placeholder="Email (user@mail.com)" value={email} onChangeText={setEmail} placeholderTextColor="grey" />
-      <TextInput style={styles.input} placeholder="Password (123456)" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="grey" />
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
+    <LinearGradient colors={["#0D1B1E", "#1C352D"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.content}>
+          <Image source={require("../assets/images/logo-ugn.png")} style={styles.title}></Image>
+
+          <View>
+            <Text style={styles.label}>Email</Text>
+            <TextInput style={styles.input} placeholder="user@mail.com" value={email} onChangeText={setEmail} placeholderTextColor="grey" keyboardType="email-address" autoCapitalize="none" />
+
+            <Text style={styles.label}>Password</Text>
+            <TextInput style={styles.input} placeholder="••••••••" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="grey" />
+          </View>
+
+          <TouchableOpacity onPress={() => console.log("Lupa Password?")}>
+            <Text style={{ fontSize: 16, color: "white", marginTop: -7, marginBottom: 15, alignSelf: "flex-end" }}>Lupa Password?</Text>
+          </TouchableOpacity>
+
+          {/* Tombol Login */}
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <Text style={styles.buttonText}>Login</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
+// 3. STYLESHEET YANG SUDAH DIPERBAIKI TOTAL
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 25, backgroundColor: "#1C352D" },
-  logo: {
-    position: "absolute",
-    top: 0,
-    right: 20,
-    width: 75,
-    height: 100,
+  container: {
+    flex: 1,
   },
-  title: { fontSize: 38, fontWeight: "bold", textAlign: "center", marginBottom: 34, color: "white" },
-  ugnTitle: {
-    color: "white",
-    fontSize: 20,
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    // alignItems: "center",
+    justifyContent: "center",
+    // Mendorong semua konten ke tengah layar
+    paddingHorizontal: 25, // Memberi jarak kiri dan kanan
+  },
+  title: {
+    justifyContent: "center",
+    // width: "100%",
+    width: 150,
+    height: 170,
     fontWeight: "bold",
     textAlign: "center",
-    position: "absolute",
-    top: 20,
-    marginLeft: 0,
-    left: 0,
-    width: "60%",
+    marginBottom: 45,
+    color: "white",
+    alignSelf: "center",
+  },
+  label: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 16,
+    marginBottom: 8,
   },
   input: {
-    height: 50,
-    borderColor: "white",
+    height: 55,
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
     borderWidth: 1,
     color: "white",
-    borderRadius: 8,
-    marginBottom: 25,
-    paddingHorizontal: 10,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    marginBottom: 20, // Jarak antar input
   },
   button: {
     backgroundColor: "black",
-    paddingVertical: 15,
-    borderRadius: 30,
-    position: "absolute",
-    bottom: 20,
-    width: "90%",
-    left: 0,
-    right: 0,
-    marginHorizontal: "auto", // auto center horizontal
+    paddingVertical: 18,
+    borderRadius: 12,
+    width: "100%",
+    marginTop: 20, // Jarak dari input password ke tombol
   },
-  buttonText: { color: "white", fontSize: 18, fontWeight: "bold", textAlign: "center" },
+  buttonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
 });

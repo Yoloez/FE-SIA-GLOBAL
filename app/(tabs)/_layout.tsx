@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { Platform } from "react-native";
 import TabBarButton from "../../components/TabBarButton"; // Sesuaikan path jika perlu
 
 export default function TabLayout() {
@@ -12,6 +13,7 @@ export default function TabLayout() {
           position: "absolute",
           left: 1,
           right: 1,
+          bottom: 0, // Pastikan di bottom
           elevation: 0,
           backgroundColor: "white",
           borderRadius: 0,
@@ -19,7 +21,10 @@ export default function TabLayout() {
           borderTopRightRadius: 15,
           marginVertical: "auto",
           borderColor: "transparent",
-          height: 65,
+          height: 100, // Tingkatkan height
+          // Tambahkan padding untuk menghindari area navigasi
+          paddingBottom: Platform.OS === "android" ? 65 : 25,
+          paddingTop: 5,
         },
       }}
     >
@@ -27,19 +32,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboad",
+          title: "Dashboard",
           tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
         }}
       />
-
-      {/* Tab 2 */}
-      {/* <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" color={color} size={size} />,
-        }}
-      /> */}
 
       {/* === TAB PRESENSI (DI TENGAH) === */}
       <Tabs.Screen
@@ -55,15 +51,6 @@ export default function TabLayout() {
           tabBarButton: (props) => <TabBarButton {...props} />,
         }}
       />
-
-      {/* Tab 4 */}
-      {/* <Tabs.Screen
-        name="futur"
-        options={{
-          title: "Future",
-          tabBarIcon: ({ color, size }) => <Ionicons name="rocket-outline" color={color} size={size} />,
-        }}
-      /> */}
 
       {/* Tab 5 */}
       <Tabs.Screen

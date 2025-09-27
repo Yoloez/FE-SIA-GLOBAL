@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 // ... import lainnya biarkan saja ...
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { StatusBar } from "react-native";
 
 function RootLayoutNav() {
   const { isLoggedIn } = useAuth();
@@ -23,11 +24,26 @@ function RootLayoutNav() {
   // tampilkan navigator seperti biasa.
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+        <Stack.Screen
+          name="Schedule" // Cocokkan dengan nama file: Schedule.tsx
+          options={{
+            title: "Jadwal Anda",
+            headerStyle: {
+              backgroundColor: "#015023", // Warna HIJAU
+            },
+            headerTintColor: "#ffffff", // Warna teks & tombol kembali menjadi PUTIH
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+          }}
+        />
       </Stack>
+      {/* </SafeAreaView> */}
     </ThemeProvider>
   );
 }

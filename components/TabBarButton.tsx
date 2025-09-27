@@ -1,28 +1,36 @@
 // components/TabBarButton.tsx
-import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
-const TabBarButton: React.FC<BottomTabBarButtonProps> = ({ children, onPress }) => {
+const TabBarButton = ({ children, onPress, bgColor }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.button}>{children}</View>
+    <TouchableOpacity onPress={onPress} style={styles.container} activeOpacity={0.9}>
+      <View style={[styles.button, { backgroundColor: bgColor }]}>{children}</View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    top: -28,
+    top: -25, // Mengangkat tombol ke atas
     justifyContent: "center",
     alignItems: "center",
-    elevation: 1,
+    // --- Shadow ---
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   button: {
-    width: 70,
+    borderWidth: 1,
+    width: 70, // Lebih besar dari tombol lain
     height: 70,
-    borderRadius: 35,
-    backgroundColor: "#48B3AF", // Anda bisa ganti warnanya
+    borderColor: "#DABC4E",
+    borderRadius: 35, // Setengah dari width/height agar bulat sempurna
     justifyContent: "center",
     alignItems: "center",
   },

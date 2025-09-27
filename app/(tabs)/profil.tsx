@@ -136,7 +136,7 @@ const Profil = () => {
           ))}
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => console.log("ini setting")}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.push("/")}>
             <Settings size={22} color="#ffffff" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton}>
@@ -145,39 +145,39 @@ const Profil = () => {
         </View>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            {/* [Saran 3] Gunakan data dinamis untuk avatar jika ada */}
-            <Image source={user?.avatar || require("../../assets/images/kairi.png")} style={styles.avatar} />
-            <View style={styles.onlineIndicator} />
-            <TouchableOpacity style={styles.editAvatarButton} onPress={() => router.push("/editProfile")}>
-              <Edit3 size={14} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
-
-          {/* [Saran 3] Tampilkan data pengguna dari context */}
-          <Text style={styles.name}>{user?.name || "Hanan Fijananto"}</Text>
-          <Text style={styles.nim}>{user?.nim || "23/123456/TK/56789"}</Text>
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>3.85</Text>
-              <Text style={styles.statLabel}>GPA</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>6</Text>
-              <Text style={styles.statLabel}>Semester</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>120</Text>
-              <Text style={styles.statLabel}>Credits</Text>
-            </View>
-          </View>
+      <View style={styles.profileSection}>
+        <View style={styles.avatarContainer}>
+          {/* [Saran 3] Gunakan data dinamis untuk avatar jika ada */}
+          <Image source={user?.avatar || require("../../assets/images/kairi.png")} style={styles.avatar} />
+          <View style={styles.onlineIndicator} />
+          <TouchableOpacity style={styles.editAvatarButton} onPress={() => router.push("/editProfile")}>
+            <Edit3 size={14} color="#ffffff" />
+          </TouchableOpacity>
         </View>
 
+        {/* [Saran 3] Tampilkan data pengguna dari context */}
+        <Text style={styles.name}>{user?.name || "Hanan Fijananto"}</Text>
+        <Text style={styles.nim}>{user?.nim || "23/123456/TK/56789"}</Text>
+
+        {/* <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>3.85</Text>
+            <Text style={styles.statLabel}>GPA</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>6</Text>
+            <Text style={styles.statLabel}>Semester</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>120</Text>
+            <Text style={styles.statLabel}>Credits</Text>
+          </View>
+        </View> */}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {menuSections.map((section, sectionIdx) => (
           <View key={sectionIdx} style={styles.menuSection}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -262,12 +262,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scrollContainer: {
-    paddingTop: 120,
+    // paddingTop: 120,
     paddingBottom: 40,
   },
   profileSection: {
     alignItems: "center",
-    marginBottom: 32,
+    marginTop: 50,
+    // marginBottom: 32,
   },
   avatarContainer: {
     position: "relative",
@@ -315,13 +316,13 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#0f172a",
+    color: "white",
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   nim: {
     fontSize: 15,
-    color: "#64748b",
+    color: "white",
     fontWeight: "500",
     marginBottom: 24,
   },

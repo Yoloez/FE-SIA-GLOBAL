@@ -1,65 +1,96 @@
+// app/(tabs)/_layout.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Platform } from "react-native";
-import TabBarButton from "../../components/TabBarButton"; // Sesuaikan path jika perlu
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import TabBarButton from "../../components/TabBarButton";
+
+// --- Definisikan Warna ---
+const TAB_BAR_BACKGROUND = "#F5EFD3";
+const ACTIVE_ICON_BG = "#FACC15"; // Warna kuning untuk background ikon aktif
+const INACTIVE_ICON_BG = "#FEFBEA"; // Warna krem untuk background ikon non-aktif
+const ICON_COLOR = "#B48F2A"; // Warna gold untuk ikon di dalam lingkaran
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: true, // Tampilkan label untuk tab lain
+        tabBarShowLabel: false, // Sembunyikan semua label
         tabBarStyle: {
           position: "absolute",
-          left: 1,
-          right: 1,
-          bottom: 0, // Pastikan di bottom
-          elevation: 0,
-          backgroundColor: "white",
-          borderRadius: 0,
-          borderTopLeftRadius: 15,
-          borderTopRightRadius: 15,
-          marginVertical: "auto",
-          borderColor: "transparent",
-          height: 100, // Tingkatkan height
-          // Tambahkan padding untuk menghindari area navigasi
-          paddingBottom: Platform.OS === "android" ? 65 : 25,
-          paddingTop: 5,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderColor: "#DABC4E",
+          elevation: 0, // Hapus shadow di Android
+          borderTopWidth: 0, // Hapus border di iOS
+          backgroundColor: TAB_BAR_BACKGROUND,
+          height: 60 + insets.bottom, // Tambahkan safe area bottom
+          paddingBottom: insets.bottom, // Padding untuk area navigasi Android
+          paddingTop: 10, // Sedikit padding atas untuk estetika
         },
       }}
     >
-      {/* Tab 1 */}
+      {/* Tab Dashboard (Kiri) */}
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <View style={[styles.iconCircle, { backgroundColor: focused ? ACTIVE_ICON_BG : INACTIVE_ICON_BG }]}>
+                <Ionicons name="home" size={24} color={ICON_COLOR} />
+              </View>
+            </View>
+          ),
         }}
       />
 
-      {/* === TAB PRESENSI (DI TENGAH) === */}
+      {/* Tab Presensi (Tengah - Kustom) */}
       <Tabs.Screen
         name="presensi"
         options={{
-          // Sembunyikan title di header
-          title: "Presensi",
-          // Sembunyikan label di bawah ikon
-          tabBarShowLabel: false,
-          // Atur ikon agar kontras
-          tabBarIcon: ({ focused }) => <Ionicons name="qr-code-outline" color={"#fff"} size={30} />,
-          // Gunakan komponen custom sebagai tombol
-          tabBarButton: (props) => <TabBarButton {...props} />,
+          tabBarIcon: ({ focused }) => <Ionicons name="qr-code" size={30} color={ICON_COLOR} />,
+          tabBarButton: (props) => (
+            <TabBarButton
+              {...props}
+              bgColor={INACTIVE_ICON_BG} // Kirim warna background ke tombol kustom
+            />
+          ),
         }}
       />
 
-      {/* Tab 5 */}
+      {/* Tab Profil (Kanan) */}
       <Tabs.Screen
         name="profil"
         options={{
-          title: "Profil",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" color={color} size={size} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <View style={[styles.iconCircle, { backgroundColor: focused ? ACTIVE_ICON_BG : INACTIVE_ICON_BG }, { borderColor: focused ? "white" : "#DABC4E" }]}>
+                <Ionicons name="person" size={24} color={ICON_COLOR} />
+              </View>
+            </View>
+          ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconCircle: {
+    borderWidth: 2,
+    width: 50,
+    borderColor: "#DABC4E",
+    height: 50,
+    borderRadius: 25, // Setengah dari width/height
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

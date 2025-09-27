@@ -1,171 +1,306 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link } from "expo-router";
-// 1. Impor ScrollView di sini
-import { Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
+import { Link, router } from "expo-router";
+import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
+import { Alert, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
+
+const { width } = Dimensions.get("window");
+const Ip = "192.168.0.159";
+const API_URL = `http://${Ip}:8000/cek`;
+
+// <-- 2. Pindahkan data ke dalam sebuah array terstruktur
+const DUMMY_CONTENT_DATA = [
+  {
+    id: "1",
+    label: "Notification",
+    title: "SVPL",
+    contents: ["satu", "dua", "tiga", "GOKILLLL"],
+    route: null, // Tidak bisa diklik
+  },
+  {
+    id: "2",
+    label: "Your Schedule",
+    title: "HANDOKO",
+    contents: ["satu", "dua", "tiga", "GOKILLLL"],
+    route: "./Schedule", // Rute navigasi
+  },
+  {
+    id: "3",
+    label: "Tugas",
+    title: "Pemrograman Mobile",
+    contents: ["Buat UI Keren", "Implementasi API"],
+    route: null,
+  },
+  {
+    id: "4",
+    label: "Pengumuman",
+    title: "Perkuliahan",
+    contents: ["Libur tanggal merah", "Jadwal ujian"],
+    route: null,
+  },
+];
 
 export default function HomeScreen() {
   const { logout } = useAuth();
-  const handleLogout = () => {
-    console.log("Tombol Logout Ditekan!");
-    logout();
+
+  // <-- 3. Buat state untuk input pencarian dan data konten
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
+  const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
+
+  // <-- 4. Terapkan logika filtering setiap kali searchQuery berubah
+  useEffect(() => {
+    if (searchQuery === "") {
+      setFilteredContent(allContent);
+    } else {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      const filteredData = allContent.filter((item) => {
+        // Cari di judul atau label, case-insensitive
+        return item.title.toLowerCase().includes(lowercasedQuery) || item.label.toLowerCase().includes(lowercasedQuery);
+      });
+      setFilteredContent(filteredData);
+    }
+  }, [searchQuery, allContent]); // Efek ini berjalan jika searchQuery atau allContent berubah
+
+  const handelData = async () => {
+    try {
+      const response = await axios.get(API_URL);
+      console.log("oke, laravel, terhubung ya..", response.data);
+      Alert.alert("Oke, terhubung dengan laravel ya..", response.data);
+    } catch (err) {
+      console.error("waduh ada error", err);
+      Alert.alert("error");
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="green" />
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
 
-      {/* 2. Ganti <View> menjadi <ScrollView> untuk konten yang bisa digulir */}
-      <View style={styles.header}>
-        <View style={styles.profileSection}>
-          <Ionicons name="person-circle-outline" size={50} />
-          <View>
-            <Text style={styles.userName}>Hanan Fijananto</Text>
-            <Text style={styles.userId}>24/123456/TRPL/56789</Text>
+      <LinearGradient colors={["#015023", "#015023"]} style={styles.container}>
+        <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
+          {/* Header Section - Fixed */}
+          <View style={styles.header}>
+            <View style={styles.profileSection}>
+              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>Hanan Fijananto</Text>
+                <Text style={styles.userId}>24/123456/TRPL/56789</Text>
+              </View>
+            </View>
+
+            <Link href="/profil" asChild>
+              <TouchableOpacity style={styles.iconsSection} activeOpacity={0.7}>
+                <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
+                <Ionicons name="notifications-outline" size={24} color="white" />
+              </TouchableOpacity>
+            </Link>
           </View>
-        </View>
 
-        <Link href="/profil" asChild>
-          <View style={styles.iconsSection}>
-            <Ionicons name="chatbox-ellipses-outline" size={30} style={{ marginLeft: 10 }} />
-            <Ionicons name="notifications-outline" size={30} />
-          </View>
-        </Link>
-      </View>
+          {/* Main Content - Scrollable */}
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
+            <View style={styles.achievementContainer}>
+              <View style={styles.achievementCard}>
+                <Text style={styles.achievementLabel}>Achievement</Text>
+                <Text style={styles.achievementValue}>38 SKS</Text>
+              </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 80 }}>
-        {/* Anda bisa menambahkan lebih banyak konten di sini untuk menguji scroll */}
-        <View style={styles.centerBox}>
-          <Text>Haloo</Text>
-        </View>
-        <View style={styles.centerBox}>
-          <Text>Konten Tambahan 1</Text>
-        </View>
-        <View style={styles.centerBox}>
-          <Text>Konten Tambahan 2</Text>
-        </View>
-        <View style={styles.centerBox}>
-          <Text>Konten Tambahan 2</Text>
-        </View>
-        <View style={styles.centerBox}>
-          <Text>Konten Tambahan 2</Text>
-        </View>
+              <View style={styles.achievementCard}>
+                <Text style={styles.achievementLabel}>IPK</Text>
+                <Text style={styles.achievementValue}>3.89</Text>
+              </View>
 
-        <View style={styles.searchContainer}>
-          <TextInput placeholder="Search" style={styles.search} placeholderTextColor="grey" />
-          <Ionicons name="search-outline" size={20} />
-        </View>
-
-        <View style={styles.centerBox}>
-          <Text>Konten Tambahan 3</Text>
-        </View>
-        <View style={styles.centerBox}>
-          <Text>Konten Tambahan 4</Text>
-        </View>
-        {/* Konten terakhir diberi margin bawah agar tidak terpotong oleh tombol logout */}
-        <View style={{ marginBottom: 200 }} />
-      </ScrollView>
-
-      {/* 3. Pindahkan Tombol Logout ke luar <ScrollView> */}
-      {/* Tombol ini sekarang menjadi "sibling" dari ScrollView, bukan "child" */}
-      <TouchableOpacity onPress={handleLogout} style={styles.button}>
-        <Text style={styles.buttonTxt}>Logout</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+              <View style={styles.achievementCard}>
+                <Text style={styles.achievementLabel}>IPS</Text>
+                <Text style={styles.achievementValue}>3.90</Text>
+              </View>
+            </View>
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              {/* <-- 5. Hubungkan TextInput ke state */}
+              <TextInput
+                placeholder="Search by title or label..."
+                style={styles.searchInput}
+                placeholderTextColor="#666"
+                value={searchQuery}
+                onChangeText={setSearchQuery} // Langsung update state saat mengetik
+              />
+              <Ionicons name="search-outline" size={20} color="#666" />
+            </View>
+            {/* Content Sections */}
+            {/* <-- 6. Render konten dari state hasil filter */}
+            {filteredContent.length > 0 ? (
+              filteredContent.map((item) => (
+                <TouchableOpacity key={item.id} onPress={() => item.route && router.push(item.route)} disabled={!item.route}>
+                  <ContentCard label={item.label} title={item.title} contents={item.contents} />
+                </TouchableOpacity>
+              ))
+            ) : (
+              // <-- Tampilkan pesan jika tidak ada hasil
+              <Text style={styles.noResultsText}>No results found for "{searchQuery}"</Text>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </>
   );
 }
 
+// <-- Tambahkan style baru untuk pesan "No Results"
 const styles = StyleSheet.create({
+  // ... (semua style Anda yang lama biarkan di sini)
+  noResultsText: {
+    textAlign: "center",
+    marginTop: 20,
+    color: "#666",
+    fontSize: 16,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  content: {
-    flex: 1, // Biarkan flex: 1 agar ScrollView tahu batasannya
+  safeContainer: {
+    flex: 1,
+    marginBottom: 130,
   },
   header: {
-    alignItems: "center",
-    backgroundColor: "yellow",
-    borderBottomWidth: 2,
-    borderColor: "black",
-    padding: 10,
-    justifyContent: "space-between",
+    backgroundColor: "#015023",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     flexDirection: "row",
-    position: "absolute",
-    alignSelf: "center",
-    left: 0,
-    right: 0,
-    top: 0,
-    gap: 12,
-    zIndex: 100,
-    // marginTop: 12,
-    marginHorizontal: 20,
-    marginBottom: 15, // Menambah jarak ke bawah
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    justifyContent: "center",
+    flex: 1,
+  },
+  userInfo: {
+    marginLeft: 12,
+    flex: 1,
   },
   userName: {
     fontSize: 18,
-    color: "#000000B3",
-    marginTop: 3,
+    fontWeight: "600",
+    color: "white",
+    marginBottom: 2,
   },
   userId: {
-    fontSize: 14,
-    color: "#000000",
+    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "400",
   },
   iconsSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    paddingLeft: 16,
   },
-  centerBox: {
-    borderColor: "black",
+  iconSpacing: {
+    marginRight: 16,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 2,
-    justifyContent: "center",
+    borderColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  achievementContainer: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#000",
+    flexDirection: "row",
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  achievementCard: {
+    flex: 1,
     alignItems: "center",
-    marginVertical: 15,
-    padding: 30,
-    marginHorizontal: 20,
-    borderRadius: 10,
+    justifyContent: "center",
+  },
+  achievementLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 4,
+  },
+  achievementValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#015023",
   },
   searchContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    borderColor: "black",
+    backgroundColor: "#F5EFD3",
     borderWidth: 2,
-    marginTop: 15,
-    padding: 10,
-    marginHorizontal: 20,
-    borderRadius: 30,
-    paddingHorizontal: 15,
+    borderColor: "#000",
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    marginBottom: 25,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  search: {
+  searchInput: {
     flex: 1,
-    borderColor: "white",
     fontSize: 16,
+    color: "#333",
+    fontWeight: "400",
   },
-  button: {
-    // Style ini akan bekerja dengan benar karena sekarang relatif terhadap SafeAreaView
-    position: "absolute",
-    bottom: 120,
-    width: "90%",
-    alignSelf: "center", // Cara terbaik untuk centering horizontal di React Native
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 8,
+  contentCard: {
+    backgroundColor: "#F5EFD3",
     borderWidth: 2,
-    borderColor: "black",
+    borderColor: "#000",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  buttonTxt: {
-    color: "black",
-    fontSize: 16,
-    textAlign: "center",
-    fontWeight: "500",
+  contentText: {
+    fontSize: 14,
+    color: "#333",
+    lineHeight: 20,
+    marginBottom: 4,
   },
 });
+
+// ... (lanjutkan sisa style Anda)

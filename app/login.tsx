@@ -3,7 +3,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Image, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Image, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen() {
@@ -13,7 +14,7 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const handleLogin = () => {
-    if (email === "user@mail.com" && password === "123456") {
+    if (email === "" && password === "") {
       login();
       router.replace("/");
     } else {
@@ -22,7 +23,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <LinearGradient colors={["#0D1B1E", "#1C352D"]} style={styles.container}>
+    <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" />
         <View style={styles.content}>
@@ -36,7 +37,7 @@ export default function LoginScreen() {
             <TextInput style={styles.input} placeholder="••••••••" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="grey" />
           </View>
 
-          <TouchableOpacity onPress={() => console.log("Lupa Password?")}>
+          <TouchableOpacity onPress={() => router.push("/forgot-password")}>
             <Text style={{ fontSize: 16, color: "white", marginTop: -7, marginBottom: 15, alignSelf: "flex-end" }}>Lupa Password?</Text>
           </TouchableOpacity>
 
@@ -83,24 +84,24 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 55,
-    backgroundColor: "rgba(0, 0, 0, 0.25)",
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    borderWidth: 1,
-    color: "white",
+    backgroundColor: "white",
+    borderColor: "black",
+    borderWidth: 2,
+    color: "black",
     borderRadius: 12,
     paddingHorizontal: 15,
     fontSize: 16,
     marginBottom: 20, // Jarak antar input
   },
   button: {
-    backgroundColor: "black",
+    backgroundColor: "#DABC4E",
     paddingVertical: 18,
-    borderRadius: 12,
+    borderRadius: 30,
     width: "100%",
     marginTop: 20, // Jarak dari input password ke tombol
   },
   buttonText: {
-    color: "white",
+    color: "black",
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",

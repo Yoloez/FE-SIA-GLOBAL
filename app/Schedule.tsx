@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 const schedule = () => {
   return (
     <View style={styles.container}>
-      <Text>schedule</Text>
+      <Text className="text-green-300 text-3xl font-bold">schedule</Text>
     </View>
   );
 };

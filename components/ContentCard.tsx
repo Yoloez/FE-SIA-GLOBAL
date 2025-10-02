@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5EFD3",
     borderWidth: 2,
     borderColor: "#000",
-    borderRadius: 12,
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 16,
     marginBottom: 12,
@@ -56,12 +56,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   contentText: {
+    fontFamily: "Urbanist_400Regular",
     fontSize: 14,
     color: "#333",
     lineHeight: 20,
     marginBottom: 4,
   },
+
   titleText: {
+    fontFamily: "Urbanist_600SemiBold",
     fontSize: 15,
     backgroundColor: "#DABC4E",
     borderRadius: 50,

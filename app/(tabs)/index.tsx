@@ -1,16 +1,19 @@
+import { Urbanist_400Regular } from "@expo-google-fonts/urbanist/400Regular";
+import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
+import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
 import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
-import { Alert, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
-const Ip = "192.168.0.159";
-const API_URL = `http://${Ip}:8000/cek`;
+const Ip = "10.72.60.171";
+const API_URL = `http://${Ip}:8000/api/cek`;
 
 // <-- 2. Pindahkan data ke dalam sebuah array terstruktur
 const DUMMY_CONTENT_DATA = [
@@ -46,11 +49,16 @@ const DUMMY_CONTENT_DATA = [
 
 export default function HomeScreen() {
   const { logout } = useAuth();
+  let [fontsLoaded] = useFonts({
+    Urbanist_400Regular,
+    Urbanist_600SemiBold,
+  });
 
   // <-- 3. Buat state untuk input pencarian dan data konten
   const [searchQuery, setSearchQuery] = useState("");
   const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
   const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
+  const [isLoading, setIsLoading] = useState(true);
 
   // <-- 4. Terapkan logika filtering setiap kali searchQuery berubah
   useEffect(() => {
@@ -66,16 +74,40 @@ export default function HomeScreen() {
     }
   }, [searchQuery, allContent]); // Efek ini berjalan jika searchQuery atau allContent berubah
 
-  const handelData = async () => {
-    try {
-      const response = await axios.get(API_URL);
-      console.log("oke, laravel, terhubung ya..", response.data);
-      Alert.alert("Oke, terhubung dengan laravel ya..", response.data);
-    } catch (err) {
-      console.error("waduh ada error", err);
-      Alert.alert("error");
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true); // Mulai loading
+        const response = await axios.get(API_URL);
+        const apiData = response.data; // Data dari Laravel: { message: "...", ... }
+
+        // Format data API agar sesuai dengan struktur ContentCard
+        const apiContentCard = {
+          id: "api-1",
+          label: "Info from Server",
+          title: apiData.title,
+          contents: [apiData.message], // Masukkan pesan dari API ke dalam array contents
+          route: null,
+        };
+
+        // Gabungkan data dari API dengan data dummy
+        const combinedData = [apiContentCard, ...DUMMY_CONTENT_DATA];
+
+        setAllContent(combinedData);
+        setFilteredContent(combinedData);
+      } catch (error) {
+        console.error("Gagal mengambil data dari server:", error);
+        Alert.alert("Koneksi Gagal", "Tidak dapat mengambil data dari server. Menampilkan data offline.");
+        // Jika gagal, tampilkan saja data dummy
+        setAllContent(DUMMY_CONTENT_DATA);
+        setFilteredContent(DUMMY_CONTENT_DATA);
+      } finally {
+        setIsLoading(false); // Hentikan loading, baik berhasil maupun gagal
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <>
@@ -133,14 +165,15 @@ export default function HomeScreen() {
             </View>
             {/* Content Sections */}
             {/* <-- 6. Render konten dari state hasil filter */}
-            {filteredContent.length > 0 ? (
+            {isLoading ? (
+              <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 30 }} />
+            ) : filteredContent.length > 0 ? (
               filteredContent.map((item) => (
                 <TouchableOpacity key={item.id} onPress={() => item.route && router.push(item.route)} disabled={!item.route}>
                   <ContentCard label={item.label} title={item.title} contents={item.contents} />
                 </TouchableOpacity>
               ))
             ) : (
-              // <-- Tampilkan pesan jika tidak ada hasil
               <Text style={styles.noResultsText}>No results found for "{searchQuery}"</Text>
             )}
           </ScrollView>
@@ -156,7 +189,7 @@ const styles = StyleSheet.create({
   noResultsText: {
     textAlign: "center",
     marginTop: 20,
-    color: "#666",
+    color: "white",
     fontSize: 16,
   },
   container: {
@@ -164,7 +197,7 @@ const styles = StyleSheet.create({
   },
   safeContainer: {
     flex: 1,
-    marginBottom: 130,
+    marginBottom: 133,
   },
   header: {
     backgroundColor: "#015023",
@@ -173,9 +206,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-    elevation: 4,
+    // borderBottomWidth: 1,
+    // borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -192,6 +225,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 18,
+    fontFamily: "Urbanist_600SemiBold",
     fontWeight: "600",
     color: "white",
     marginBottom: 2,
@@ -200,6 +234,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(255, 255, 255, 0.8)",
     fontWeight: "400",
+    // fontFamily: "Urbanist_400Regular",
   },
   iconsSection: {
     flexDirection: "row",
@@ -249,8 +284,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   achievementLabel: {
+    fontFamily: "Urbanist_400Regular",
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "800",
     color: "#333",
     marginBottom: 4,
   },
@@ -279,6 +315,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: "#333",
+    fontFamily: "Urbanist_400Regular",
     fontWeight: "400",
   },
   contentCard: {
@@ -296,6 +333,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   contentText: {
+    fontFamily: "Urbanist_400Regular",
     fontSize: 14,
     color: "#333",
     lineHeight: 20,

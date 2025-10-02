@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TabBarButton from "../../components/TabBarButton";
 
 // --- Definisikan Warna ---
-const TAB_BAR_BACKGROUND = "#F5EFD3";
+const TAB_BAR_BACKGROUND = "#015023";
 const ACTIVE_ICON_BG = "#FACC15"; // Warna kuning untuk background ikon aktif
 const INACTIVE_ICON_BG = "#FEFBEA"; // Warna krem untuk background ikon non-aktif
 const ICON_COLOR = "#B48F2A"; // Warna gold untuk ikon di dalam lingkaran
@@ -28,7 +28,7 @@ export default function TabLayout() {
           elevation: 0, // Hapus shadow di Android
           borderTopWidth: 0, // Hapus border di iOS
           backgroundColor: TAB_BAR_BACKGROUND,
-          height: 60 + insets.bottom, // Tambahkan safe area bottom
+          height: 65 + insets.bottom, // Tambahkan safe area bottom
           paddingBottom: insets.bottom, // Padding untuk area navigasi Android
           paddingTop: 10, // Sedikit padding atas untuk estetika
         },
@@ -40,7 +40,7 @@ export default function TabLayout() {
         options={{
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
-              <View style={[styles.iconCircle, { backgroundColor: focused ? ACTIVE_ICON_BG : INACTIVE_ICON_BG }]}>
+              <View style={[styles.iconCircle, { backgroundColor: focused ? ACTIVE_ICON_BG : INACTIVE_ICON_BG, borderColor: focused ? "white" : "#DABC4E" }]}>
                 <Ionicons name="home" size={24} color={ICON_COLOR} />
               </View>
             </View>

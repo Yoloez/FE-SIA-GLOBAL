@@ -1,5 +1,6 @@
-// app/(auth)/login.tsx
-
+import { Urbanist_400Regular } from "@expo-google-fonts/urbanist/400Regular";
+import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
+import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -8,6 +9,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen() {
+  let [fontsLoaded] = useFonts({
+    Urbanist_400Regular,
+    Urbanist_600SemiBold,
+  });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useAuth();
@@ -37,8 +43,8 @@ export default function LoginScreen() {
             <TextInput style={styles.input} placeholder="••••••••" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="grey" />
           </View>
 
-          <TouchableOpacity onPress={() => router.push("/forgot-password")}>
-            <Text style={{ fontSize: 16, color: "white", marginTop: -7, marginBottom: 15, alignSelf: "flex-end" }}>Lupa Password?</Text>
+          <TouchableOpacity onPress={() => router.push("/ForgotPassword")}>
+            <Text style={{ fontSize: 16, color: "white", marginTop: -7, marginBottom: 15, alignSelf: "flex-end", fontFamily: "Urbanist_400Regular" }}>Lupa Password?</Text>
           </TouchableOpacity>
 
           {/* Tombol Login */}
@@ -55,6 +61,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    zIndex: 1,
   },
   safeArea: {
     flex: 1,
@@ -71,6 +78,7 @@ const styles = StyleSheet.create({
     // width: "100%",
     width: 150,
     height: 170,
+    fontFamily: "Urbanist_400Regular",
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 45,
@@ -81,6 +89,7 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.8)",
     fontSize: 16,
     marginBottom: 8,
+    fontFamily: "Urbanist_400Regular",
   },
   input: {
     height: 55,
@@ -91,7 +100,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 15,
     fontSize: 16,
-    marginBottom: 20, // Jarak antar input
+    marginBottom: 20,
+    fontFamily: "Urbanist_400Regular",
+    // Jarak antar input
   },
   button: {
     backgroundColor: "#DABC4E",
@@ -101,6 +112,7 @@ const styles = StyleSheet.create({
     marginTop: 20, // Jarak dari input password ke tombol
   },
   buttonText: {
+    fontFamily: "Urbanist_400Regular",
     color: "black",
     fontSize: 18,
     fontWeight: "bold",

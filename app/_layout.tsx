@@ -10,7 +10,7 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   if (!isLoggedIn && pathname !== "/login" && pathname !== "/ForgotPassword") {
-    return <Redirect href="/login" />;
+    return <Redirect href="/(auth)/login" />;
   }
 
   return (

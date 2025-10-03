@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CustomAlert from "../components/CustomAlert"; // <-- 1. Impor komponen CustomAlert
+import CustomAlert from "../../components/CustomAlert"; // <-- 1. Impor komponen CustomAlert
 
 export default function ForgotPasswordScreen() {
   let [fontsLoaded] = useFonts({
@@ -50,7 +50,7 @@ export default function ForgotPasswordScreen() {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" />
         <View style={styles.content}>
-          <Image source={require("../assets/images/logo-ugn.png")} style={styles.title} />
+          <Image source={require("../../assets/images/logo-ugn.png")} style={styles.title} />
 
           <Text style={styles.infoText}>Masukkan email Anda yang terdaftar untuk menerima tautan pemulihan password.</Text>
 

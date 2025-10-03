@@ -4,7 +4,7 @@
     "slug": "coba-nativewind",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "assets/images/logo-ugn.png",
     "scheme": "cobanativewind",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -52,7 +52,8 @@
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
           "recordAudioAndroid": true
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

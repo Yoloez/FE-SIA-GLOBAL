@@ -29,7 +29,7 @@ const DUMMY_CONTENT_DATA = [
     label: "Your Schedule",
     title: "HANDOKO",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "./Schedule", // Rute navigasi
+    route: "../Schedule", // Rute navigasi
   },
   {
     id: "3",
@@ -340,5 +340,3 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 });
-
-// ... (lanjutkan sisa style Anda)

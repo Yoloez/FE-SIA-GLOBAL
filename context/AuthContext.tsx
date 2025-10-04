@@ -1,59 +1,59 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
+// 1. Hapus impor 'router' dari sini untuk memutus lingkaran dependensi
+// import { router } from 'expo-router';
 
-// Definisikan tipe data untuk objek pengguna agar konsisten
 interface User {
   id: number;
   name: string;
   email: string;
-  role: "mahasiswa" | "dosen" | "admin" | "manager" | null; // Tipe peran
-  // Anda bisa menambahkan 'permissions' di sini jika perlu
+  role: "mahasiswa" | "dosen" | "admin" | "manager" | "applicant" | null;
 }
 
 interface AuthContextData {
   user: User | null;
   token: string | null;
   isLoggedIn: boolean;
-  login: (userData: User, token: string) => Promise<void>;
-  logout: () => void;
+  isLoading: boolean;
+  login: (userData: User, authToken: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fungsi untuk memuat data dari storage saat aplikasi pertama kali dibuka
-    const loadAuthData = async () => {
+    const loadUserData = async () => {
       try {
         const storedToken = await AsyncStorage.getItem("userToken");
         const storedUserData = await AsyncStorage.getItem("userData");
 
         if (storedToken && storedUserData) {
-          setToken(storedToken);
           setUser(JSON.parse(storedUserData));
+          setToken(storedToken);
         }
       } catch (e) {
-        console.error("Failed to load auth data from storage", e);
+        console.error("Gagal memuat data pengguna dari storage", e);
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadAuthData();
+
+    loadUserData();
   }, []);
 
-  const login = async (userData: User, token: string) => {
+  const login = async (userData: User, authToken: string) => {
     try {
       setUser(userData);
-      setToken(token);
-      await AsyncStorage.setItem("userToken", token);
+      setToken(authToken);
+      await AsyncStorage.setItem("userToken", authToken);
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
     } catch (e) {
-      console.error("Failed to save auth data to storage", e);
+      console.error("Gagal menyimpan data pengguna", e);
     }
   };
 
@@ -63,22 +63,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(null);
       await AsyncStorage.removeItem("userToken");
       await AsyncStorage.removeItem("userData");
+
+      // 2. Hapus `router.replace()` dari sini.
+      // Pengalihan akan ditangani secara otomatis oleh app/_layout.tsx
+      // saat ia melihat `isLoggedIn` berubah menjadi false.
     } catch (e) {
-      console.error("Failed to remove auth data from storage", e);
+      console.error("Gagal menghapus data pengguna", e);
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        isLoggedIn: !!user,
-        login,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
+  return <AuthContext.Provider value={{ user, token, isLoggedIn: !!user, isLoading, login, logout }}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => useContext(AuthContext);

@@ -12,7 +12,7 @@ import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
-const Ip = "10.72.60.171";
+const Ip = "192.168.0.159";
 const API_URL = `http://${Ip}:8000/api/cek`;
 
 // <-- 2. Pindahkan data ke dalam sebuah array terstruktur

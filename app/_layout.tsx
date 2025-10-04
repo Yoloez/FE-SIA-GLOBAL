@@ -1,56 +1,57 @@
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { Redirect, Stack, usePathname } from "expo-router";
-import { StatusBar } from "react-native";
+import { Slot, SplashScreen, useRouter, useSegments } from "expo-router";
+import { useEffect } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
-function RootLayoutNav() {
-  const { isLoggedIn } = useAuth();
-  const pathname = usePathname();
-  const colorScheme = useColorScheme();
+// 1. Mencegah splash screen bawaan untuk hilang secara otomatis.
+// Kita akan mengontrolnya secara manual.
+SplashScreen.preventAutoHideAsync();
 
-  if (!isLoggedIn && pathname !== "/login" && pathname !== "/ForgotPassword") {
-    return <Redirect href="/login" />;
+function RootLayoutNav() {
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    // 2. Efek ini akan berjalan HANYA setelah status login selesai dimuat (`isLoading` menjadi false).
+    if (!isLoading) {
+      const inAuthGroup = segments[0] === "(auth)";
+
+      // Jika pengguna sudah login TAPI masih berada di halaman login/auth,
+      // arahkan mereka ke dashboard yang sesuai.
+      if (isLoggedIn && inAuthGroup) {
+        switch (user?.role) {
+          case "mahasiswa":
+            router.replace("/(tabs)/");
+            break;
+          case "dosen":
+            // Nanti, arahkan ke rute dosen
+            // router.replace("/(dosen)/");
+            break;
+          default:
+            router.replace("/(tabs)/"); // Fallback
+            break;
+        }
+      }
+
+      // Jika pengguna BELUM login dan TIDAK sedang di halaman auth,
+      // paksa mereka kembali ke halaman login.
+      else if (!isLoggedIn && !inAuthGroup) {
+        router.replace("/(auth)/login");
+      }
+
+      // 3. Setelah semua logika navigasi selesai, baru sembunyikan splash screen.
+      SplashScreen.hideAsync();
+    }
+  }, [isLoading, user, isLoggedIn, segments, router]); // Jalankan efek ini jika state berubah
+
+  // 4. Selama loading, kita tidak merender apa-apa (splash screen masih terlihat).
+  if (isLoading) {
+    return null;
   }
 
-  return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-
-        {/* === BARIS YANG DITAMBAHKAN === */}
-        <Stack.Screen
-          name="ForgotPassword" // Sesuaikan dengan nama file: ForgotPassword.tsx
-          options={{
-            presentation: "modal",
-            title: "Lupa Password",
-            headerTitleAlign: "center",
-
-            headerShown: true,
-            // sheetElevation: 100,
-            headerStyle: { backgroundColor: "#015023" },
-            headerTintColor: "#ffffff",
-
-            headerTitleStyle: { fontWeight: "medium", fontFamily: "Urbanist_600SemiBold" },
-          }}
-        />
-        {/* ============================== */}
-
-        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-        <Stack.Screen
-          name="Schedule"
-          options={{
-            title: "Jadwal Anda",
-            headerStyle: { backgroundColor: "#015023" },
-            headerTintColor: "#ffffff",
-            headerTitleStyle: { fontWeight: "bold" },
-          }}
-        />
-      </Stack>
-    </ThemeProvider>
-  );
+  // Setelah selesai, <Slot /> akan merender halaman yang benar berdasarkan
+  // hasil navigasi dari useEffect di atas. Ini memenuhi aturan Expo Router.
+  return <Slot />;
 }
 
 export default function RootLayout() {

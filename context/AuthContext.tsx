@@ -7,7 +7,7 @@ interface User {
   id: number;
   name: string;
   email: string;
-  role: "mahasiswa" | "dosen" | "admin" | "manager" | "applicant" | null;
+  role: "student" | "dosen" | "admin" | "manager" | null;
 }
 
 interface AuthContextData {

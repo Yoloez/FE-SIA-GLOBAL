@@ -2,8 +2,7 @@ import { Slot, SplashScreen, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
-// 1. Mencegah splash screen bawaan untuk hilang secara otomatis.
-// Kita akan mengontrolnya secara manual.
+// Mencegah splash screen bawaan untuk hilang secara otomatis.
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
@@ -12,45 +11,59 @@ function RootLayoutNav() {
   const router = useRouter();
 
   useEffect(() => {
-    // 2. Efek ini akan berjalan HANYA setelah status login selesai dimuat (`isLoading` menjadi false).
-    if (!isLoading) {
-      const inAuthGroup = segments[0] === "(auth)";
+    // Efek ini akan berjalan HANYA setelah status login selesai dimuat.
+    if (isLoading) {
+      return; // Jangan lakukan apa-apa jika masih loading
+    }
 
-      // Jika pengguna sudah login TAPI masih berada di halaman login/auth,
-      // arahkan mereka ke dashboard yang sesuai.
-      if (isLoggedIn && inAuthGroup) {
-        switch (user?.role) {
-          case "mahasiswa":
+    const inApp = segments[0] !== "(auth)";
+
+    if (isLoggedIn && user) {
+      // --- LANGKAH DEBUGGING PENTING ---
+      // Baris ini akan mencetak peran pengguna ke terminal Metro Anda.
+      // Ini akan memberi tahu kita nilai sebenarnya dari user.role.
+      console.log("Checking role for redirection. User role is:", user.role);
+      // --------------------------------
+
+      // Jika pengguna sudah login tapi berada di halaman auth, paksa keluar.
+      // Atau jika pengguna berada di halaman utama (root) setelah login.
+      if (!inApp) {
+        switch (user.role) {
+          case "student":
             router.replace("/(tabs)/");
             break;
           case "dosen":
-            // Nanti, arahkan ke rute dosen
-            // router.replace("/(dosen)/");
+            router.replace("/(dosen)/");
+            break;
+          case "admin":
+            router.replace("/(admin)/");
+            break;
+          case "manager":
+            router.replace("/(manager)/");
             break;
           default:
-            router.replace("/(tabs)/"); // Fallback
+            // Selalu sediakan fallback jika peran tidak dikenali
+            console.log("Peran tidak dikenali, mengarahkan ke default.");
+            router.replace("/(tabs)/");
             break;
         }
       }
-
-      // Jika pengguna BELUM login dan TIDAK sedang di halaman auth,
-      // paksa mereka kembali ke halaman login.
-      else if (!isLoggedIn && !inAuthGroup) {
-        router.replace("/(auth)/login");
-      }
-
-      // 3. Setelah semua logika navigasi selesai, baru sembunyikan splash screen.
-      SplashScreen.hideAsync();
+    } else if (!isLoggedIn) {
+      // Jika pengguna belum login, paksa mereka ke grup (auth)
+      // Ini akan otomatis mengarah ke /login jika itu satu-satunya halaman
+      router.replace("/(auth)/login");
     }
-  }, [isLoading, user, isLoggedIn, segments, router]); // Jalankan efek ini jika state berubah
 
-  // 4. Selama loading, kita tidak merender apa-apa (splash screen masih terlihat).
+    // Setelah semua logika navigasi selesai, baru sembunyikan splash screen.
+    SplashScreen.hideAsync();
+  }, [isLoading, user, isLoggedIn, router]); // Dependensi yang lebih sederhana
+
+  // Selama loading, kita tidak merender apa-apa (splash screen masih terlihat).
   if (isLoading) {
     return null;
   }
 
-  // Setelah selesai, <Slot /> akan merender halaman yang benar berdasarkan
-  // hasil navigasi dari useEffect di atas. Ini memenuhi aturan Expo Router.
+  // <Slot /> akan merender halaman yang benar.
   return <Slot />;
 }
 

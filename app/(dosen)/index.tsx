@@ -118,10 +118,10 @@ export default function HomeScreen() {
           {/* Header Section - Fixed */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
-              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+              <Image source={require("../../assets/images/react-logo.png")} style={styles.avatar} />
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>Hanan Fijananto</Text>
-                <Text style={styles.userId}>24/123456/TRPL/56789</Text>
+                <Text style={styles.userName}>Dosen 1</Text>
+                <Text style={styles.userId}>8888</Text>
               </View>
             </View>
 
@@ -135,22 +135,6 @@ export default function HomeScreen() {
 
           {/* Main Content - Scrollable */}
           <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
-            <View style={styles.achievementContainer}>
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>Achievement</Text>
-                <Text style={styles.achievementValue}>38 SKS</Text>
-              </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPK</Text>
-                <Text style={styles.achievementValue}>3.89</Text>
-              </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPS</Text>
-                <Text style={styles.achievementValue}>3.90</Text>
-              </View>
-            </View>
             {/* Search Bar */}
             <View style={styles.searchContainer}>
               {/* <-- 5. Hubungkan TextInput ke state */}
@@ -197,7 +181,7 @@ const styles = StyleSheet.create({
   },
   safeContainer: {
     flex: 1,
-    marginBottom: 100, // Beri ruang di bawah untuk tab bar
+    marginBottom: 100,
   },
   header: {
     backgroundColor: "#015023",
@@ -262,38 +246,6 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingHorizontal: 20,
     paddingTop: 20,
-  },
-  achievementContainer: {
-    backgroundColor: "#F5EFD3",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#000",
-    flexDirection: "row",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  achievementCard: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  achievementLabel: {
-    fontFamily: "Urbanist_400Regular",
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#333",
-    marginBottom: 4,
-  },
-  achievementValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#015023",
   },
   searchContainer: {
     flexDirection: "row",

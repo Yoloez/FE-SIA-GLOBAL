@@ -48,12 +48,10 @@ export default function LoginScreen() {
     try {
       const response = await axios.post(API_URL, {
         email: email,
-
         password: password,
       });
 
       const responseData = response.data.data;
-
       const userFromApi = responseData.user;
 
       const accessToken = responseData.access_token;

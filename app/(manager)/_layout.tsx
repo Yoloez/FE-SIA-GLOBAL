@@ -9,7 +9,9 @@ export default function ManagerLayout() {
       <Stack.Screen name="index" options={{ title: "Manager Dashboard" }} />
       <Stack.Screen name="CreateClasses" options={{ title: "Buat Kelas Baru", presentation: "modal" }} />
       <Stack.Screen name="[classId]" options={{ title: "Detail Kelas" }} />
-      <Stack.Screen name="assign-member" options={{ title: "Tambah Anggota", presentation: "modal" }} />
+      <Stack.Screen name="AssignMember" options={{ title: "Tambah Anggota", presentation: "modal" }} />
+      <Stack.Screen name="CreateSubjects" options={{ title: "Buat Mata Kuliah" }} />
+      <Stack.Screen name="CreateLecturer" options={{ title: "Tambah Dosen" }} />
     </Stack>
   );
 }

@@ -33,7 +33,6 @@ export default function AdminDashboardScreen() {
       setManagers(response.data.data);
     } catch (error) {
       console.error("Gagal mengambil data manajer:", error);
-      //   alert("Gagal memuat data manajer.");
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +50,6 @@ export default function AdminDashboardScreen() {
     logout();
   }, [logout]);
 
-  // Komponen untuk merender setiap item manajer di dalam daftar
   const renderManagerItem = ({ item }: { item: Manager }) => (
     <View style={styles.managerCard}>
       <View>

@@ -1,4 +1,4 @@
-import { Slot, SplashScreen, useRouter, useSegments } from "expo-router";
+import { Slot, SplashScreen, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
@@ -7,63 +7,55 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { user, isLoggedIn, isLoading } = useAuth();
-  const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    // Efek ini akan berjalan HANYA setelah status login selesai dimuat.
+    // Jangan lakukan apa-apa jika context masih memuat data sesi.
     if (isLoading) {
-      return; // Jangan lakukan apa-apa jika masih loading
+      return;
     }
 
-    const inApp = segments[0] !== "(auth)";
-
+    // Kondisi ini akan dipanggil SETELAH login berhasil atau saat refresh
     if (isLoggedIn && user) {
-      // --- LANGKAH DEBUGGING PENTING ---
-      // Baris ini akan mencetak peran pengguna ke terminal Metro Anda.
-      // Ini akan memberi tahu kita nilai sebenarnya dari user.role.
-      console.log("Checking role for redirection. User role is:", user.role);
-      // --------------------------------
-
-      // Jika pengguna sudah login tapi berada di halaman auth, paksa keluar.
-      // Atau jika pengguna berada di halaman utama (root) setelah login.
-      if (!inApp) {
-        switch (user.role) {
-          case "student":
-            router.replace("/(tabs)/");
-            break;
-          case "dosen":
-            router.replace("/(dosen)/");
-            break;
-          case "admin":
-            router.replace("/(admin)/");
-            break;
-          case "manager":
-            router.replace("/(manager)/");
-            break;
-          default:
-            // Selalu sediakan fallback jika peran tidak dikenali
-            console.log("Peran tidak dikenali, mengarahkan ke default.");
-            router.replace("/(tabs)/");
-            break;
-        }
+      console.log("User is logged in. Redirecting based on role:", user.role);
+      switch (user.role) {
+        case "student":
+          router.replace("/(tabs)/");
+          break;
+        case "dosen":
+          router.replace("/(dosen)/");
+          break;
+        case "admin":
+          router.replace("/(admin)/");
+          break;
+        case "manager":
+          router.replace("/(manager)/");
+          break;
+        default:
+          console.log("Peran tidak dikenali, mengarahkan ke default.");
+          router.replace("/(tabs)/");
+          break;
       }
     } else if (!isLoggedIn) {
-      // Jika pengguna belum login, paksa mereka ke grup (auth)
-      // Ini akan otomatis mengarah ke /login jika itu satu-satunya halaman
+      // Kondisi ini akan dipanggil jika tidak ada sesi (saat app start atau setelah logout)
+      console.log("User is not logged in. Redirecting to login.");
       router.replace("/(auth)/login");
     }
 
-    // Setelah semua logika navigasi selesai, baru sembunyikan splash screen.
+    // Sembunyikan splash screen setelah logika navigasi selesai.
     SplashScreen.hideAsync();
-  }, [isLoading, user, isLoggedIn, router]); // Dependensi yang lebih sederhana
+
+    // --- INI PERBAIKANNYA ---
+    // Hapus `router` dari dependency array untuk memutus infinite loop.
+    // Efek ini sekarang hanya akan berjalan jika status otentikasi pengguna berubah.
+  }, [isLoading, user, isLoggedIn]);
 
   // Selama loading, kita tidak merender apa-apa (splash screen masih terlihat).
   if (isLoading) {
     return null;
   }
 
-  // <Slot /> akan merender halaman yang benar.
+  // <Slot /> akan merender halaman yang benar setelah pengalihan selesai.
   return <Slot />;
 }
 

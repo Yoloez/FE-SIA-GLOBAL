@@ -75,6 +75,13 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="chat"
+        options={{
+          href: null, // Ini adalah kuncinya!
+        }}
+      />
     </Tabs>
   );
 }

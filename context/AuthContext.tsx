@@ -1,13 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
-// 1. Hapus impor 'router' dari sini untuk memutus lingkaran dependensi
-// import { router } from 'expo-router';
 
+// Tipe data untuk User, pastikan sesuai
 interface User {
   id: number;
   name: string;
   email: string;
-  role: "student" | "dosen" | "admin" | "manager" | null;
+  role: "mahasiswa" | "dosen" | "admin" | "manager" | "student" | "applicant" | null;
 }
 
 interface AuthContextData {
@@ -28,18 +27,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const loadUserData = async () => {
+      console.log("========================================");
+      console.log("[INVESTIGASI] App Start: Mencoba memuat data sesi...");
       try {
         const storedToken = await AsyncStorage.getItem("userToken");
         const storedUserData = await AsyncStorage.getItem("userData");
 
+        console.log("[INVESTIGASI] Token dari storage:", storedToken ? "Ditemukan" : "Kosong");
+        console.log("[INVESTIGASI] Data user dari storage:", storedUserData ? "Ditemukan" : "Kosong");
+
         if (storedToken && storedUserData) {
-          setUser(JSON.parse(storedUserData));
+          const parsedUser = JSON.parse(storedUserData);
+          setUser(parsedUser);
           setToken(storedToken);
+          console.log("[INVESTIGASI] Sesi berhasil dimuat untuk pengguna:", parsedUser.name);
+        } else {
+          console.log("[INVESTIGASI] Tidak ada sesi aktif yang ditemukan.");
         }
       } catch (e) {
-        console.error("Gagal memuat data pengguna dari storage", e);
+        console.error("[INVESTIGASI] GAGAL memuat data dari storage", e);
       } finally {
         setIsLoading(false);
+        console.log("========================================");
       }
     };
 
@@ -47,14 +56,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (userData: User, authToken: string) => {
+    console.log("========================================");
+    console.log("[INVESTIGASI] Login: Mencoba menyimpan data sesi...");
     try {
       setUser(userData);
       setToken(authToken);
       await AsyncStorage.setItem("userToken", authToken);
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
+      console.log("[INVESTIGASI] Data sesi untuk", userData.name, "berhasil disimpan.");
     } catch (e) {
-      console.error("Gagal menyimpan data pengguna", e);
+      console.error("[INVESTIGASI] GAGAL menyimpan data ke storage", e);
     }
+    console.log("========================================");
   };
 
   const logout = async () => {
@@ -63,10 +76,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setToken(null);
       await AsyncStorage.removeItem("userToken");
       await AsyncStorage.removeItem("userData");
-
-      // 2. Hapus `router.replace()` dari sini.
-      // Pengalihan akan ditangani secara otomatis oleh app/_layout.tsx
-      // saat ia melihat `isLoggedIn` berubah menjadi false.
+      // Pengalihan sekarang ditangani oleh _layout.tsx
     } catch (e) {
       console.error("Gagal menghapus data pengguna", e);
     }

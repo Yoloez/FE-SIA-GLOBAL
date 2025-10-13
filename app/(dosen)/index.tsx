@@ -125,7 +125,7 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <Link href="/profil" asChild>
+            <Link href="/chat" asChild>
               <TouchableOpacity style={styles.iconsSection} activeOpacity={0.7}>
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
                 <Ionicons name="notifications-outline" size={24} color="white" />

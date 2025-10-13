@@ -32,7 +32,7 @@ export default function CreateSubjectScreen() {
     try {
       // Panggil endpoint API untuk membuat mata kuliah baru
       const response = await axios.post(
-        `${API_BASE_URL}/manager/subjects-store`, // URL endpoint
+        `${API_BASE_URL}/manager/subjects`, // URL endpoint
         {
           // Body data yang dikirim
           name_subject: nameSubject,
@@ -61,7 +61,7 @@ export default function CreateSubjectScreen() {
         // Tampilkan error validasi dari Laravel jika ada
         if (error.response.status === 422) {
           const errors = error.response.data.errors;
-          //   errorMessage = Object.values(errors)[0][0]; // Ambil pesan error pertama
+          // errorMessage = Object.values(errors)[0][0]; // Ambil pesan error pertama
         } else if (error.response.status === 403) {
           errorMessage = "Anda tidak memiliki hak akses untuk melakukan aksi ini.";
         }

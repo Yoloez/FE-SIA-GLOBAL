@@ -1,56 +1,62 @@
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { Redirect, Stack, usePathname } from "expo-router";
-import { StatusBar } from "react-native";
+import { Slot, SplashScreen, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
-function RootLayoutNav() {
-  const { isLoggedIn } = useAuth();
-  const pathname = usePathname();
-  const colorScheme = useColorScheme();
+// Mencegah splash screen bawaan untuk hilang secara otomatis.
+SplashScreen.preventAutoHideAsync();
 
-  if (!isLoggedIn && pathname !== "/login" && pathname !== "/ForgotPassword") {
-    return <Redirect href="/(auth)/login" />;
+function RootLayoutNav() {
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Jangan lakukan apa-apa jika context masih memuat data sesi.
+    if (isLoading) {
+      return;
+    }
+
+    // Kondisi ini akan dipanggil SETELAH login berhasil atau saat refresh
+    if (isLoggedIn && user) {
+      console.log("User is logged in. Redirecting based on role:", user.role);
+      switch (user.role) {
+        case "student":
+          router.replace("/(tabs)/");
+          break;
+        case "dosen":
+          router.replace("/(dosen)/");
+          break;
+        case "admin":
+          router.replace("/(admin)/");
+          break;
+        case "manager":
+          router.replace("/(manager)/");
+          break;
+        default:
+          console.log("Peran tidak dikenali, mengarahkan ke default.");
+          router.replace("/(tabs)/");
+          break;
+      }
+    } else if (!isLoggedIn) {
+      // Kondisi ini akan dipanggil jika tidak ada sesi (saat app start atau setelah logout)
+      console.log("User is not logged in. Redirecting to login.");
+      router.replace("/(auth)/login");
+    }
+
+    // Sembunyikan splash screen setelah logika navigasi selesai.
+    SplashScreen.hideAsync();
+
+    // --- INI PERBAIKANNYA ---
+    // Hapus `router` dari dependency array untuk memutus infinite loop.
+    // Efek ini sekarang hanya akan berjalan jika status otentikasi pengguna berubah.
+  }, [isLoading, user, isLoggedIn]);
+
+  // Selama loading, kita tidak merender apa-apa (splash screen masih terlihat).
+  if (isLoading) {
+    return null;
   }
 
-  return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-
-        {/* === BARIS YANG DITAMBAHKAN === */}
-        <Stack.Screen
-          name="ForgotPassword" // Sesuaikan dengan nama file: ForgotPassword.tsx
-          options={{
-            presentation: "modal",
-            title: "Lupa Password",
-            headerTitleAlign: "center",
-
-            headerShown: true,
-            // sheetElevation: 100,
-            headerStyle: { backgroundColor: "#015023" },
-            headerTintColor: "#ffffff",
-
-            headerTitleStyle: { fontWeight: "medium", fontFamily: "Urbanist_600SemiBold" },
-          }}
-        />
-        {/* ============================== */}
-
-        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-        <Stack.Screen
-          name="Schedule"
-          options={{
-            title: "Jadwal Anda",
-            headerStyle: { backgroundColor: "#015023" },
-            headerTintColor: "#ffffff",
-            headerTitleStyle: { fontWeight: "bold" },
-          }}
-        />
-      </Stack>
-    </ThemeProvider>
-  );
+  // <Slot /> akan merender halaman yang benar setelah pengalihan selesai.
+  return <Slot />;
 }
 
 export default function RootLayout() {

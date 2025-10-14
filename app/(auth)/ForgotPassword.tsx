@@ -68,7 +68,6 @@ export default function ForgotPasswordScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* <-- 5. Render komponen CustomAlert di sini */}
         <CustomAlert visible={isAlertVisible} title={alertTitle} message={alertMessage} onClose={() => setAlertVisible(false)} buttons={alertButtons} />
       </SafeAreaView>
     </LinearGradient>

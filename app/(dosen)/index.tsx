@@ -2,18 +2,20 @@ import { Urbanist_400Regular } from "@expo-google-fonts/urbanist/400Regular";
 import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
 import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
-import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 const Ip = "192.168.0.159";
-const API_URL = `http://${Ip}:8000/api`;
+const API_URL = `http://${Ip}:8000/api/cek`;
 
+// <-- 2. Pindahkan data ke dalam sebuah array terstruktur
 const DUMMY_CONTENT_DATA = [
   {
     id: "1",
@@ -56,7 +58,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
   const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // <-- 4. Terapkan logika filtering setiap kali searchQuery berubah
   useEffect(() => {
@@ -72,40 +74,40 @@ export default function HomeScreen() {
     }
   }, [searchQuery, allContent]); // Efek ini berjalan jika searchQuery atau allContent berubah
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       setIsLoading(true); // Mulai loading
-  //       const response = await axios.get(API_URL);
-  //       const apiData = response.data; // Data dari Laravel: { message: "...", ... }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true); // Mulai loading
+        const response = await axios.get(API_URL);
+        const apiData = response.data; // Data dari Laravel: { message: "...", ... }
 
-  //       // Format data API agar sesuai dengan struktur ContentCard
-  //       const apiContentCard = {
-  //         id: "api-1",
-  //         label: "Info from Server",
-  //         title: apiData.title,
-  //         contents: [apiData.message], // Masukkan pesan dari API ke dalam array contents
-  //         route: null,
-  //       };
+        // Format data API agar sesuai dengan struktur ContentCard
+        const apiContentCard = {
+          id: "api-1",
+          label: "Info from Server",
+          title: apiData.title,
+          contents: [apiData.message], // Masukkan pesan dari API ke dalam array contents
+          route: null,
+        };
 
-  //       // Gabungkan data dari API dengan data dummy
-  //       const combinedData = [apiContentCard, ...DUMMY_CONTENT_DATA];
+        // Gabungkan data dari API dengan data dummy
+        const combinedData = [apiContentCard, ...DUMMY_CONTENT_DATA];
 
-  //       setAllContent(combinedData);
-  //       setFilteredContent(combinedData);
-  //     } catch (error) {
-  //       console.error("Gagal mengambil data dari server:", error);
-  //       Alert.alert("Koneksi Gagal", "Tidak dapat mengambil data dari server. Menampilkan data offline.");
-  //       // Jika gagal, tampilkan saja data dummy
-  //       setAllContent(DUMMY_CONTENT_DATA);
-  //       setFilteredContent(DUMMY_CONTENT_DATA);
-  //     } finally {
-  //       setIsLoading(false); // Hentikan loading, baik berhasil maupun gagal
-  //     }
-  //   };
+        setAllContent(combinedData);
+        setFilteredContent(combinedData);
+      } catch (error) {
+        console.error("Gagal mengambil data dari server:", error);
+        Alert.alert("Koneksi Gagal", "Tidak dapat mengambil data dari server. Menampilkan data offline.");
+        // Jika gagal, tampilkan saja data dummy
+        setAllContent(DUMMY_CONTENT_DATA);
+        setFilteredContent(DUMMY_CONTENT_DATA);
+      } finally {
+        setIsLoading(false); // Hentikan loading, baik berhasil maupun gagal
+      }
+    };
 
-  //   fetchData();
-  // }, []);
+    fetchData();
+  }, []);
 
   return (
     <>
@@ -116,10 +118,10 @@ export default function HomeScreen() {
           {/* Header Section - Fixed */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
-              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+              <Image source={require("../../assets/images/react-logo.png")} style={styles.avatar} />
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>Hanan Fijananto</Text>
-                <Text style={styles.userId}>24/123456/TRPL/56789</Text>
+                <Text style={styles.userName}>Dosen 1</Text>
+                <Text style={styles.userId}>8888</Text>
               </View>
             </View>
 
@@ -133,22 +135,6 @@ export default function HomeScreen() {
 
           {/* Main Content - Scrollable */}
           <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
-            <View style={styles.achievementContainer}>
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>Achievement</Text>
-                <Text style={styles.achievementValue}>38 SKS</Text>
-              </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPK</Text>
-                <Text style={styles.achievementValue}>3.89</Text>
-              </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPS</Text>
-                <Text style={styles.achievementValue}>3.90</Text>
-              </View>
-            </View>
             {/* Search Bar */}
             <View style={styles.searchContainer}>
               {/* <-- 5. Hubungkan TextInput ke state */}
@@ -195,7 +181,7 @@ const styles = StyleSheet.create({
   },
   safeContainer: {
     flex: 1,
-    marginBottom: 100, // Beri ruang di bawah untuk tab bar
+    marginBottom: 100,
   },
   header: {
     backgroundColor: "#015023",
@@ -260,38 +246,6 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingHorizontal: 20,
     paddingTop: 20,
-  },
-  achievementContainer: {
-    backgroundColor: "#F5EFD3",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#000",
-    flexDirection: "row",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  achievementCard: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  achievementLabel: {
-    fontFamily: "Urbanist_400Regular",
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#333",
-    marginBottom: 4,
-  },
-  achievementValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#015023",
   },
   searchContainer: {
     flexDirection: "row",

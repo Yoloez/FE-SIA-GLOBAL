@@ -6,7 +6,8 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, Touc
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
-const IP_ADDRESS = "192.168.0.159";
+const IP_ADDRESS = "192.168.0.159"; //ip rumah
+// const IP_ADDRESS = "10.33.65.27"; //dtedi ip
 const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
 
 // Tipe data untuk objek Subject

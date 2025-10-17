@@ -1,8 +1,13 @@
-// components/TabBarButton.tsx
-import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import React, { ReactNode } from "react";
+import { GestureResponderEvent, StyleSheet, TouchableOpacity, View } from "react-native";
 
-const TabBarButton = ({ children, onPress, bgColor }) => {
+interface TabBarButtonProps {
+  children: ReactNode; // elemen anak (ikon, teks, dsb)
+  onPress?: (event: GestureResponderEvent) => void; // event handler ketika ditekan
+  bgColor?: string; // warna background opsional
+}
+
+const TabBarButton: React.FC<TabBarButtonProps> = ({ children, onPress, bgColor = "#FFF" }) => {
   return (
     <TouchableOpacity onPress={onPress} style={styles.container} activeOpacity={0.9}>
       <View style={[styles.button, { backgroundColor: bgColor }]}>{children}</View>

@@ -104,7 +104,7 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ title: "Grup Kelas" }} />
+      <Stack.Screen options={{ title: "Chat" }} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={80}>
         {isLoading ? (
           <ActivityIndicator size="large" color="#015023" style={{ flex: 1 }} />

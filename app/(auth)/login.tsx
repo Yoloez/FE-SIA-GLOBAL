@@ -9,7 +9,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 
-const IP_ADDRESS = "192.168.0.159"; // Ganti dengan IP Address laptop Anda
+const IP_ADDRESS = "192.168.0.159"; //rumah ip
+// const IP_ADDRESS = "10.33.65.27"; //dtedi ip
+// Ganti dengan IP Address laptop Anda
 const API_URL = `http://${IP_ADDRESS}:8000/api/auth/login`;
 
 export default function LoginScreen() {

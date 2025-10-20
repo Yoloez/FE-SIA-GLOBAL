@@ -2,17 +2,17 @@ import { Urbanist_400Regular } from "@expo-google-fonts/urbanist/400Regular";
 import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
-import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
-import { ActivityIndicator, Alert, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
+import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
-const Ip = "192.168.0.159";
+const Ip = "192.168.0.159"; //ip rumah
+// const Ip = "10.33.65.27"; //dtedi ip
 const API_URL = `http://${Ip}:8000/api/cek`;
 
 // <-- 2. Pindahkan data ke dalam sebuah array terstruktur
@@ -58,7 +58,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
   const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // <-- 4. Terapkan logika filtering setiap kali searchQuery berubah
   useEffect(() => {
@@ -74,40 +74,44 @@ export default function HomeScreen() {
     }
   }, [searchQuery, allContent]); // Efek ini berjalan jika searchQuery atau allContent berubah
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true); // Mulai loading
-        const response = await axios.get(API_URL);
-        const apiData = response.data; // Data dari Laravel: { message: "...", ... }
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       setIsLoading(true); // Mulai loading
+  //       const response = await axios.get(API_URL);
+  //       const apiData = response.data; // Data dari Laravel: { message: "...", ... }
 
-        // Format data API agar sesuai dengan struktur ContentCard
-        const apiContentCard = {
-          id: "api-1",
-          label: "Info from Server",
-          title: apiData.title,
-          contents: [apiData.message], // Masukkan pesan dari API ke dalam array contents
-          route: null,
-        };
+  //       // Format data API agar sesuai dengan struktur ContentCard
+  //       const apiContentCard = {
+  //         id: "api-1",
+  //         label: "Info from Server",
+  //         title: apiData.title,
+  //         contents: [apiData.message], // Masukkan pesan dari API ke dalam array contents
+  //         route: null,
+  //       };
 
-        // Gabungkan data dari API dengan data dummy
-        const combinedData = [apiContentCard, ...DUMMY_CONTENT_DATA];
+  //       // Gabungkan data dari API dengan data dummy
+  //       const combinedData = [apiContentCard, ...DUMMY_CONTENT_DATA];
 
-        setAllContent(combinedData);
-        setFilteredContent(combinedData);
-      } catch (error) {
-        console.error("Gagal mengambil data dari server:", error);
-        Alert.alert("Koneksi Gagal", "Tidak dapat mengambil data dari server. Menampilkan data offline.");
-        // Jika gagal, tampilkan saja data dummy
-        setAllContent(DUMMY_CONTENT_DATA);
-        setFilteredContent(DUMMY_CONTENT_DATA);
-      } finally {
-        setIsLoading(false); // Hentikan loading, baik berhasil maupun gagal
-      }
-    };
+  //       setAllContent(combinedData);
+  //       setFilteredContent(combinedData);
+  //     } catch (error) {
+  //       console.error("Gagal mengambil data dari server:", error);
+  //       Alert.alert("Koneksi Gagal", "Tidak dapat mengambil data dari server. Menampilkan data offline.");
+  //       // Jika gagal, tampilkan saja data dummy
+  //       setAllContent(DUMMY_CONTENT_DATA);
+  //       setFilteredContent(DUMMY_CONTENT_DATA);
+  //     } finally {
+  //       setIsLoading(false); // Hentikan loading, baik berhasil maupun gagal
+  //     }
+  //   };
 
-    fetchData();
-  }, []);
+  //   fetchData();
+  // }, []);
+
+  const handleLogout = useCallback(() => {
+    logout();
+  }, [logout]);
 
   return (
     <>
@@ -147,6 +151,9 @@ export default function HomeScreen() {
               />
               <Ionicons name="search-outline" size={20} color="#666" />
             </View>
+            <TouchableOpacity onPress={handleLogout} style={{ alignSelf: "flex-end", marginBottom: 10 }}>
+              <Text style={{ color: "white", fontSize: 16 }}>Logout</Text>
+            </TouchableOpacity>
             {/* Content Sections */}
             {/* <-- 6. Render konten dari state hasil filter */}
             {isLoading ? (

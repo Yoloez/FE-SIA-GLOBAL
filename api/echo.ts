@@ -4,17 +4,14 @@ import Echo from "laravel-echo";
 import Pusher from "pusher-js/react-native";
 
 const IP_ADDRESS = "192.168.0.159"; // IP Laptop Anda
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
-// URL untuk otorisasi broadcasting biasanya tidak di bawah /api
 const BROADCASTING_URL = `http://${IP_ADDRESS}:8000`;
 
 (window as any).Pusher = Pusher;
+// Pusher.logToConsole = true;
 
-// --- GANTI KUNCI INI DENGAN YANG ADA DI FILE .env LARAVEL ANDA ---
-const REVERB_APP_KEY = "qi2l7jof7hedxkaxwkiy";
-// -----------------------------------------------------------
+const REVERB_APP_KEY = "qi2l7jof7hedxkaxwkiy"; // Ganti dengan key dari .env Laravel Anda
 
-const reverbPortString = process.env.EXPO_PUBLIC_REVERB_PORT || "8080";
+const reverbPortString = process.env.EXPO_PUBLIC_REVERB_PORT || "9090";
 const reverbPortNumber = parseInt(reverbPortString, 10);
 
 const echo = new Echo({
@@ -26,39 +23,43 @@ const echo = new Echo({
     forceTLS: false,
     enabledTransports: ["ws", "wss"],
     cluster: "mt1",
-  }),
-  authorizer: (channel: any) => {
-    return {
-      authorize: async (socketId: string, callback: (isAuth: boolean, authInfo: any) => void) => {
-        try {
-          const token = await AsyncStorage.getItem("userToken");
-          if (!token) {
-            throw new Error("Token not found");
-          }
-          // Panggil endpoint /broadcasting/auth
-          const response = await axios.post(
-            `${BROADCASTING_URL}/broadcasting/auth`,
-            {
-              socket_id: socketId,
-              channel_name: channel.name,
-            },
-            {
-              headers: { Authorization: `Bearer ${token}` },
+
+    authEndpoint: `${BROADCASTING_URL}/broadcasting/auth`,
+
+    // --- INI PERBAIKANNYA ---
+    // 'authorizer' harus fungsi sinkron yang mengembalikan objek.
+    // 'async' dipindahkan ke dalam method 'authorize'.
+    authorizer: (channel, options) => {
+      return {
+        authorize: async (socketId, callback) => {
+          try {
+            const token = await AsyncStorage.getItem("userToken");
+            if (!token) {
+              throw new Error("Token otentikasi tidak ditemukan.");
             }
-          );
-          callback(false, response.data);
-        } catch (error) {
-          if (axios.isAxiosError(error) && error.response) {
-            console.error("Authorization failed:", error.response?.data || error.message);
-            callback(true, error);
+            const response = await axios.post(
+              options.authEndpoint,
+              {
+                socket_id: socketId,
+                channel_name: channel.name,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            callback(null, response.data);
+          } catch (error) {
+            if (axios.isAxiosError(error)) {
+              console.error("PUSHER AUTH FAILED:", error.response?.data || error.message);
+              callback(error as Error, null);
+            }
           }
-        }
-      },
-    };
-  },
-  // --- INI PERBAIKANNYA ---
-  // Kita menambahkan 'as any' untuk memberitahu TypeScript agar tidak khawatir
-  // dengan tipe data yang kompleks dari library ini.
-} as any);
+        },
+      };
+    },
+  }),
+});
 
 export default echo;

@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Image, SectionList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 
 // --- KONFIGURASI API ---
@@ -14,27 +14,40 @@ const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
 interface User {
   id: number;
   name: string;
-  username: string; // Diasumsikan username ada untuk ditampilkan
-  email: string; // Digunakan untuk avatar dummy
+  username: string;
+  email: string;
 }
 
 export default function ChatListScreen() {
-  const { token, user } = useAuth();
+  // Ambil SEMUA state dari AuthContext, termasuk isLoading
+  const { token, user, isLoading: isAuthLoading } = useAuth();
   const [sections, setSections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fungsi untuk mengambil daftar kontak dari API
   const fetchContacts = useCallback(async () => {
-    if (!token) return;
+    // --- LANGKAH INVESTIGASI: KITA PASANG "ALAT PEREKAM" DI SINI ---
+    console.log("========================================");
+    console.log("[DEBUG] Memulai fetchContacts...");
+    console.log("[DEBUG] Status AuthContext isLoading:", isAuthLoading);
+    console.log("[DEBUG] Nilai token saat ini:", token ? `DITEMUKAN (panjang: ${token.length})` : "NULL atau UNDEFINED");
+    console.log("========================================");
+    // -----------------------------------------------------------------
+
+    // Jangan lakukan apa-apa jika AuthContext masih loading atau jika token belum ada
+    if (isAuthLoading || !token) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/chat/contacts`, {
+      const response = await api.get(`${API_BASE_URL}/chat/contacts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const { lecturers, classmates } = response.data.data;
 
-      // Format data agar sesuai dengan yang dibutuhkan SectionList
       const newSections = [];
       if (lecturers && lecturers.length > 0) {
         newSections.push({ title: "Lecturer", data: lecturers });
@@ -44,12 +57,12 @@ export default function ChatListScreen() {
       }
       setSections(newSections);
     } catch (error) {
-      console.error("Gagal memuat kontak:", error.response?.data);
-      alert("Gagal memuat daftar kontak.");
+      console.error("Gagal memuat kontak (Error Detail):", error.response?.data || error.message);
+      alert("Gagal memuat daftar kontak. Cek terminal untuk detail.");
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, isAuthLoading]); // <-- Tambahkan isAuthLoading sebagai dependensi
 
   useFocusEffect(
     useCallback(() => {
@@ -60,7 +73,7 @@ export default function ChatListScreen() {
   // Fungsi untuk memulai percakapan privat
   const handleStartPrivateChat = async (recipientId: number) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/chat/conversations/private`, { recipient_id: recipientId }, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await api.post(`${API_BASE_URL}/chat/conversations/private`, { recipient_id: recipientId }, { headers: { Authorization: `Bearer ${token}` } });
       const conversation = response.data.data;
       router.push(`/chat/${conversation.id_conversation}`);
     } catch (error) {
@@ -68,7 +81,7 @@ export default function ChatListScreen() {
       console.error("================ GAGAL MEMULAI CHAT PRIVAT ================");
       let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
 
-      if (axios.isAxiosError(error)) {
+      if (api.isAxiosError(error)) {
         if (error.response) {
           // Server merespons dengan status error (4xx atau 5xx)
           console.error("Status Kode:", error.response.status);

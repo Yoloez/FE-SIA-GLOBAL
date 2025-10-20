@@ -82,6 +82,12 @@ export default function TabLayout() {
           href: null, // Ini adalah kuncinya!
         }}
       />
+      <Tabs.Screen
+        name="EditProfil"
+        options={{
+          href: null, // Ini adalah kuncinya!
+        }}
+      />
     </Tabs>
   );
 }

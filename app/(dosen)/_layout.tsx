@@ -64,7 +64,7 @@ export default function TabLayout() {
 
       {/* Tab Profil (Kanan) */}
       <Tabs.Screen
-        name="ProfilMahasiswa"
+        name="ProfilDosen"
         options={{
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>

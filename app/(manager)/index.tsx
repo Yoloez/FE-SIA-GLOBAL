@@ -52,10 +52,6 @@ export default function ManagerDashboardScreen() {
 
       setClasses(response.data.data);
     } catch (error) {
-      // --- INI BAGIAN PERBAIKANNYA: Penanganan Error yang Lebih Detail ---
-
-      console.error("================ GAGAL MEMUAT KELAS ================");
-
       let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
 
       if (axios.isAxiosError(error)) {

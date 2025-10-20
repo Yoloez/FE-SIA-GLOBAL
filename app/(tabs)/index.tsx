@@ -51,8 +51,6 @@ export default function HomeScreen() {
     Urbanist_400Regular,
     Urbanist_600SemiBold,
   });
-
-  // <-- 3. Buat state untuk input pencarian dan data konten
   const [searchQuery, setSearchQuery] = useState("");
   const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
   const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
@@ -70,7 +68,9 @@ export default function HomeScreen() {
       });
       setFilteredContent(filteredData);
     }
-  }, [searchQuery, allContent]); // Efek ini berjalan jika searchQuery atau allContent berubah
+  }, [searchQuery, allContent]);
+
+  // Efek ini berjalan jika searchQuery atau allContent berubah
 
   // useEffect(() => {
   //   const fetchData = async () => {
@@ -106,6 +106,11 @@ export default function HomeScreen() {
 
   //   fetchData();
   // }, []);
+  // const handleLogout = useCallback(() => {
+  //   Animated.sequence([Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }), Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })]).start(() => {
+  //     logout();
+  //   });
+  // }, [logout, scaleAnim]);
 
   return (
     <>
@@ -148,6 +153,9 @@ export default function HomeScreen() {
                 <Text style={styles.achievementLabel}>IPS</Text>
                 <Text style={styles.achievementValue}>3.90</Text>
               </View>
+              {/* <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </TouchableOpacity> */}
             </View>
             {/* Search Bar */}
             <View style={styles.searchContainer}>

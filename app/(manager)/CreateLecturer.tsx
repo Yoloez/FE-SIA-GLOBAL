@@ -14,7 +14,7 @@ export default function CreateLecturerScreen() {
   const router = useRouter();
 
   // State untuk setiap input form
-  const [name, setName] = useState("");
+  const [name, setName] = useState(""); 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

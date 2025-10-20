@@ -1,15 +1,11 @@
+import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
-const IP_ADDRESS = "192.168.0.159";
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
-
-// Interface untuk mendefinisikan bentuk objek User
 interface User {
   id: number;
   name: string;
@@ -31,9 +27,7 @@ export default function AssignMemberScreen() {
       if (!token || !role) return;
       setIsLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/manager/users-by-role?role=${role}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.get(`/manager/users-by-role?role=${role}`);
         setUsers(response.data.data);
       } catch (error) {
         console.error("Fetch Users Error:", error);
@@ -43,14 +37,14 @@ export default function AssignMemberScreen() {
       }
     };
     fetchUsers();
-  }, [token, role]);
+  }, [role]);
 
   // Fungsi untuk menangani saat seorang pengguna dipilih untuk ditambahkan
   const handleAssign = async (userId: number) => {
     setIsAssigning(userId);
     const endpoint = role === "dosen" ? "lecturers" : "students";
     try {
-      await axios.post(`${API_BASE_URL}/manager/classes/${classId}/${endpoint}`, { user_si_id: userId }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post(`/manager/classes/${classId}/${endpoint}`, { user_si_id: userId }, { headers: { Authorization: `Bearer ${token}` } });
       Alert.alert("Sukses", `${role === "dosen" ? "Dosen" : "Mahasiswa"} berhasil ditambahkan.`);
       router.back(); // Kembali ke halaman detail setelah berhasil
     } catch (error) {

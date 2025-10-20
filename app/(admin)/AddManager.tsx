@@ -3,10 +3,8 @@ import { Stack, router } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-
-const IP_ADDRESS = "192.168.0.159";
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
 
 export default function AddManagerScreen() {
   const { token } = useAuth();
@@ -30,22 +28,13 @@ export default function AddManagerScreen() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/admin/managers`,
-        {
-          name: name,
-          username: username,
-          email: email,
-          password: password,
-          password_confirmation: passwordConfirmation,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        }
-      );
+      const response = await api.post("/admin/managers", {
+        name: name,
+        username: username,
+        email: email,
+        password: password,
+        password_confirmation: passwordConfirmation,
+      });
       Alert.alert("Sukses", `Manajer "${response.data.data.name}" berhasil ditambahkan.`, [
         {
           text: "OK",
@@ -103,7 +92,7 @@ export default function AddManagerScreen() {
           <Text style={styles.label}>Name:</Text>
           <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={name} onChangeText={setName} />
 
-          <Text style={styles.label}>NIM:</Text>
+          <Text style={styles.label}>Username:</Text>
           <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={username} onChangeText={setUsername} autoCapitalize="none" />
 
           <Text style={styles.label}>Email:</Text>

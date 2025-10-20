@@ -9,10 +9,9 @@ import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
+import api from "@/api/axios";
 
 const { width } = Dimensions.get("window");
-const Ip = "192.168.0.159";
-const API_URL = `http://${Ip}:8000/api`;
 
 const DUMMY_CONTENT_DATA = [
   {

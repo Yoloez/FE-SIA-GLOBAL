@@ -1,3 +1,4 @@
+import api from "@/api/axios";
 import axios from "axios";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
@@ -5,10 +6,6 @@ import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, 
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
-const IP_ADDRESS = "192.168.0.159";
-// const IP_ADDRESS = "10.33.65.27";
-// Ganti dengan IP Anda
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
 
 // Interface untuk mendefinisikan bentuk data profil yang kita harapkan dari API
 interface LecturerProfileData {
@@ -31,9 +28,7 @@ const ProfilDosen = () => {
     setIsLoading(true);
     try {
       // --- PERBAIKAN: Panggil endpoint yang benar ---
-      const response = await axios.get(`${API_BASE_URL}/lecturer/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/lecturer/profile");
       setProfileData(response.data.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -43,7 +38,7 @@ const ProfilDosen = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {

@@ -2,13 +2,10 @@ import axios from "axios";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
-const IP_ADDRESS = "192.168.0.159";
-// const IP_ADDRESS = "10.33.65.27";
-
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
 
 interface ProfileData {
   name: string;
@@ -20,7 +17,7 @@ interface ProfileData {
 }
 
 const Profil = () => {
-  const { logout, user, token } = useAuth();
+  const { logout, user } = useAuth();
 
   // --- State untuk menyimpan data profil dan status loading ---
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -29,12 +26,9 @@ const Profil = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const fetchProfile = useCallback(async () => {
-    if (!token) return;
     setIsLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/student/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/student/profile");
       setProfileData(response.data.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -44,7 +38,7 @@ const Profil = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   // Gunakan useFocusEffect agar data di-refresh setiap kali kembali ke halaman ini
   useFocusEffect(

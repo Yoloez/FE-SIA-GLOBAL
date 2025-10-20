@@ -1,13 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-
-const IP_ADDRESS = "192.168.0.159";
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
 
 interface StaffProfile {
   employee_id_number: string;
@@ -21,9 +19,10 @@ interface Manager {
 }
 
 export default function AdminDashboardScreen() {
-  const { logout, token } = useAuth();
+  const { logout } = useAuth();
   const [managers, setManagers] = useState<Manager[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogout = useCallback(() => {
     Alert.alert("Konfirmasi Logout", "Apakah Anda yakin ingin keluar?", [
@@ -42,18 +41,15 @@ export default function AdminDashboardScreen() {
   const fetchManagers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/managers`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await api.get("/admin/managers");
       setManagers(response.data.data);
     } catch (error) {
       console.error("Gagal mengambil data manajer:", error);
+      Alert.alert("Error", "Gagal mengambil data manajer");
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,47 +57,69 @@ export default function AdminDashboardScreen() {
     }, [fetchManagers])
   );
 
-  const handleDeleteManager = (managerId: number, managerName: string) => {
-    Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus manajer "${managerName}"? Tindakan ini tidak dapat dibatalkan.`, [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await axios.delete(`${API_BASE_URL}/admin/managers/${managerId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            Alert.alert("Sukses", "Manajer berhasil dihapus.");
-            fetchManagers();
-          } catch (error) {
-            if (axios.isAxiosError(error)) console.error("Gagal menghapus manajer:", error.response?.data);
-            Alert.alert("Gagal", "Gagal menghapus manajer.");
-          }
+  const handleDeleteManager = useCallback(
+    (managerId: number, managerName: string) => {
+      Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus manajer "${managerName}"? Tindakan ini tidak dapat dibatalkan.`, [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/admin/managers/${managerId}`);
+              Alert.alert("Sukses", "Manajer berhasil dihapus.");
+              fetchManagers();
+            } catch (error) {
+              if (axios.isAxiosError(error)) console.error("Gagal menghapus manajer:", error.response?.data);
+              Alert.alert("Gagal", "Gagal menghapus manajer.");
+            }
+          },
         },
-      },
-    ]);
-  };
+      ]);
+    },
+    [fetchManagers]
+  );
 
-  const renderManagerItem = ({ item }: { item: Manager }) => (
-    <View style={styles.managerCard}>
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
-        <View>
-          <Text style={styles.managerName}>{item.name}</Text>
-          <Text style={styles.managerEmail}>{item.email}</Text>
-          <Text style={styles.managerEmail}>{item.staff_profile?.employee_id_number || "NIP: Belum diatur"}</Text>
+  // Filter managers based on search query
+  const filteredManagers = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return managers;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return managers.filter((manager) => manager.name.toLowerCase().includes(query) || manager.email.toLowerCase().includes(query) || manager.staff_profile?.employee_id_number?.toLowerCase().includes(query));
+  }, [managers, searchQuery]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+  }, []);
+
+  const renderManagerItem = useCallback(
+    ({ item }: { item: Manager }) => (
+      <View style={styles.managerCard}>
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+          <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.managerName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.managerEmail} numberOfLines={1}>
+              {item.email}
+            </Text>
+            <Text style={styles.managerEmail}>{item.staff_profile?.employee_id_number || "NIP: Belum diatur"}</Text>
+          </View>
+        </View>
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="create-outline" size={22} color="#015023" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteManager(item.id, item.name)}>
+            <Ionicons name="trash-outline" size={22} color="#B00020" />
+          </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="create-outline" size={22} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteManager(item.id, item.name)}>
-          <Ionicons name="trash-outline" size={22} />
-        </TouchableOpacity>
-      </View>
-    </View>
+    ),
+    [handleDeleteManager]
   );
 
   return (
@@ -121,20 +139,55 @@ export default function AdminDashboardScreen() {
       />
 
       <View style={styles.container}>
-        {/* Bagian Atas: Tombol Aksi */}
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput style={styles.searchInput} placeholder="Cari manajer (nama, email, NIP)..." placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" autoCorrect={false} />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
 
-        {/* Bagian Bawah: Daftar Manajer */}
+        {/* Daftar Manajer */}
         <View style={styles.listContainer}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottomWidth: 1, borderBottomColor: "white" }}>
-            <Text style={styles.listTitle}>Daftar Manajer</Text>
-            <TouchableOpacity onPress={() => router.push("/(admin)/AddManager")}>
+          <View style={styles.listHeader}>
+            <View>
+              <Text style={styles.listTitle}>Daftar Manajer</Text>
+              {searchQuery.length > 0 && <Text style={styles.resultCount}>{filteredManagers.length} hasil ditemukan</Text>}
+            </View>
+            <TouchableOpacity onPress={() => router.push("/(admin)/AddManager")} style={styles.addButton}>
               <Ionicons name="add-circle-outline" size={28} color="white" />
             </TouchableOpacity>
           </View>
+
           {isLoading ? (
-            <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 20 }} />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#ffffff" />
+              <Text style={styles.loadingText}>Memuat data...</Text>
+            </View>
           ) : (
-            <FlatList data={managers} renderItem={renderManagerItem} keyExtractor={(item) => item.id.toString()} ListEmptyComponent={<Text style={styles.emptyText}>Belum ada manajer yang ditambahkan.</Text>} />
+            <FlatList
+              data={filteredManagers}
+              renderItem={renderManagerItem}
+              keyExtractor={(item) => `manager-${item.id}`}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name={searchQuery ? "search-outline" : "people-outline"} size={64} color="#ccc" />
+                  <Text style={styles.emptyText}>{searchQuery ? `Tidak ada manajer yang cocok dengan "${searchQuery}"` : "Belum ada manajer yang ditambahkan."}</Text>
+                  {searchQuery && (
+                    <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
+                      <Text style={styles.clearSearchText}>Hapus Pencarian</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              }
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            />
           )}
         </View>
       </View>
@@ -152,36 +205,57 @@ const styles = StyleSheet.create({
     backgroundColor: "#015023",
     padding: 20,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
+  searchContainer: {
     marginBottom: 20,
   },
-  button: {
-    backgroundColor: "#015023",
-    paddingVertical: 15,
-    borderRadius: 8,
-    width: "100%",
+  searchInputWrapper: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    elevation: 3,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#333",
+  },
+  clearButton: {
+    padding: 5,
   },
   listContainer: {
     flex: 1,
-    width: "100%",
+  },
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.3)",
   },
   listTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#ffffff",
-    marginBottom: 15,
+  },
+  resultCount: {
+    fontSize: 14,
+    color: "#FFD43B",
+    marginTop: 4,
+  },
+  addButton: {
+    padding: 5,
   },
   managerCard: {
     justifyContent: "space-between",
@@ -189,50 +263,76 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F5EFD3",
     borderRadius: 16,
+    borderColor: "#333",
+    borderWidth: 2,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   managerName: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+    marginBottom: 4,
   },
   managerEmail: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
-  },
-  emptyText: {
-    textAlign: "center",
-    marginTop: 20,
-    color: "#ffffff",
-    fontSize: 16,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 19,
-    fontWeight: "300",
   },
   actions: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
   },
   actionButton: {
     width: 36,
     height: 36,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 18,
   },
   avatar: {
-    width: 64,
-    height: 64,
+    width: 60,
+    height: 60,
     borderRadius: 8,
-    marginRight: 16,
+    marginRight: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    color: "#fff",
+    fontSize: 14,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 16,
+    color: "#ffffff",
+    fontSize: 16,
+    paddingHorizontal: 20,
+  },
+  clearSearchButton: {
+    marginTop: 20,
+    backgroundColor: "#FFD43B",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  clearSearchText: {
+    color: "#015023",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

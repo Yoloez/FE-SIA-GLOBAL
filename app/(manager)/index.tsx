@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -53,6 +53,7 @@ export default function ManagerDashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
   const [slideAnim] = useState(new Animated.Value(-width * 0.75));
+  const [search, setSearch] = useState("");
 
   const fetchClasses = useCallback(async () => {
     if (!token) {
@@ -133,6 +134,12 @@ export default function ManagerDashboardScreen() {
     ]);
   }, [logout]);
 
+  const filteredClasses = useMemo(() => {
+    if (!search.trim()) return classes;
+    const q = search.toLowerCase();
+    return classes.filter((c) => c.subject.name_subject.toLowerCase().includes(q) || c.code_class.toLowerCase().includes(q) || c.academic_period.name.toLowerCase().includes(q));
+  }, [classes, search]);
+
   const handleDeleteClass = useCallback(
     (classId: number, className: string) => {
       Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus kelas "${className}"? Tindakan ini tidak dapat dibatalkan.`, [
@@ -191,11 +198,14 @@ export default function ManagerDashboardScreen() {
               <Text style={styles.badgeText}>Kelas</Text>
             </View>
             <TouchableOpacity onPress={() => handleDeleteClass(item.id_class, `${item.subject.name_subject} - Kelas ${item.code_class}`)} style={styles.deleteIconNew} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="trash-bin-outline" size={20} color="#666" />
+              <Ionicons name="trash-bin-outline" size={20} color="red" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.cardInfo}>
+            <Text style={{ fontSize: 15, fontWeight: "medium" }} numberOfLines={2}>
+              Jumlah Mahasiswa: {item.member_class}
+            </Text>
             <Text style={styles.cardTitleNew} numberOfLines={2}>
               {item.subject.name_subject}
             </Text>
@@ -278,6 +288,12 @@ export default function ManagerDashboardScreen() {
 
       <View style={styles.container}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+          {!isLoading && (
+            <View style={styles.searchWrapper}>
+              <TextInput style={styles.searchInput} placeholder="Cari mata kuliah..." placeholderTextColor="#aaa" value={search} onChangeText={setSearch} />
+              <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
+            </View>
+          )}
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#fff" />
@@ -285,7 +301,7 @@ export default function ManagerDashboardScreen() {
             </View>
           ) : (
             <FlatList
-              data={classes}
+              data={filteredClasses}
               renderItem={renderItem}
               keyExtractor={(item) => `class-${item.id_class}`}
               ListEmptyComponent={
@@ -476,7 +492,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   deleteIconNew: {
-    backgroundColor: "rgba(255, 255, 255, 0.6)",
+    backgroundColor: "white",
     padding: 8,
     borderRadius: 20,
   },
@@ -522,5 +538,23 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: "500",
+  },
+  searchWrapper: {
+    marginHorizontal: 0,
+    marginBottom: 12,
+    position: "relative",
+  },
+  searchInput: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 40,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#333",
+  },
+  searchIcon: {
+    position: "absolute",
+    left: 12,
+    top: 11,
   },
 });

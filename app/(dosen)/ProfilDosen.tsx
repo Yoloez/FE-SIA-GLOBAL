@@ -13,21 +13,22 @@ interface LecturerProfileData {
   email: string;
   employee_id_number: string | null;
   position: string;
+  profile_image_url: string;
 }
 
 const ProfilDosen = () => {
   const { logout, user, token } = useAuth();
 
-  const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
+  const [profileData, setProfileData] = useState<LecturerProfileData |   null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;  
 
   // --- Fungsi untuk mengambil data profil dari API ---
   const fetchProfile = useCallback(async () => {
     if (!token) return;
     setIsLoading(true);
     try {
-      // --- PERBAIKAN: Panggil endpoint yang benar ---
+      // --- PERBAIKAN: Panggil endpoint yang benar --- 
       const response = await api.get("/lecturer/profile");
       setProfileData(response.data.data);
     } catch (error) {
@@ -69,7 +70,7 @@ const ProfilDosen = () => {
           <Text style={styles.profileTitle}>Profile</Text>
 
           <View style={styles.avatarContainer}>
-            <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+            <Image source={{ uri: profileData.profile_image_url }} style={styles.avatar} />
           </View>
 
           {/* --- DATA SEKARANG DINAMIS --- */}

@@ -2,8 +2,8 @@ import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
@@ -36,6 +36,7 @@ export default function ClassDetailScreen() {
   const { token } = useAuth();
   const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchClassDetails = useCallback(async () => {
     if (!token || !classId) return;
@@ -56,6 +57,25 @@ export default function ClassDetailScreen() {
       fetchClassDetails();
     }, [fetchClassDetails])
   );
+
+  // Filter lecturers dan students berdasarkan search query
+  const filteredData = useMemo(() => {
+    if (!classDetails) return { lecturers: [], students: [] };
+
+    const query = searchQuery.toLowerCase().trim();
+
+    if (!query) {
+      return {
+        lecturers: classDetails.lecturers,
+        students: classDetails.students,
+      };
+    }
+
+    return {
+      lecturers: classDetails.lecturers.filter((lecturer) => lecturer.name.toLowerCase().includes(query) || lecturer.email.toLowerCase().includes(query)),
+      students: classDetails.students.filter((student) => student.name.toLowerCase().includes(query) || student.email.toLowerCase().includes(query)),
+    };
+  }, [classDetails, searchQuery]);
 
   const handleRemoveMember = (memberId: number, memberName: string, role: "dosen" | "student") => {
     const endpoint = role === "dosen" ? "lecturers" : "students";
@@ -121,12 +141,13 @@ export default function ClassDetailScreen() {
   const sections = [
     { type: "header" },
     { type: "stats" },
+    { type: "search" },
     { type: "lecturers-header" },
-    ...classDetails.lecturers.map((lecturer) => ({ type: "lecturer", data: lecturer })),
-    { type: "lecturers-empty", show: classDetails.lecturers.length === 0 },
+    ...filteredData.lecturers.map((lecturer) => ({ type: "lecturer", data: lecturer })),
+    { type: "lecturers-empty", show: filteredData.lecturers.length === 0 },
     { type: "students-header" },
-    ...classDetails.students.map((student) => ({ type: "student", data: student })),
-    { type: "students-empty", show: classDetails.students.length === 0 },
+    ...filteredData.students.map((student) => ({ type: "student", data: student })),
+    { type: "students-empty", show: filteredData.students.length === 0 },
   ];
 
   const renderItem = ({ item }: any) => {
@@ -170,6 +191,19 @@ export default function ClassDetailScreen() {
           </View>
         );
 
+      case "search":
+        return (
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput style={styles.searchInput} placeholder="Cari dosen atau mahasiswa..." placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+
       case "lecturers-header":
         return (
           <View style={styles.sectionHeader}>
@@ -190,7 +224,7 @@ export default function ClassDetailScreen() {
         return item.show ? (
           <View style={styles.emptyState}>
             <Ionicons name="briefcase-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>Belum ada dosen yang ditambahkan</Text>
+            <Text style={styles.emptyText}>{searchQuery ? "Tidak ada dosen yang sesuai pencarian" : "Belum ada dosen yang ditambahkan"}</Text>
           </View>
         ) : null;
 
@@ -198,7 +232,7 @@ export default function ClassDetailScreen() {
         return (
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <Ionicons name="people-outline" size={24} color="#015023" />
+              <Ionicons name="people-outline" size={24} color="white" />
               <Text style={styles.sectionTitle}>Daftar Mahasiswa</Text>
             </View>
             <TouchableOpacity style={styles.addButton} onPress={() => router.push(`/(manager)/AssignMember?classId=${classId}&role=student`)} activeOpacity={0.7}>
@@ -214,7 +248,7 @@ export default function ClassDetailScreen() {
         return item.show ? (
           <View style={styles.emptyState}>
             <Ionicons name="people-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>Belum ada mahasiswa yang ditambahkan</Text>
+            <Text style={styles.emptyText}>{searchQuery ? "Tidak ada mahasiswa yang sesuai pencarian" : "Belum ada mahasiswa yang ditambahkan"}</Text>
           </View>
         ) : null;
 
@@ -304,6 +338,33 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 15,
     color: "#666",
+    marginLeft: 8,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5EFD3",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#333",
+    padding: 0,
+  },
+  clearButton: {
+    padding: 4,
     marginLeft: 8,
   },
   statsContainer: {

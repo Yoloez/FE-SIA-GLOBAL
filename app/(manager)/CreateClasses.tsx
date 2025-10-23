@@ -1,4 +1,5 @@
 import api from "@/api/axios";
+import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -73,8 +74,26 @@ export default function CreateClassScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ title: "Buat Kelas Baru", presentation: "modal", headerTitleAlign: "center" }} />
+      <Stack.Screen options={{ headerShown: false }} />
+      
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Custom Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Buat Kelas Baru</Text>
+        </View>
+
+        {/* Add Icon Button */}
+        <View style={styles.addIconContainer}>
+          <View style={styles.addIconCircle}>
+            <Ionicons name="add" size={32} color="#ffffff" />
+          </View>
+          <Text style={styles.addText}>Tambah Foto</Text>
+        </View>
+
+        {/* Form  */}
         <Text style={styles.label}>Pilih Periode Akademik *</Text>
         <View style={styles.pickerContainer}>
           <Picker selectedValue={selectedPeriod} onValueChange={(itemValue) => setSelectedPeriod(itemValue)} style={styles.picker}>
@@ -106,7 +125,7 @@ export default function CreateClassScreen() {
 
         <View style={styles.buttonContainer}>
           {isLoading ? (
-            <ActivityIndicator size="large" color="#015023" />
+            <ActivityIndicator size="large" color="#DABC4E" />
           ) : (
             <TouchableOpacity style={styles.button} onPress={handleCreateClass}>
               <Text style={styles.buttonText}>Buat Kelas</Text>
@@ -119,9 +138,54 @@ export default function CreateClassScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff" },
-  container: { padding: 20 },
-  label: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 8 },
+  safeArea: { flex: 1, backgroundColor: "#015023" },
+  container: { paddingBottom: 40 },
+  
+  // Style untuk header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingTop: 10,
+    
+  },
+
+  
+  backButton: {
+    marginRight: 15,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  
+  // Style untuk icon Add 
+  addIconContainer: {
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  addIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  addText: {
+    fontSize: 16,
+    color: "#ffffff",
+    fontWeight: "500",
+  },
+  
+  // Style form 
+  label: { fontSize: 16, fontWeight: "600", color: "#ffffff", marginBottom: 8, paddingHorizontal: 20 },
   input: {
     height: 50,
     borderWidth: 1,
@@ -129,6 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 20,
+    marginHorizontal: 20,
     fontSize: 16,
     backgroundColor: "#f9f9f9",
   },
@@ -137,6 +202,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     marginBottom: 20,
+    marginHorizontal: 20,
     backgroundColor: "#f9f9f9",
     justifyContent: "center",
   },
@@ -145,15 +211,16 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 20,
+    paddingHorizontal: 20,
   },
   button: {
-    backgroundColor: "#015023",
+    backgroundColor: "#DABC4E",
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: "center",
   },
   buttonText: {
-    color: "#ffffff",
+    color: "#015023",
     fontSize: 18,
     fontWeight: "bold",
   },

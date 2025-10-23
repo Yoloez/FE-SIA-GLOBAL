@@ -6,20 +6,20 @@ import { Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, Touchable
 interface Contact {
   id: string;
   name: string;
-  phone: string;
+  nim: string;
   highlight: boolean;
 }
 
 export default function ManagerScreen() {
   const [contacts, setContacts] = useState<Contact[]>([
-    { id: '1', name: 'Antonio', phone: '12345678910', highlight: false },
-    { id: '2', name: 'Georgino', phone: '12345678910', highlight: true },
-    { id: '3', name: 'Antonio', phone: '12345678910', highlight: false },
-    { id: '4', name: 'Antonio', phone: '12345678910', highlight: false },
-    { id: '5', name: 'Bambang', phone: '12345678910', highlight: false },
-    { id: '6', name: 'Citra', phone: '12345678910', highlight: false },
-    { id: '7', name: 'Doni', phone: '12345678910', highlight: false },
-    { id: '8', name: 'Eka', phone: '12345678910', highlight: false },
+    { id: '1', name: 'Antonio', nim: '12345678910', highlight: false },
+    { id: '2', name: 'Georgino', nim: '12345678910', highlight: true },
+    { id: '3', name: 'Antonio', nim: '12345678910', highlight: false },
+    { id: '4', name: 'Antonio', nim: '12345678910', highlight: false },
+    { id: '5', name: 'Bambang', nim: '12345678910', highlight: false },
+    { id: '6', name: 'Citra', nim: '12345678910', highlight: false },
+    { id: '7', name: 'Doni', nim: '12345678910', highlight: false },
+    { id: '8', name: 'Eka', nim: '12345678910', highlight: false },
   ]);
 
  
@@ -67,10 +67,10 @@ export default function ManagerScreen() {
                 {contact.name}
               </Text>
               <Text style={[
-                styles.contactPhone,
-                contact.highlight && styles.contactPhoneHighlight,
+                styles.contactnim,
+                contact.highlight && styles.contactnimHighlight,
               ]}>
-                {contact.phone}
+                {contact.nim}
               </Text>
             </View>
 
@@ -166,11 +166,11 @@ const styles = StyleSheet.create({
   contactNameHighlight: {
     color: '#ffffff',
   },
-  contactPhone: {
+  contactnim: {
     color: '#666',
     fontSize: 12,
   },
-  contactPhoneHighlight: {
+  contactnimHighlight: {
     color: '#fff9e6',
   },
   actions: {
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   iconImage: {
   width: 22,
   height: 22,
-  tintColor: '#000', // warna default (bisa dihapus kalau icon kamu sudah berwarna)
+  tintColor: '#000', 
 },
 
 iconImageHighlight: {

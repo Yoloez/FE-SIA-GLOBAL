@@ -3,11 +3,8 @@ import { Stack, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../../context/AuthContext"; // Sesuaikan path jika perlu
-
-// Definisikan IP dan URL API Anda
-const IP_ADDRESS = "192.168.0.159"; // Ganti dengan IP Address laptop Anda
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
+import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
 
 export default function CreateSubjectScreen() {
   const { token } = useAuth(); // Ambil token untuk otentikasi
@@ -31,20 +28,13 @@ export default function CreateSubjectScreen() {
 
     try {
       // Panggil endpoint API untuk membuat mata kuliah baru
-      const response = await axios.post(
-        `${API_BASE_URL}/manager/subjects`, // URL endpoint
+      const response = await api.post(
+        "/manager/subjects", // URL endpoint
         {
           // Body data yang dikirim
           name_subject: nameSubject,
           code_subject: codeSubject,
           sks: parseInt(sks, 10), // Pastikan SKS dikirim sebagai angka
-        },
-        {
-          // Headers untuk otentikasi
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
         }
       );
 

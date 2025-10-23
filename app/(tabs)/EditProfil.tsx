@@ -1,16 +1,12 @@
+import api from "@/api/axios";
 import axios from "axios";
 import { Stack, useFocusEffect, useRouter } from "expo-router"; // <-- 1. Impor useRouter
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
-const IP_ADDRESS = "192.168.0.159"; // Ganti dengan IP Anda
-// const IP_ADDRESS = "10.33.65.27"; // Ganti dengan IP Anda
-
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
-
 export default function EditProfilScreen() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const router = useRouter(); // <-- 2. Inisialisasi router
 
   // State untuk form
@@ -25,12 +21,9 @@ export default function EditProfilScreen() {
 
   // Fungsi untuk mengambil data profil saat ini
   const fetchProfile = useCallback(async () => {
-    if (!token) return;
     setIsFetching(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/student/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/student/profile");
       const data = response.data.data;
       setFullName(data.full_name);
       setEmail(data.email);
@@ -39,7 +32,7 @@ export default function EditProfilScreen() {
     } finally {
       setIsFetching(false);
     }
-  }, [token]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,12 +52,8 @@ export default function EditProfilScreen() {
         new_password_confirmation: newPasswordConfirmation,
       };
 
-      await axios.put(`${API_BASE_URL}/student/profile`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.put("/student/profile", payload);
 
-      // --- INI PERBAIKANNYA ---
-      // 3. Tambahkan tombol "OK" dengan aksi navigasi di dalam Alert
       Alert.alert("Sukses", "Profil berhasil diperbarui.", [
         {
           text: "OK",

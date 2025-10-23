@@ -2,15 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 
-// Definisikan IP dan URL API Anda
-const IP_ADDRESS = "192.168.0.159"; // Ganti dengan IP Address laptop Anda
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
+const { width } = Dimensions.get("window");
 
-// --- Perbaikan Interface agar sesuai dengan data dari Laravel ---
 interface User {
   id: number;
   name: string;
@@ -35,56 +33,61 @@ export interface ClassItem {
   schedule: string;
 }
 
+interface MenuItem {
+  id: string;
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  route: string;
+}
+
+const menuItems: MenuItem[] = [
+  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "/(manager)/CreateSubjects" },
+  { id: "2", title: "Buat Kelas", icon: "school-outline", route: "/(manager)/CreateClasses" },
+  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "/(manager)/CreateLecturer" },
+  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "/(manager)/CreateStudent" },
+];
+
 export default function ManagerDashboardScreen() {
   const { token, logout } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [slideAnim] = useState(new Animated.Value(-width * 0.75));
 
   const fetchClasses = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/manager/classes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/manager/classes");
 
-      setClasses(response.data.data);
+      if (response.data && response.data.data) {
+        setClasses(response.data.data);
+      }
     } catch (error) {
       let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
 
       if (axios.isAxiosError(error)) {
-        // Jika ini adalah error dari Axios, kita bisa dapat info lebih
-
         if (error.response) {
-          // Server merespons dengan status error (4xx atau 5xx)
-
           console.error("Status Kode:", error.response.status);
-
           console.error("Pesan dari Server:", JSON.stringify(error.response.data, null, 2));
-
           alertMessage = `Gagal memuat daftar kelas. Server merespons dengan error ${error.response.status}.`;
         } else if (error.request) {
-          // Request terkirim tapi tidak ada respons (masalah jaringan)
-
-          console.error("Tidak ada respons dari server. Cek koneksi, alamat IP, dan pastikan server Laravel berjalan.");
-
+          console.error("Tidak ada respons dari server.");
           alertMessage = "Tidak dapat terhubung ke server. Pastikan Anda berada di jaringan yang sama dan server backend berjalan.";
         } else {
-          // Error lain saat menyiapkan request
-
           console.error("Error Axios:", error.message);
-
           alertMessage = "Terjadi masalah saat menyiapkan permintaan.";
         }
       } else {
-        // Error JavaScript biasa
-
         console.error("Error tidak terduga:", error);
       }
 
-      alert(alertMessage);
+      Alert.alert("Error", alertMessage);
     } finally {
       setIsLoading(false);
     }
@@ -96,213 +99,428 @@ export default function ManagerDashboardScreen() {
     }, [fetchClasses])
   );
 
+  const openMenu = useCallback(() => {
+    setMenuVisible(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [slideAnim]);
+
+  const closeMenu = useCallback(() => {
+    Animated.timing(slideAnim, {
+      toValue: -width * 0.75,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setMenuVisible(false));
+  }, [slideAnim]);
+
+  const handleMenuItemPress = useCallback(
+    (route: string) => {
+      closeMenu();
+      setTimeout(() => {
+        router.push(route as any);
+      }, 300);
+    },
+    [closeMenu]
+  );
+
   const handleLogout = useCallback(() => {
-    logout();
+    Alert.alert("Konfirmasi Logout", "Apakah Anda yakin ingin keluar?", [
+      { text: "Batal", style: "cancel" },
+      { text: "Logout", style: "destructive", onPress: () => logout() },
+    ]);
   }, [logout]);
 
-  // --- KODE BARU: Fungsi untuk menghapus kelas ---
-  const handleDeleteClass = (classId: number, className: string) => {
-    // Tampilkan dialog konfirmasi untuk mencegah kesalahan
-    Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus kelas "${className}"? Tindakan ini tidak dapat dibatalkan.`, [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // Kirim permintaan DELETE ke backend
-            await axios.delete(`${API_BASE_URL}/manager/classes/${classId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            Alert.alert("Sukses", "Kelas berhasil dihapus.");
-            fetchClasses(); // Muat ulang daftar kelas setelah berhasil
-          } catch (error) {
-            if (axios.isAxiosError(error)) console.error("Gagal menghapus kelas:", error.response?.data);
-            Alert.alert("Gagal", "Gagal menghapus kelas.");
-          }
+  const handleDeleteClass = useCallback(
+    (classId: number, className: string) => {
+      Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus kelas "${className}"? Tindakan ini tidak dapat dibatalkan.`, [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/manager/classes/${classId}`);
+              Alert.alert("Sukses", "Kelas berhasil dihapus.");
+              fetchClasses();
+            } catch (error) {
+              if (axios.isAxiosError(error)) {
+                console.error("Gagal menghapus kelas:", error.response?.data);
+              }
+              Alert.alert("Gagal", "Gagal menghapus kelas.");
+            }
+          },
         },
-      },
-    ]);
-  };
+      ]);
+    },
+    [fetchClasses]
+  );
 
-  const renderItem = ({ item }: { item: ClassItem }) => (
-    <View style={styles.card}>
-      <TouchableOpacity onPress={() => router.push(`/(manager)/${item.id_class}`)}>
-        <View style={styles.cardHeader}>
-          {/* Bagian kiri header untuk judul */}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>{`${item.subject.name_subject} - Kelas ${item.code_class}`}</Text>
-            <Text style={styles.cardPeriod}>{item.academic_period.name}</Text>
-          </View>
-          {/* --- KODE BARU: Tombol hapus di kanan header --- */}
-          <TouchableOpacity onPress={() => handleDeleteClass(item.id_class, `${item.subject.name_subject} - Kelas ${item.code_class}`)} style={styles.deleteIcon}>
-            <Ionicons name="trash-bin-outline" size={24} color="#B00020" />
-          </TouchableOpacity>
+  const renderItem = useCallback(
+    ({ item }: { item: ClassItem }) => (
+      <TouchableOpacity style={styles.card} onPress={() => router.push(`/(manager)/${item.id_class}`)} activeOpacity={0.9}>
+        <View style={styles.cardPattern}>
+          {/* Geometric circles pattern */}
+          {[...Array(24)].map((_, i) => {
+            const row = Math.floor(i / 6);
+            const col = i % 6;
+            const isEven = (row + col) % 2 === 0;
+
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.patternCircleContainer,
+                  {
+                    left: col * 16.66 + "%",
+                    top: row * 25 + "%",
+                  } as any,
+                ]}
+              >
+                <View style={[styles.patternCircle, isEven && styles.patternCircleAlt]} />
+              </View>
+            );
+          })}
         </View>
-        <View style={styles.cardBody}>
-          <View style={styles.infoRow}>
-            <Ionicons name="people-outline" size={16} color="#666" />
-            <Text style={styles.cardInfo}>
-              Kapasitas: {item.students.length} / {item.member_class}
-            </Text>
+
+        <View style={styles.cardContent}>
+          <View style={styles.cardTop}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Kelas</Text>
+            </View>
+            <TouchableOpacity onPress={() => handleDeleteClass(item.id_class, `${item.subject.name_subject} - Kelas ${item.code_class}`)} style={styles.deleteIconNew} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="trash-bin-outline" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={16} color="#666" />
-            <Text style={styles.cardInfo}>{item.schedule}</Text>
+
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitleNew} numberOfLines={2}>
+              {item.subject.name_subject}
+            </Text>
+            <Text style={styles.cardSubtitle}>Kelas {item.code_class}</Text>
+            <Text style={styles.cardPeriodNew}>{item.academic_period.name}</Text>
           </View>
         </View>
       </TouchableOpacity>
-      <View style={styles.cardFooter}>
-        <Text style={styles.footerText}>Lihat Detail</Text>
-        <Ionicons name="chevron-forward-outline" size={16} color="#015023" />
-      </View>
-    </View>
+    ),
+    [handleDeleteClass]
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ title: "Dashboard Manajer" }} />
-      <View style={styles.container}>
-        <View style={styles.actionContainer}>
-          <TouchableOpacity style={styles.button} onPress={() => router.push("/(manager)/CreateSubjects")}>
-            <Ionicons name="add-circle-outline" size={20} color="#fff" />
-            <Text style={styles.buttonText}>Tambah Mata Kuliah</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={() => router.push("/(manager)/CreateClasses")}>
-            <Ionicons name="add-circle-outline" size={20} color="#fff" />
-            <Text style={styles.buttonText}>Buat Kelas</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={() => router.push("/(manager)/CreateLecturer")}>
-            <Ionicons name="person-add-outline" size={20} color="#fff" />
-            <Text style={styles.buttonText}>Tambah Dosen</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <Stack.Screen
+        options={{
+          title: "Dashboard Manajer",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
+          headerLeft: () => (
+            <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
+              <Ionicons name="menu" size={28} color="#fff" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+
+      {/* Hamburger Menu Modal */}
+      <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu}>
+        <View style={styles.modalContainer}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeMenu} />
+          <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
+            <View style={styles.menuHeader}>
+              <Text style={styles.menuHeaderText}>Menu</Text>
+              <TouchableOpacity onPress={closeMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={28} color="#015023" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.menuList}>
+              {menuItems.map((item) => (
+                <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuItemPress(item.route)} activeOpacity={0.7}>
+                  <View style={styles.menuIconContainer}>
+                    <Ionicons name={item.icon} size={24} color="#015023" />
+                  </View>
+                  <Text style={styles.menuItemText}>{item.title}</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#999" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#FFD43B",
+                paddingVertical: 16,
+                borderRadius: 12,
+                marginHorizontal: 20,
+                alignItems: "center",
+                flexDirection: "row",
+                justifyContent: "center",
+                marginVertical: 15,
+                elevation: 3,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3,
+              }}
+              onPress={handleLogout}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#015023" />
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+
+            <View style={styles.menuFooter}>
+              <Text style={styles.menuFooterText}>Dashboard Manajer SIA UGN</Text>
+            </View>
+          </Animated.View>
         </View>
+      </Modal>
 
-        {isLoading ? (
-          <ActivityIndicator size="large" color="#015023" style={{ flex: 1 }} />
-        ) : (
-          <FlatList
-            data={classes}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id_class.toString()}
-            ListEmptyComponent={<Text style={styles.emptyText}>Belum ada kelas yang dibuat.</Text>}
-            contentContainerStyle={{ paddingTop: 10 }}
-            style={{ width: "100%" }}
-          />
-        )}
-
-        {/* Tombol Logout di bagian bawah */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.buttonText}>Logout</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#fff" />
+              <Text style={styles.loadingText}>Memuat data...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={classes}
+              renderItem={renderItem}
+              keyExtractor={(item) => `class-${item.id_class}`}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="school-outline" size={64} color="#ccc" />
+                  <Text style={styles.emptyText}>Belum ada kelas yang dibuat.</Text>
+                </View>
+              }
+              contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
+              scrollEnabled={false}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              updateCellsBatchingPeriod={50}
+              initialNumToRender={10}
+              windowSize={10}
+            />
+          )}
+        </ScrollView>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f0f4f7" },
-  container: { flex: 1, padding: 20 },
-  actionContainer: {
-    flexDirection: "column",
-    justifyContent: "space-between",
-    marginBottom: 20,
-    height: 150,
-    gap: 10,
-  },
-  button: {
-    backgroundColor: "#015023",
+  safeArea: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
+    backgroundColor: "#015023",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#015023",
+    paddingHorizontal: 20,
+  },
+  menuButton: {
+    paddingLeft: 15,
+    paddingRight: 10,
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  menuContainer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: width * 0.75,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  menuHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#f5f5f5",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  menuHeaderText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#015023",
+  },
+  menuList: {
+    flex: 1,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f0f8f4",
     justifyContent: "center",
-    elevation: 3,
+    alignItems: "center",
+    marginRight: 15,
+  },
+  menuItemText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
+  },
+  menuFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+    alignItems: "center",
+  },
+  menuFooterText: {
+    fontSize: 12,
+    color: "#999",
   },
   logoutButton: {
-    backgroundColor: "#B00020",
-    paddingVertical: 12,
-    borderRadius: 8,
-    width: "100%",
+    backgroundColor: "#FFD43B",
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 10,
+    marginVertical: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
-  buttonText: {
-    color: "#fff",
+  logoutButtonText: {
+    color: "#015023",
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 8,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    width: "100%",
-    marginBottom: 15,
-    elevation: 3,
+    borderRadius: 20,
+    marginBottom: 20,
+    height: 180,
+    elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    overflow: "hidden",
+    position: "relative",
   },
-  cardHeader: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    // Penambahan style untuk menampung tombol hapus
+  cardPattern: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#E8D9B8",
+    overflow: "hidden",
+  },
+  patternCircleContainer: {
+    position: "absolute",
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  patternCircle: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: "rgba(169, 191, 167, 0.3)",
+    borderWidth: 15,
+    borderColor: "rgba(255, 255, 255, 0.5)",
+  },
+  patternCircleAlt: {
+    backgroundColor: "rgba(169, 191, 167, 0.4)",
+    borderColor: "rgba(169, 191, 167, 0.2)",
+  },
+  cardContent: {
+    flex: 1,
+    padding: 20,
+    position: "relative",
+    zIndex: 10,
+  },
+  cardTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    marginBottom: 12,
   },
-  deleteIcon: {
-    padding: 5, // Area tekan yang lebih besar
+  badge: {
+    backgroundColor: "#D4AF37",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    flexShrink: 1, // Agar teks tidak mendorong ikon
-  },
-  cardPeriod: {
+  badgeText: {
+    color: "#fff",
     fontSize: 14,
-    color: "#015023",
     fontWeight: "600",
-    marginTop: 4,
   },
-  cardBody: {
-    padding: 15,
-    gap: 10,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  deleteIconNew: {
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
+    padding: 8,
+    borderRadius: 20,
   },
   cardInfo: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  cardTitleNew: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#2C3E50",
+    marginBottom: 4,
+  },
+  cardSubtitle: {
     fontSize: 14,
     color: "#555",
-    marginLeft: 8,
+    marginBottom: 8,
   },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  cardPeriodNew: {
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "500",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    padding: 10,
-    backgroundColor: "#f9f9f9",
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    paddingVertical: 40,
   },
-  footerText: {
-    color: "#015023",
-    fontWeight: "bold",
-    marginRight: 4,
+  loadingText: {
+    marginTop: 10,
+    color: "#fff",
+    fontSize: 14,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
   },
   emptyText: {
     textAlign: "center",
-    color: "#666",
-    marginTop: 50,
+    color: "#fff",
+    marginTop: 16,
     fontSize: 16,
+    fontWeight: "500",
   },
 });

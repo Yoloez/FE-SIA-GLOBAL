@@ -1,14 +1,10 @@
+import api from "@/api/axios";
 import { Picker } from "@react-native-picker/picker";
-import axios from "axios";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
-
-const IP_ADDRESS = "192.168.0.159"; //ip rumah
-// const IP_ADDRESS = "10.33.65.27"; //dtedi ip
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
 
 // Tipe data untuk objek Subject
 interface Subject {
@@ -37,16 +33,8 @@ export default function CreateClassScreen() {
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      if (!token) return;
       try {
-        const [subjectsResponse, periodsResponse] = await Promise.all([
-          axios.get(`${API_BASE_URL}/manager/subjects`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${API_BASE_URL}/manager/academic-periods`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+        const [subjectsResponse, periodsResponse] = await Promise.all([api.get("/manager/subjects"), api.get("/manager/academic-periods")]);
         setSubjects(subjectsResponse.data.data);
         setPeriods(periodsResponse.data.data);
       } catch (error) {
@@ -54,7 +42,7 @@ export default function CreateClassScreen() {
       }
     };
     fetchInitialData();
-  }, [token]);
+  }, []);
 
   const handleCreateClass = async () => {
     // <-- 5. Tambahkan validasi untuk selectedPeriod
@@ -65,20 +53,14 @@ export default function CreateClassScreen() {
 
     setIsLoading(true);
     try {
-      await axios.post(
-        `${API_BASE_URL}/manager/classes`,
-        {
-          // <-- 6. Tambahkan academic_period_id ke dalam payload
-          id_subject: selectedSubject,
-          academic_period_id: selectedPeriod,
-          code_class: codeClass,
-          member_class: parseInt(memberClass, 10),
-          schedule: schedule,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await api.post("/manager/classes", {
+        // <-- 6. Tambahkan academic_period_id ke dalam payload
+        id_subject: selectedSubject,
+        academic_period_id: selectedPeriod,
+        code_class: codeClass,
+        member_class: parseInt(memberClass, 10),
+        schedule: schedule,
+      });
       Alert.alert("Sukses", "Kelas baru berhasil dibuat.");
       router.back();
     } catch (error) {

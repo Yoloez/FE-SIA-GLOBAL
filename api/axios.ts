@@ -1,10 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
-const IP_ADDRESS = "192.168.0.159"; // Ganti dengan IP laptop Anda
-const API_BASE_URL = `http://${IP_ADDRESS}:8000/api`;
+// 1. Baca URL API dari environment variable.
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// 1. Buat instance axios baru
+if (!API_BASE_URL) {
+  alert("Error: Alamat API belum diatur di file .env");
+}
+
+// 2. Buat instance axios baru dengan konfigurasi terpusat.
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -12,11 +16,10 @@ const api = axios.create({
   },
 });
 
-// 2. Buat "Interceptor" atau "Pencegat"
-// Kode ini akan berjalan SECARA OTOMATIS sebelum SETIAP request dikirim
+// 3. Buat "Interceptor" untuk menambahkan token secara otomatis.
+// Kode ini akan berjalan sebelum SETIAP request dikirim.
 api.interceptors.request.use(
   async (config) => {
-    // Ambil token dari AsyncStorage
     const token = await AsyncStorage.getItem("userToken");
     if (token) {
       // Jika token ada, tempelkan ke header Authorization
@@ -25,7 +28,6 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    // Lakukan sesuatu jika ada error saat menyiapkan request
     return Promise.reject(error);
   }
 );

@@ -2,7 +2,7 @@ import api from "@/api/axios";
 import axios from "axios";
 import { Stack, useFocusEffect, useRouter } from "expo-router"; // <-- 1. Impor useRouter
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Image, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
 export default function EditProfilScreen() {
@@ -91,46 +91,48 @@ export default function EditProfilScreen() {
           </View>
 
           {/* Form Fields */}
-          <ScrollView style={{ flex: 1, width: "100%" }} showsVerticalScrollIndicator={false}>
-            <View style={styles.infoContainer}>
-              <Text style={styles.label}>Nama Lengkap:</Text>
-              <View style={styles.infoBox}>
-                <TextInput style={styles.infoText} value={fullName} onChangeText={setFullName} />
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
+            <ScrollView style={{ flex: 1, width: "100%" }} showsVerticalScrollIndicator={false}>
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Nama Lengkap:</Text>
+                <View style={styles.infoBox}>
+                  <TextInput style={styles.infoText} value={fullName} onChangeText={setFullName} />
+                </View>
               </View>
-            </View>
 
-            <View style={styles.infoContainer}>
-              <Text style={styles.label}>Email:</Text>
-              <View style={styles.infoBox}>
-                <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Email:</Text>
+                <View style={styles.infoBox}>
+                  <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                </View>
               </View>
-            </View>
 
-            <Text style={styles.passwordSectionTitle}>Ubah Password (Opsional)</Text>
-            <View style={styles.infoContainer}>
-              <Text style={styles.label}>Password Saat Ini:</Text>
-              <View style={styles.infoBox}>
-                <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
+              <Text style={styles.passwordSectionTitle}>Ubah Password (Opsional)</Text>
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Password Saat Ini:</Text>
+                <View style={styles.infoBox}>
+                  <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
+                </View>
               </View>
-            </View>
-            <View style={styles.infoContainer}>
-              <Text style={styles.label}>Password Baru:</Text>
-              <View style={styles.infoBox}>
-                <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Password Baru:</Text>
+                <View style={styles.infoBox}>
+                  <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+                </View>
               </View>
-            </View>
-            <View style={styles.infoContainer}>
-              <Text style={styles.label}>Konfirmasi Password Baru:</Text>
-              <View style={styles.infoBox}>
-                <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry />
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Konfirmasi Password Baru:</Text>
+                <View style={styles.infoBox}>
+                  <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry />
+                </View>
               </View>
-            </View>
 
-            {/* Save Button */}
-            <TouchableOpacity style={styles.settingButton} onPress={handleSave} disabled={isLoading}>
-              {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <Text style={styles.settingButtonText}>Save Changes</Text>}
-            </TouchableOpacity>
-          </ScrollView>
+              {/* Save Button */}
+              <TouchableOpacity style={styles.settingButton} onPress={handleSave} disabled={isLoading}>
+                {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <Text style={styles.settingButtonText}>Save Changes</Text>}
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </View>
     </SafeAreaView>
@@ -270,5 +272,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.2)",
     paddingTop: 15,
+  },
+  keyboardView: {
+    flex: 1,
   },
 });

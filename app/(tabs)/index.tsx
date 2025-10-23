@@ -9,7 +9,6 @@ import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
-import api from "@/api/axios";
 
 const { width } = Dimensions.get("window");
 
@@ -26,7 +25,7 @@ const DUMMY_CONTENT_DATA = [
     label: "Your Schedule",
     title: "HANDOKO",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "../Schedule", // Rute navigasi
+    route: "/jadwal", // Rute navigasi
   },
   {
     id: "3",

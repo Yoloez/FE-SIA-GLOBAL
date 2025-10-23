@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
@@ -11,6 +11,7 @@ interface User {
   id: number;
   name: string;
   email: string;
+  profile_image: string;
 }
 interface Subject {
   id_subject: number;
@@ -125,7 +126,7 @@ export default function ClassDetailScreen() {
   const renderMemberItem = ({ item, role }: { item: User; role: "dosen" | "student" }) => (
     <View style={styles.memberCard}>
       <View style={styles.memberAvatar}>
-        <Ionicons name={role === "dosen" ? "briefcase" : "person"} size={24} color="#015023" />
+        <Image source={{ uri: item.profile_image }} />
       </View>
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{item.name}</Text>

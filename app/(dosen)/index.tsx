@@ -29,7 +29,7 @@ const DUMMY_CONTENT_DATA = [
     label: "Your Schedule",
     title: "HANDOKO",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "../Schedule", // Rute navigasi
+    route: "/jadwal", // Rute navigasi
   },
   {
     id: "3",

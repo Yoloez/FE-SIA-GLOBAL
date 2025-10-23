@@ -116,7 +116,7 @@ const Profil = () => {
   );
 };
 
-// --- STYLESHEET ANDA TIDAK SAYA UBAH SAMA SEKALI ---
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

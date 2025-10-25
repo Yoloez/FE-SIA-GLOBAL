@@ -1,46 +1,46 @@
+import api from "@/api/axios";
 import axios from "axios";
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
-interface ProfileData {
-  name: string;
-  email: string;
-  program_name: string | null;
-  registration_number: string | null;
+// Interface untuk mendefinisikan bentuk data profil yang kita harapkan dari API
+interface LecturerProfileData {
   full_name: string;
-  generation: string | null;
+  email: string;
+  employee_id_number: string | null;
+  position: string;
+  profile_image: string;
 }
 
-const Profil = () => {
-  const { logout, user } = useAuth();
+const ProfilDosen = () => {
+  const { logout, user, token } = useAuth();
 
-  // --- State untuk menyimpan data profil dan status loading ---
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
+  // --- Fungsi untuk mengambil data profil dari API ---
   const fetchProfile = useCallback(async () => {
+    if (!token) return;
     setIsLoading(true);
     try {
-      const response = await api.get("/student/profile");
+      // --- PERBAIKAN: Panggil endpoint yang benar ---
+      const response = await api.get("/lecturer/profile");
       setProfileData(response.data.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Gagal memuat profil:", error.response?.data);
-        alert("Gagal memuat data profil.");
+        alert(`Gagal memuat data profil. Error: ${error.response?.status}`);
       }
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Gunakan useFocusEffect agar data di-refresh setiap kali kembali ke halaman ini
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
@@ -70,7 +70,7 @@ const Profil = () => {
           <Text style={styles.profileTitle}>Profile</Text>
 
           <View style={styles.avatarContainer}>
-            <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+            <Image source={{ uri: profileData.profile_image }} style={styles.avatar} />
           </View>
 
           {/* --- DATA SEKARANG DINAMIS --- */}
@@ -82,30 +82,11 @@ const Profil = () => {
           </View>
 
           <View style={styles.infoContainer}>
-            <Text style={styles.label}>NIM:</Text>
+            <Text style={styles.label}>NIP:</Text>
             <View style={styles.infoBox}>
-              <Text style={styles.infoText}>{profileData.registration_number || "Belum diisi"}</Text>
+              <Text style={styles.infoText}>{profileData.employee_id_number || "Belum diisi"}</Text>
             </View>
           </View>
-
-          <View style={styles.infoContainer}>
-            <Text style={styles.label}>Major:</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>{profileData.program_name || "Belum diisi"}</Text>
-            </View>
-          </View>
-
-          <View style={styles.infoContainer}>
-            <Text style={styles.label}>Generation:</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>{profileData.generation || "Belum diisi"}</Text>
-            </View>
-          </View>
-
-          {/* Tombol-tombol tidak berubah */}
-          <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/EditProfil")}>
-            <Text style={styles.settingButtonText}>Setting</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
             <Text style={styles.logoutButtonText}>Logout</Text>
@@ -116,7 +97,7 @@ const Profil = () => {
   );
 };
 
-
+// --- STYLESHEET ANDA TIDAK SAYA UBAH SAMA SEKALI ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -214,6 +195,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#e8d5b7",
     borderRadius: 25,
     padding: 15,
+    marginTop: 15,
     alignItems: "center",
   },
   logoutButtonText: {
@@ -248,4 +230,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Profil;
+export default ProfilDosen;

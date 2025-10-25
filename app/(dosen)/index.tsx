@@ -4,21 +4,25 @@ import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
-import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
+import React, { useCallback, useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
 import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
+const Ip = "192.168.0.159"; //ip rumah
+// const Ip = "10.33.65.27"; //dtedi ip
+const API_URL = `http://${Ip}:8000/api/cek`;
 
+// <-- 2. Pindahkan data ke dalam sebuah array terstruktur
 const DUMMY_CONTENT_DATA = [
   {
     id: "1",
-    label: "Notification",
+    label: "Grades",
     title: "SVPL",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: null, // Tidak bisa diklik
+    route: "/grades", // Tidak bisa diklik
   },
   {
     id: "2",
@@ -49,6 +53,8 @@ export default function HomeScreen() {
     Urbanist_400Regular,
     Urbanist_600SemiBold,
   });
+
+  // <-- 3. Buat state untuk input pencarian dan data konten
   const [searchQuery, setSearchQuery] = useState("");
   const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
   const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
@@ -66,9 +72,7 @@ export default function HomeScreen() {
       });
       setFilteredContent(filteredData);
     }
-  }, [searchQuery, allContent]);
-
-  // Efek ini berjalan jika searchQuery atau allContent berubah
+  }, [searchQuery, allContent]); // Efek ini berjalan jika searchQuery atau allContent berubah
 
   // useEffect(() => {
   //   const fetchData = async () => {
@@ -104,11 +108,10 @@ export default function HomeScreen() {
 
   //   fetchData();
   // }, []);
-  // const handleLogout = useCallback(() => {
-  //   Animated.sequence([Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }), Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })]).start(() => {
-  //     logout();
-  //   });
-  // }, [logout, scaleAnim]);
+
+  const handleLogout = useCallback(() => {
+    logout();
+  }, [logout]);
 
   return (
     <>
@@ -119,10 +122,10 @@ export default function HomeScreen() {
           {/* Header Section - Fixed */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
-              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+              <Image source={require("../../assets/images/react-logo.png")} style={styles.avatar} />
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>Hanan Fijananto</Text>
-                <Text style={styles.userId}>24/123456/TRPL/56789</Text>
+                <Text style={styles.userName}>Dosen 1</Text>
+                <Text style={styles.userId}>8888</Text>
               </View>
             </View>
 
@@ -136,25 +139,6 @@ export default function HomeScreen() {
 
           {/* Main Content - Scrollable */}
           <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
-            <View style={styles.achievementContainer}>
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>Achievement</Text>
-                <Text style={styles.achievementValue}>38 SKS</Text>
-              </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPK</Text>
-                <Text style={styles.achievementValue}>3.89</Text>
-              </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPS</Text>
-                <Text style={styles.achievementValue}>3.90</Text>
-              </View>
-              {/* <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
-                <Text style={styles.logoutButtonText}>Logout</Text>
-              </TouchableOpacity> */}
-            </View>
             {/* Search Bar */}
             <View style={styles.searchContainer}>
               {/* <-- 5. Hubungkan TextInput ke state */}
@@ -167,6 +151,9 @@ export default function HomeScreen() {
               />
               <Ionicons name="search-outline" size={20} color="#666" />
             </View>
+            <TouchableOpacity onPress={handleLogout} style={{ alignSelf: "flex-end", marginBottom: 10 }}>
+              <Text style={{ color: "white", fontSize: 16 }}>Logout</Text>
+            </TouchableOpacity>
             {/* Content Sections */}
             {/* <-- 6. Render konten dari state hasil filter */}
             {isLoading ? (
@@ -201,7 +188,7 @@ const styles = StyleSheet.create({
   },
   safeContainer: {
     flex: 1,
-    marginBottom: 100, // Beri ruang di bawah untuk tab bar
+    marginBottom: 100,
   },
   header: {
     backgroundColor: "#015023",
@@ -266,38 +253,6 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingHorizontal: 20,
     paddingTop: 20,
-  },
-  achievementContainer: {
-    backgroundColor: "#F5EFD3",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#000",
-    flexDirection: "row",
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  achievementCard: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  achievementLabel: {
-    fontFamily: "Urbanist_400Regular",
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#333",
-    marginBottom: 4,
-  },
-  achievementValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#015023",
   },
   searchContainer: {
     flexDirection: "row",

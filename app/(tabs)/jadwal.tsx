@@ -1,155 +1,292 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
-import { Stack, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { useAuth } from "../../context/AuthContext";
-
-// Definisikan tipe data untuk schedule item
-interface ScheduleItem {
-  id_class: number;
-  code_class: string;
-  schedule: string;
-  subject: {
-    name_subject: string;
-  };
-}
+import { router } from "expo-router";
+import React, { useState } from "react";
+import { ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function ScheduleScreen() {
-  const { user } = useAuth();
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(25);
 
-  const fetchSchedules = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // Panggil endpoint baru di backend
-      const response = await api.get("/student/schedules");
-      setSchedules(response.data.data);
-    } catch (error) {
-      if (axios.isAxiosError(error)) console.error("Gagal memuat jadwal:", error.response?.data);
-      alert("Gagal memuat jadwal Anda.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const dates = [
+    { day: "MON", date: 22 },
+    { day: "TUE", date: 23 },
+    { day: "WED", date: 24 },
+    { day: "THU", date: 25, active: true },
+    { day: "FRI", date: 26 },
+    { day: "SAT", date: 27 },
+    { day: "SUN", date: 28 },
+  ];
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchSchedules();
-    }, [fetchSchedules])
-  );
-
-  const renderItem = ({ item }: { item: ScheduleItem }) => (
-    <View style={styles.card}>
-      <View style={styles.iconContainer}>
-        <Ionicons name="time-outline" size={28} color="#015023" />
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.subjectName}>{item.subject.name_subject}</Text>
-        <Text style={styles.className}>Kelas: {item.code_class}</Text>
-        <Text style={styles.scheduleText}>{item.schedule}</Text>
-      </View>
-    </View>
-  );
+  const schedules = [
+    {
+      id: 1,
+      time: "09:15 - 10:55",
+      title: "Analisis dan Desain Perangkat Lunak",
+      code: "Calab JLR20 SAC 2",
+      lecturer: "Fahrudin Mukti Wibowo, S.Kom., M.Cs",
+      room: "R. Kuliah CU 207",
+    },
+    {
+      id: 2,
+      time: "09:15 - 10:55",
+      title: "Analisis dan Desain Perangkat Lunak",
+      code: "Calab JLR20 SAC 2",
+      lecturer: "Fahrudin Mukti Wibowo, S.Kom., M.Cs",
+      room: "R. Kuliah CU 207",
+    },
+  ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ title: "Jadwal Kuliah" }} />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#015023" />
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Jadwal Kuliah Anda</Text>
-        <Text style={styles.headerSubtitle}>Semester Ini</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push("/index")}>
+          <Ionicons name="arrow-back" size={24} color="#ffffff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Your Schedule</Text>
+        <TouchableOpacity style={styles.calendarButton}>
+          <Ionicons name="calendar-outline" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </View>
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#015023" style={{ flex: 1 }} />
-      ) : (
-        <FlatList
-          data={schedules}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id_class.toString()}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>Anda belum memiliki jadwal untuk semester ini.</Text>
-            </View>
-          }
-        />
-      )}
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Week Navigation */}
+        <View style={styles.weekNav}>
+          <TouchableOpacity>
+            <Ionicons name="chevron-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.weekText}>This Week</Text>
+          <TouchableOpacity>
+            <Ionicons name="chevron-forward" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Date Display */}
+        <View style={styles.dateDisplay}>
+          <Text style={styles.dateNumber}>25</Text>
+          <View>
+            <Text style={styles.dayName}>Thursday</Text>
+            <Text style={styles.monthYear}>September 2025</Text>
+          </View>
+        </View>
+
+        {/* Date Selector */}
+        <View style={styles.dateSelector}>
+          {dates.map((item) => (
+            <TouchableOpacity key={item.date} style={[styles.dateItem, item.active && styles.dateItemActive]} onPress={() => setSelectedDate(item.date)}>
+              <Text style={[styles.dateDay, item.active && styles.dateDayActive]}>{item.day}</Text>
+              <Text style={[styles.dateNum, item.active && styles.dateNumActive]}>{item.date}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Schedule Cards with Image Background */}
+        <View style={styles.scheduleList}>
+          {schedules.map((schedule) => (
+            <ImageBackground key={schedule.id} source={require("../../assets/images/kairi.png")} style={styles.scheduleCard} imageStyle={styles.scheduleCardImage}>
+              {/* Overlay */}
+              <View style={styles.cardOverlay}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.scheduleLabel}>
+                    <Text style={styles.scheduleLabelText}>Schedule</Text>
+                  </View>
+                  <Text style={styles.scheduleTime}>{schedule.time}</Text>
+                </View>
+
+                <Text style={styles.scheduleTitle}>{schedule.title}</Text>
+                <Text style={styles.scheduleCode}>{schedule.code}</Text>
+
+                <View style={styles.scheduleInfo}>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                    <Text style={styles.infoText}>{schedule.lecturer}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                    <Text style={styles.infoText}>{schedule.room}</Text>
+                  </View>
+                </View>
+              </View>
+            </ImageBackground>
+          ))}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f0f4f7" },
-  header: {
+  container: {
+    flex: 1,
     backgroundColor: "#015023",
-    padding: 20,
-    paddingTop: 10,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: "#d0e0d8",
-    textAlign: "center",
-  },
-  listContainer: {
-    padding: 15,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 15,
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingTop: 30,
+    marginTop: 20,
   },
-  iconContainer: {
-    backgroundColor: "#e8f5e9",
-    padding: 15,
-    borderRadius: 30,
+  backButton: {
+    width: 35,
+  },
+  backIcon: {
+    color: "#ffffff",
+    fontSize: 24,
+  },
+  headerTitle: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  calendarButton: {
+    width: 35,
+    alignItems: "flex-end",
+  },
+  calendarIcon: {
+    fontSize: 20,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  weekNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 15,
+  },
+  navArrow: {
+    color: "#ffffff",
+    fontSize: 24,
+    paddingHorizontal: 20,
+  },
+  weekText: {
+    color: "#ffffff",
+    fontSize: 16,
+    paddingHorizontal: 20,
+  },
+  dateDisplay: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    alignSelf: "center",
+  },
+  dateNumber: {
+    color: "#ffffff",
+    fontSize: 48,
+    fontWeight: "bold",
     marginRight: 15,
   },
-  cardContent: {
-    flex: 1,
+  dayName: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "500",
   },
-  subjectName: {
+  monthYear: {
+    color: "#ffffff",
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  dateSelector: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  dateItem: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    minWidth: 40,
+    alignItems: "center",
+  },
+  dateItemActive: {
+    backgroundColor: "#DABC4E",
+  },
+  dateDay: {
+    color: "#015023",
+    fontSize: 10,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  dateDayActive: {
+    color: "#1a1a1a",
+  },
+  dateNum: {
+    color: "#015023",
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
   },
-  className: {
-    fontSize: 14,
-    color: "#555",
+  dateNumActive: {
+    color: "#1a1a1a",
   },
-  scheduleText: {
-    fontSize: 14,
-    color: "#015023",
-    fontWeight: "500",
-    marginTop: 5,
+  scheduleList: {
+    paddingBottom: 20,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
+  scheduleCard: {
+    borderRadius: 20,
+    marginBottom: 15,
+    overflow: "hidden",
+  },
+  scheduleCardImage: {
+    borderRadius: 20,
+    opacity: 0.2, // Atur opacity gambar (0.1 - 1.0)
+  },
+  cardOverlay: {
+    backgroundColor: "rgba(232, 213, 183, 0.85)", // Overlay semi-transparent
+    padding: 20,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: "30%",
+    marginBottom: 12,
   },
-  emptyText: {
-    textAlign: "center",
-    color: "#666",
-    marginTop: 20,
+  scheduleLabel: {
+    backgroundColor: "#d4b676",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  scheduleLabelText: {
+    color: "#015023",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  scheduleTime: {
+    color: "#015023",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  scheduleTitle: {
+    color: "#1a1a1a",
     fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  scheduleCode: {
+    color: "#666",
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  scheduleInfo: {
+    gap: 6,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  infoIcon: {
+    marginRight: 8,
+  },
+  infoText: {
+    color: "#1a1a1a",
+    fontSize: 13,
+    flex: 1,
   },
 });

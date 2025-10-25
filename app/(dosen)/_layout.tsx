@@ -1,4 +1,3 @@
-// app/(tabs)/_layout.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -35,6 +34,7 @@ export default function TabLayout() {
       }}
     >
       {/* Tab Dashboard (Kiri) */}
+
       <Tabs.Screen
         name="index"
         options={{
@@ -49,6 +49,7 @@ export default function TabLayout() {
       />
 
       {/* Tab Presensi (Tengah - Kustom) */}
+
       <Tabs.Screen
         name="presensi"
         options={{
@@ -61,6 +62,7 @@ export default function TabLayout() {
       />
 
       {/* Tab Profil (Kanan) */}
+
       <Tabs.Screen
         name="ProfilDosen"
         options={{
@@ -80,8 +82,22 @@ export default function TabLayout() {
           href: null,
         }}
       />
+
       <Tabs.Screen
         name="jadwal"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="class-grades"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="grades"
         options={{
           href: null,
         }}

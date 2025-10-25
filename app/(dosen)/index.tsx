@@ -19,10 +19,10 @@ const API_URL = `http://${Ip}:8000/api/cek`;
 const DUMMY_CONTENT_DATA = [
   {
     id: "1",
-    label: "Notification",
+    label: "Grades",
     title: "SVPL",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: null, // Tidak bisa diklik
+    route: "/grades", // Tidak bisa diklik
   },
   {
     id: "2",

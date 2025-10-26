@@ -56,13 +56,20 @@ export default function ManagerDashboardScreen() {
   const [search, setSearch] = useState("");
   const isAnimating = useRef(false);
   const isMounted = useRef(true); // Track component mount status
+  const searchTimeoutRef = useRef<number | null>(null);
 
   // Cleanup on unmount
   React.useEffect(() => {
     return () => {
       isMounted.current = false;
+      // Cleanup animation
+      slideAnim.stopAnimation();
+      // Clear search timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
     };
-  }, []);
+  }, [slideAnim]);
 
   const fetchClasses = useCallback(async () => {
     if (!token) {
@@ -158,6 +165,7 @@ export default function ManagerDashboardScreen() {
             router.push(route as any);
           } catch (error) {
             console.error("Navigation error:", error);
+            Alert.alert("Error", "Gagal membuka halaman. Silakan coba lagi.");
           }
         }
       }, 300);
@@ -227,6 +235,7 @@ export default function ManagerDashboardScreen() {
             router.push(`/(manager)/${item.id_class}`);
           } catch (error) {
             console.error("Navigation error:", error);
+            Alert.alert("Error", "Gagal membuka detail kelas. Silakan coba lagi.");
           }
         }}
         activeOpacity={0.9}
@@ -284,7 +293,22 @@ export default function ManagerDashboardScreen() {
   const ListHeaderComponent = useMemo(
     () => (
       <View style={styles.searchWrapper}>
-        <TextInput style={styles.searchInput} placeholder="Cari mata kuliah..." placeholderTextColor="#aaa" value={search} onChangeText={setSearch} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Cari mata kuliah..."
+          placeholderTextColor="#aaa"
+          value={search}
+          onChangeText={(text) => {
+            // Clear existing timeout
+            if (searchTimeoutRef.current) {
+              clearTimeout(searchTimeoutRef.current);
+            }
+            // Set new timeout to debounce search
+            searchTimeoutRef.current = setTimeout(() => {
+              setSearch(text);
+            }, 300);
+          }}
+        />
         <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
       </View>
     ),
@@ -318,40 +342,42 @@ export default function ManagerDashboardScreen() {
 
       {/* Hamburger Menu Modal */}
       {menuVisible && (
-        <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu} statusBarTranslucent>
-          <View style={styles.modalContainer}>
-            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeMenu} />
-            <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
-              <View style={styles.menuHeader}>
-                <Text style={styles.menuHeaderText}>Menu</Text>
-                <TouchableOpacity onPress={closeMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Ionicons name="close" size={28} color="#015023" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
-                {menuItems.map((item) => (
-                  <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuItemPress(item.route)} activeOpacity={0.7}>
-                    <View style={styles.menuIconContainer}>
-                      <Ionicons name={item.icon} size={24} color="#015023" />
-                    </View>
-                    <Text style={styles.menuItemText}>{item.title}</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#999" />
+        <SafeAreaView edges={["top", "left", "right"]}>
+          <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu} statusBarTranslucent>
+            <View style={styles.modalContainer}>
+              <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeMenu} />
+              <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
+                <View style={styles.menuHeader}>
+                  <Text style={styles.menuHeaderText}>Menu</Text>
+                  <TouchableOpacity onPress={closeMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="close" size={28} color="#015023" />
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
+                </View>
 
-              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-                <Ionicons name="log-out-outline" size={20} color="#015023" />
-                <Text style={styles.logoutButtonText}>Logout</Text>
-              </TouchableOpacity>
+                <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
+                  {menuItems.map((item) => (
+                    <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuItemPress(item.route)} activeOpacity={0.7}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name={item.icon} size={24} color="#015023" />
+                      </View>
+                      <Text style={styles.menuItemText}>{item.title}</Text>
+                      <Ionicons name="chevron-forward" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
 
-              <View style={styles.menuFooter}>
-                <Text style={styles.menuFooterText}>Dashboard Manajer SIA UGN</Text>
-              </View>
-            </Animated.View>
-          </View>
-        </Modal>
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+                  <Ionicons name="log-out-outline" size={20} color="#015023" />
+                  <Text style={styles.logoutButtonText}>Logout</Text>
+                </TouchableOpacity>
+
+                <View style={styles.menuFooter}>
+                  <Text style={styles.menuFooterText}>Dashboard Manajer SIA UGN</Text>
+                </View>
+              </Animated.View>
+            </View>
+          </Modal>
+        </SafeAreaView>
       )}
 
       <View style={styles.container}>
@@ -424,6 +450,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
+    marginTop: 12,
     backgroundColor: "#f5f5f5",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",

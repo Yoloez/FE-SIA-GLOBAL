@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 50,
-    color: "#333",
+    color: "white",
   },
   buttonContainer: {
     marginTop: 20,

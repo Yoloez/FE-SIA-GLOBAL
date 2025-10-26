@@ -3,8 +3,8 @@ import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link, router } from "expo-router";
-import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
@@ -18,14 +18,14 @@ const DUMMY_CONTENT_DATA = [
     label: "Notification",
     title: "SVPL",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: null, // Tidak bisa diklik
+    route: null,
   },
   {
     id: "2",
     label: "Your Schedule",
     title: "HANDOKO",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "/jadwal", // Rute navigasi
+    route: "/jadwal",
   },
   {
     id: "3",
@@ -43,72 +43,87 @@ const DUMMY_CONTENT_DATA = [
   },
 ];
 
+interface ContentItem {
+  id: string;
+  label: string;
+  title: string;
+  contents: string[];
+  route: string | null;
+}
+
 export default function HomeScreen() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const isMounted = useRef(true);
+
   let [fontsLoaded] = useFonts({
     Urbanist_400Regular,
     Urbanist_600SemiBold,
   });
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
-  const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
+  const [allContent, setAllContent] = useState<ContentItem[]>(DUMMY_CONTENT_DATA);
+  const [filteredContent, setFilteredContent] = useState<ContentItem[]>(DUMMY_CONTENT_DATA);
   const [isLoading, setIsLoading] = useState(false);
 
-  // <-- 4. Terapkan logika filtering setiap kali searchQuery berubah
+  // Cleanup on unmount
+  useEffect(() => {
+    isMounted.current = true;
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Filter logic setiap kali searchQuery berubah
   useEffect(() => {
     if (searchQuery === "") {
       setFilteredContent(allContent);
     } else {
       const lowercasedQuery = searchQuery.toLowerCase();
       const filteredData = allContent.filter((item) => {
-        // Cari di judul atau label, case-insensitive
         return item.title.toLowerCase().includes(lowercasedQuery) || item.label.toLowerCase().includes(lowercasedQuery);
       });
       setFilteredContent(filteredData);
     }
   }, [searchQuery, allContent]);
 
-  // Efek ini berjalan jika searchQuery atau allContent berubah
+  // Handler untuk navigasi ke chat
+  const handleChatPress = () => {
+    try {
+      // Coba beberapa kemungkinan route
+      router.push("../chat"); // Jika folder di app/(chat)/index.tsx
+      // atau router.push("/chat"); // Jika folder di app/chat/index.tsx
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback
+      try {
+        router.replace("../chat");
+      } catch (fallbackError) {
+        console.error("Fallback navigation error:", fallbackError);
+      }
+    }
+  };
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       setIsLoading(true); // Mulai loading
-  //       const response = await axios.get(API_URL);
-  //       const apiData = response.data; // Data dari Laravel: { message: "...", ... }
+  // Handler untuk navigasi ke notifications (opsional)
+  const handleNotificationPress = () => {
+    console.log("Notification pressed");
+    // Implementasi navigasi ke halaman notifikasi jika ada
+  };
 
-  //       // Format data API agar sesuai dengan struktur ContentCard
-  //       const apiContentCard = {
-  //         id: "api-1",
-  //         label: "Info from Server",
-  //         title: apiData.title,
-  //         contents: [apiData.message], // Masukkan pesan dari API ke dalam array contents
-  //         route: null,
-  //       };
+  // Handler untuk item content
+  const handleContentPress = (item: ContentItem) => {
+    if (!item.route) return;
 
-  //       // Gabungkan data dari API dengan data dummy
-  //       const combinedData = [apiContentCard, ...DUMMY_CONTENT_DATA];
+    try {
+      router.push(item.route as any);
+    } catch (error) {
+      console.error("Navigation error:", error);
+    }
+  };
 
-  //       setAllContent(combinedData);
-  //       setFilteredContent(combinedData);
-  //     } catch (error) {
-  //       console.error("Gagal mengambil data dari server:", error);
-  //       Alert.alert("Koneksi Gagal", "Tidak dapat mengambil data dari server. Menampilkan data offline.");
-  //       // Jika gagal, tampilkan saja data dummy
-  //       setAllContent(DUMMY_CONTENT_DATA);
-  //       setFilteredContent(DUMMY_CONTENT_DATA);
-  //     } finally {
-  //       setIsLoading(false); // Hentikan loading, baik berhasil maupun gagal
-  //     }
-  //   };
-
-  //   fetchData();
-  // }, []);
-  // const handleLogout = useCallback(() => {
-  //   Animated.sequence([Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }), Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })]).start(() => {
-  //     logout();
-  //   });
-  // }, [logout, scaleAnim]);
+  // Get user display name
+  const displayName = user?.name || "User";
+  const displayId = user?.email || "ID not available";
 
   return (
     <>
@@ -121,21 +136,29 @@ export default function HomeScreen() {
             <View style={styles.profileSection}>
               <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>Hanan Fijananto</Text>
-                <Text style={styles.userId}>24/123456/TRPL/56789</Text>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <Text style={styles.userId} numberOfLines={1}>
+                  {displayId}
+                </Text>
               </View>
             </View>
 
-            <Link href="/chat" asChild>
-              <TouchableOpacity style={styles.iconsSection} activeOpacity={0.7}>
-                <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
+            <View style={styles.iconsSection}>
+              <TouchableOpacity onPress={handleChatPress} style={styles.iconButton} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleNotificationPress} style={styles.iconButton} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="notifications-outline" size={24} color="white" />
               </TouchableOpacity>
-            </Link>
+            </View>
           </View>
 
           {/* Main Content - Scrollable */}
           <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
+            {/* Achievement Cards */}
             <View style={styles.achievementContainer}>
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementLabel}>Achievement</Text>
@@ -151,34 +174,28 @@ export default function HomeScreen() {
                 <Text style={styles.achievementLabel}>IPS</Text>
                 <Text style={styles.achievementValue}>3.90</Text>
               </View>
-              {/* <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
-                <Text style={styles.logoutButtonText}>Logout</Text>
-              </TouchableOpacity> */}
             </View>
+
             {/* Search Bar */}
             <View style={styles.searchContainer}>
-              {/* <-- 5. Hubungkan TextInput ke state */}
-              <TextInput
-                placeholder="Search by title or label..."
-                style={styles.searchInput}
-                placeholderTextColor="#666"
-                value={searchQuery}
-                onChangeText={setSearchQuery} // Langsung update state saat mengetik
-              />
+              <TextInput placeholder="Search by title or label..." style={styles.searchInput} placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} />
               <Ionicons name="search-outline" size={20} color="#666" />
             </View>
+
             {/* Content Sections */}
-            {/* <-- 6. Render konten dari state hasil filter */}
             {isLoading ? (
-              <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 30 }} />
+              <ActivityIndicator size="large" color="#ffffff" style={styles.loader} />
             ) : filteredContent.length > 0 ? (
               filteredContent.map((item) => (
-                <TouchableOpacity key={item.id} onPress={() => item.route && router.push(item.route)} disabled={!item.route}>
+                <TouchableOpacity key={item.id} onPress={() => handleContentPress(item)} disabled={!item.route} activeOpacity={item.route ? 0.7 : 1}>
                   <ContentCard label={item.label} title={item.title} contents={item.contents} />
                 </TouchableOpacity>
               ))
             ) : (
-              <Text style={styles.noResultsText}>No results found for "{searchQuery}"</Text>
+              <View style={styles.noResultsContainer}>
+                <Ionicons name="search-outline" size={48} color="rgba(255,255,255,0.5)" />
+                <Text style={styles.noResultsText}>No results found for "{searchQuery}"</Text>
+              </View>
             )}
           </ScrollView>
         </SafeAreaView>
@@ -187,21 +204,13 @@ export default function HomeScreen() {
   );
 }
 
-// <-- Tambahkan style baru untuk pesan "No Results"
 const styles = StyleSheet.create({
-  // ... (semua style Anda yang lama biarkan di sini)
-  noResultsText: {
-    textAlign: "center",
-    marginTop: 20,
-    color: "white",
-    fontSize: 16,
-  },
   container: {
     flex: 1,
   },
   safeContainer: {
     flex: 1,
-    marginBottom: 100, // Beri ruang di bawah untuk tab bar
+    marginBottom: 100,
   },
   header: {
     backgroundColor: "#015023",
@@ -210,8 +219,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    // borderBottomWidth: 1,
-    // borderBottomColor: "rgba(255, 255, 255, 0.1)",
     elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -222,6 +229,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: 16,
   },
   userInfo: {
     marginLeft: 12,
@@ -238,15 +246,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(255, 255, 255, 0.8)",
     fontWeight: "400",
-    // fontFamily: "Urbanist_400Regular",
   },
   iconsSection: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 16,
+    gap: 16,
   },
-  iconSpacing: {
-    marginRight: 16,
+  iconButton: {
+    padding: 4,
   },
   avatar: {
     width: 48,
@@ -266,6 +273,7 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 20,
   },
   achievementContainer: {
     backgroundColor: "#F5EFD3",
@@ -322,25 +330,19 @@ const styles = StyleSheet.create({
     fontFamily: "Urbanist_400Regular",
     fontWeight: "400",
   },
-  contentCard: {
-    backgroundColor: "#F5EFD3",
-    borderWidth: 2,
-    borderColor: "#000",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  loader: {
+    marginTop: 30,
   },
-  contentText: {
+  noResultsContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  noResultsText: {
+    textAlign: "center",
+    marginTop: 16,
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 16,
     fontFamily: "Urbanist_400Regular",
-    fontSize: 14,
-    color: "#333",
-    lineHeight: 20,
-    marginBottom: 4,
   },
 });

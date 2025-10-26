@@ -1,39 +1,174 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
-import { ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import axios from "axios";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
+
+// Definisikan tipe data untuk schedule item
+interface ScheduleItem {
+  id_schedule: number;
+  id_class: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room: string;
+  lecturer_name?: string;
+  class: {
+    id_class: number;
+    code_class: string;
+    subject: {
+      id_subject: number;
+      name_subject: string;
+    };
+  };
+}
 
 export default function ScheduleScreen() {
-  const [selectedDate, setSelectedDate] = useState(25);
+  const { user } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const dates = [
-    { day: "MON", date: 22 },
-    { day: "TUE", date: 23 },
-    { day: "WED", date: 24 },
-    { day: "THU", date: 25, active: true },
-    { day: "FRI", date: 26 },
-    { day: "SAT", date: 27 },
-    { day: "SUN", date: 28 },
-  ];
+  // Helper function untuk mendapatkan awal minggu (Senin)
+  function getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+    return new Date(d.setDate(diff));
+  }
 
-  const schedules = [
-    {
-      id: 1,
-      time: "09:15 - 10:55",
-      title: "Analisis dan Desain Perangkat Lunak",
-      code: "Calab JLR20 SAC 2",
-      lecturer: "Fahrudin Mukti Wibowo, S.Kom., M.Cs",
-      room: "R. Kuliah CU 207",
-    },
-    {
-      id: 2,
-      time: "09:15 - 10:55",
-      title: "Analisis dan Desain Perangkat Lunak",
-      code: "Calab JLR20 SAC 2",
-      lecturer: "Fahrudin Mukti Wibowo, S.Kom., M.Cs",
-      room: "R. Kuliah CU 207",
-    },
-  ];
+  // Generate dates untuk minggu ini
+  const generateWeekDates = () => {
+    const dates = [];
+    const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() + i);
+      dates.push({
+        day: dayNames[date.getDay()],
+        date: date.getDate(),
+        month: date.getMonth(),
+        year: date.getFullYear(),
+        fullDate: date,
+      });
+    }
+    return dates;
+  };
+
+  const weekDates = generateWeekDates();
+
+  const dayFullNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  const fetchSchedules = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get("/student/schedules");
+      setSchedules(response.data.data);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Gagal memuat jadwal:", error.response?.data);
+      }
+      alert("Gagal memuat jadwal Anda.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSchedules();
+    }, [fetchSchedules])
+  );
+
+  // Navigate ke minggu sebelumnya
+  const goToPreviousWeek = () => {
+    const newWeekStart = new Date(currentWeekStart);
+    newWeekStart.setDate(currentWeekStart.getDate() - 7);
+    setCurrentWeekStart(newWeekStart);
+
+    // Set selected date ke hari yang sama di minggu baru
+    const newSelectedDate = new Date(selectedDate);
+    newSelectedDate.setDate(selectedDate.getDate() - 7);
+    setSelectedDate(newSelectedDate);
+  };
+
+  // Navigate ke minggu berikutnya
+  const goToNextWeek = () => {
+    const newWeekStart = new Date(currentWeekStart);
+    newWeekStart.setDate(currentWeekStart.getDate() + 7);
+    setCurrentWeekStart(newWeekStart);
+
+    // Set selected date ke hari yang sama di minggu baru
+    const newSelectedDate = new Date(selectedDate);
+    newSelectedDate.setDate(selectedDate.getDate() + 7);
+    setSelectedDate(newSelectedDate);
+  };
+
+  // Reset ke minggu ini
+  const goToThisWeek = () => {
+    const today = new Date();
+    setCurrentWeekStart(getWeekStart(today));
+    setSelectedDate(today);
+  };
+
+  // Filter jadwal berdasarkan hari yang dipilih
+  const getSchedulesForSelectedDay = () => {
+    const dayOfWeek = selectedDate.getDay();
+    // Convert: Sunday=0 -> 7, Monday=1 -> 1, etc.
+    const apiDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+    return schedules.filter((schedule) => schedule.day_of_week === apiDayOfWeek);
+  };
+
+  // Format waktu dari HH:MM:SS ke HH:MM
+  const formatTime = (time: string) => {
+    if (!time) return "";
+    return time.substring(0, 5);
+  };
+
+  // Check if date is today
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+  };
+
+  // Check if date is selected
+  const isSelectedDate = (date: Date) => {
+    return date.getDate() === selectedDate.getDate() && date.getMonth() === selectedDate.getMonth() && date.getFullYear() === selectedDate.getFullYear();
+  };
+
+  // Get week label
+  const getWeekLabel = () => {
+    const today = new Date();
+    const weekStartToday = getWeekStart(today);
+
+    if (currentWeekStart.getTime() === weekStartToday.getTime()) {
+      return "This Week";
+    }
+
+    const diffTime = currentWeekStart.getTime() - weekStartToday.getTime();
+    const diffWeeks = Math.round(diffTime / (7 * 24 * 60 * 60 * 1000));
+
+    if (diffWeeks === 1) return "Next Week";
+    if (diffWeeks === -1) return "Last Week";
+    if (diffWeeks > 1) return `${diffWeeks} Weeks Ahead`;
+    if (diffWeeks < -1) return `${Math.abs(diffWeeks)} Weeks Ago`;
+
+    return "This Week";
+  };
+
+  const filteredSchedules = getSchedulesForSelectedDay();
+
+  // Get selected date info
+  const dateInfo = {
+    date: selectedDate.getDate(),
+    dayName: dayFullNames[selectedDate.getDay()],
+    monthYear: selectedDate.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -45,7 +180,7 @@ export default function ScheduleScreen() {
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Schedule</Text>
-        <TouchableOpacity style={styles.calendarButton}>
+        <TouchableOpacity style={styles.calendarButton} onPress={goToThisWeek}>
           <Ionicons name="calendar-outline" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
@@ -53,64 +188,86 @@ export default function ScheduleScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Week Navigation */}
         <View style={styles.weekNav}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={goToPreviousWeek}>
             <Ionicons name="chevron-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.weekText}>This Week</Text>
-          <TouchableOpacity>
+          <Text style={styles.weekText}>{getWeekLabel()}</Text>
+          <TouchableOpacity onPress={goToNextWeek}>
             <Ionicons name="chevron-forward" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
         {/* Date Display */}
         <View style={styles.dateDisplay}>
-          <Text style={styles.dateNumber}>25</Text>
+          <Text style={styles.dateNumber}>{dateInfo.date}</Text>
           <View>
-            <Text style={styles.dayName}>Thursday</Text>
-            <Text style={styles.monthYear}>September 2025</Text>
+            <Text style={styles.dayName}>{dateInfo.dayName}</Text>
+            <Text style={styles.monthYear}>{dateInfo.monthYear}</Text>
           </View>
         </View>
 
         {/* Date Selector */}
         <View style={styles.dateSelector}>
-          {dates.map((item) => (
-            <TouchableOpacity key={item.date} style={[styles.dateItem, item.active && styles.dateItemActive]} onPress={() => setSelectedDate(item.date)}>
-              <Text style={[styles.dateDay, item.active && styles.dateDayActive]}>{item.day}</Text>
-              <Text style={[styles.dateNum, item.active && styles.dateNumActive]}>{item.date}</Text>
-            </TouchableOpacity>
-          ))}
+          {weekDates.map((item, index) => {
+            const isSelected = isSelectedDate(item.fullDate);
+            const isTodayDate = isToday(item.fullDate);
+
+            return (
+              <TouchableOpacity key={index} style={[styles.dateItem, isSelected && styles.dateItemActive, isTodayDate && !isSelected && styles.dateItemToday]} onPress={() => setSelectedDate(item.fullDate)}>
+                <Text style={[styles.dateDay, isSelected && styles.dateDayActive, isTodayDate && !isSelected && styles.dateDayToday]}>{item.day}</Text>
+                <Text style={[styles.dateNum, isSelected && styles.dateNumActive, isTodayDate && !isSelected && styles.dateNumToday]}>{item.date}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* Schedule Cards with Image Background */}
-        <View style={styles.scheduleList}>
-          {schedules.map((schedule) => (
-            <ImageBackground key={schedule.id} source={require("../../assets/images/kairi.png")} style={styles.scheduleCard} imageStyle={styles.scheduleCardImage}>
-              {/* Overlay */}
-              <View style={styles.cardOverlay}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.scheduleLabel}>
-                    <Text style={styles.scheduleLabelText}>Schedule</Text>
-                  </View>
-                  <Text style={styles.scheduleTime}>{schedule.time}</Text>
-                </View>
+        {/* Loading Indicator */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#DABC4E" />
+            <Text style={styles.loadingText}>Memuat jadwal...</Text>
+          </View>
+        ) : (
+          /* Schedule Cards with Image Background */
+          <View style={styles.scheduleList}>
+            {filteredSchedules.length > 0 ? (
+              filteredSchedules.map((schedule) => (
+                <ImageBackground key={schedule.id_schedule} source={require("../../assets/images/kairi.png")} style={styles.scheduleCard} imageStyle={styles.scheduleCardImage}>
+                  {/* Overlay */}
+                  <View style={styles.cardOverlay}>
+                    <View style={styles.cardHeader}>
+                      <View style={styles.scheduleLabel}>
+                        <Text style={styles.scheduleLabelText}>Schedule</Text>
+                      </View>
+                      <Text style={styles.scheduleTime}>
+                        {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                      </Text>
+                    </View>
 
-                <Text style={styles.scheduleTitle}>{schedule.title}</Text>
-                <Text style={styles.scheduleCode}>{schedule.code}</Text>
+                    <Text style={styles.scheduleTitle}>{schedule.class?.subject?.name_subject || "Subject Name"}</Text>
+                    <Text style={styles.scheduleCode}>{schedule.class?.code_class || "Class Code"}</Text>
 
-                <View style={styles.scheduleInfo}>
-                  <View style={styles.infoRow}>
-                    <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                    <Text style={styles.infoText}>{schedule.lecturer}</Text>
+                    <View style={styles.scheduleInfo}>
+                      <View style={styles.infoRow}>
+                        <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                        <Text style={styles.infoText}>{schedule.lecturer_name || "Lecturer Name"}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                        <Text style={styles.infoText}>{schedule.room || "Room"}</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.infoRow}>
-                    <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                    <Text style={styles.infoText}>{schedule.room}</Text>
-                  </View>
-                </View>
+                </ImageBackground>
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={48} color="#ffffff" />
+                <Text style={styles.emptyText}>Tidak ada jadwal untuk hari ini</Text>
               </View>
-            </ImageBackground>
-          ))}
-        </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -133,10 +290,6 @@ const styles = StyleSheet.create({
   backButton: {
     width: 35,
   },
-  backIcon: {
-    color: "#ffffff",
-    fontSize: 24,
-  },
   headerTitle: {
     color: "#ffffff",
     fontSize: 18,
@@ -145,9 +298,6 @@ const styles = StyleSheet.create({
   calendarButton: {
     width: 35,
     alignItems: "flex-end",
-  },
-  calendarIcon: {
-    fontSize: 20,
   },
   content: {
     flex: 1,
@@ -159,15 +309,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 15,
   },
-  navArrow: {
-    color: "#ffffff",
-    fontSize: 24,
-    paddingHorizontal: 20,
-  },
   weekText: {
     color: "#ffffff",
     fontSize: 16,
     paddingHorizontal: 20,
+    minWidth: 150,
+    textAlign: "center",
   },
   dateDisplay: {
     flexDirection: "row",
@@ -207,6 +354,11 @@ const styles = StyleSheet.create({
   dateItemActive: {
     backgroundColor: "#DABC4E",
   },
+  dateItemToday: {
+    backgroundColor: "#c9e4ca",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
   dateDay: {
     color: "#015023",
     fontSize: 10,
@@ -216,6 +368,10 @@ const styles = StyleSheet.create({
   dateDayActive: {
     color: "#1a1a1a",
   },
+  dateDayToday: {
+    color: "#015023",
+    fontWeight: "700",
+  },
   dateNum: {
     color: "#015023",
     fontSize: 16,
@@ -223,6 +379,10 @@ const styles = StyleSheet.create({
   },
   dateNumActive: {
     color: "#1a1a1a",
+  },
+  dateNumToday: {
+    color: "#015023",
+    fontWeight: "800",
   },
   scheduleList: {
     paddingBottom: 20,
@@ -234,10 +394,10 @@ const styles = StyleSheet.create({
   },
   scheduleCardImage: {
     borderRadius: 20,
-    opacity: 0.2, // Atur opacity gambar (0.1 - 1.0)
+    opacity: 0.2,
   },
   cardOverlay: {
-    backgroundColor: "rgba(232, 213, 183, 0.85)", // Overlay semi-transparent
+    backgroundColor: "rgba(232, 213, 183, 0.85)",
     padding: 20,
   },
   cardHeader: {
@@ -288,5 +448,26 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     fontSize: 13,
     flex: 1,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    color: "#ffffff",
+    fontSize: 14,
+    marginTop: 10,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: "#ffffff",
+    fontSize: 16,
+    marginTop: 10,
+    opacity: 0.8,
   },
 });

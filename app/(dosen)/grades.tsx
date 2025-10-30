@@ -1,30 +1,27 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, ListRenderItem, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
+import api from "../../api/axios"; // Pastikan Anda menggunakan agen axios
 
-// 🧩 Tambahkan interface untuk tipe data kelas
-interface AcademicPeriod {
-  name: string;
-}
-
-interface Subject {
-  name_subject: string;
-}
-
+// Definisikan tipe data untuk Kelas Dosen
 interface LecturerClass {
   id_class: number;
   code_class: string;
-  subject: Subject;
-  academic_period: AcademicPeriod;
+  subject: {
+    name_subject: string;
+  };
+  academic_period: {
+    name: string;
+  };
 }
 
 export default function LecturerClassesScreen() {
   const [classes, setClasses] = useState<LecturerClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Fungsi untuk mengambil daftar kelas yang diajar
   const fetchClasses = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -43,9 +40,13 @@ export default function LecturerClassesScreen() {
     }, [fetchClasses])
   );
 
-  // 🎯 Tulis tipe parameter di renderItem
-  const renderItem: ListRenderItem<LecturerClass> = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => router.push(`/(dosen)/class-grades/${item.id_class}`)}>
+  // Komponen untuk merender setiap kartu kelas
+  const renderItem = ({ item }: { item: LecturerClass }) => (
+    <TouchableOpacity
+      style={styles.card}
+      // Arahkan ke halaman detail nilai, kirimkan classId
+      onPress={() => router.push(`/(dosen)/class-grades/${item.id_class}`)}
+    >
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{item.subject.name_subject}</Text>
         <Text style={styles.cardSubtitle}>
@@ -81,17 +82,8 @@ export default function LecturerClassesScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f0f4f7" },
   header: { backgroundColor: "#015023", padding: 20, paddingTop: 10 },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: "#d0e0d8",
-    textAlign: "center",
-  },
+  headerTitle: { fontSize: 24, fontWeight: "bold", color: "#fff", textAlign: "center" },
+  headerSubtitle: { fontSize: 16, color: "#d0e0d8", textAlign: "center" },
   container: { padding: 15 },
   card: {
     backgroundColor: "#fff",
@@ -106,10 +98,5 @@ const styles = StyleSheet.create({
   cardContent: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: "bold", color: "#333" },
   cardSubtitle: { fontSize: 14, color: "#666" },
-  emptyText: {
-    textAlign: "center",
-    color: "#666",
-    marginTop: 50,
-    fontSize: 16,
-  },
+  emptyText: { textAlign: "center", color: "#666", marginTop: 50, fontSize: 16 },
 });

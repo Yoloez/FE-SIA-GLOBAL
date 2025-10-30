@@ -41,11 +41,10 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "/(admin)/CreateSubjects" },
-  { id: "2", title: "Buat Kelas", icon: "school-outline", route: "/(admin)/CreateClasses" },
-  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "/(admin)/CreateLecturer" },
-  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "/(admin)/CreateStudent" },
-  { id: "5", title: "List Manager", icon: "id-card-outline", route: "/(admin)/ListManager" },
+  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "../(manager)/CreateSubjects" },
+  { id: "2", title: "Buat Kelas", icon: "school-outline", route: "../(manager)/CreateClasses" },
+  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "../(manager)/CreateLecturer" },
+  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "../(manager)/CreateStudent" },
 ];
 
 export default function ManagerDashboardScreen() {
@@ -233,7 +232,7 @@ export default function ManagerDashboardScreen() {
         style={styles.card}
         onPress={() => {
           try {
-            router.push(`/(admin)/${item.id_class}`);
+            router.push(`/(manager)/${item.id_class}`);
           } catch (error) {
             console.error("Navigation error:", error);
             Alert.alert("Error", "Gagal membuka detail kelas. Silakan coba lagi.");
@@ -330,7 +329,7 @@ export default function ManagerDashboardScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <Stack.Screen
         options={{
-          title: "Dashboard Admin",
+          title: "Dashboard Manajer",
           headerStyle: { backgroundColor: "#015023" },
           headerTintColor: "#fff",
           headerLeft: () => (

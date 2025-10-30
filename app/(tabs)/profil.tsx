@@ -1,4 +1,5 @@
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -56,66 +57,69 @@ const Profil = () => {
   // Tampilkan loading indicator saat data sedang diambil
   if (isLoading || !profileData) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center", backgroundColor: "#015023" }]}>
-        <ActivityIndicator size="large" color="#fff" />
+      <View style={[styles.container]}>
+        <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#fff" />
+        </LinearGradient>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#015023" />
-      <View style={styles.content}>
-        <View style={styles.profileCard}>
-          <Text style={styles.profileTitle}>Profile</Text>
+      <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
+        <StatusBar barStyle="light-content" backgroundColor="#015023" />
+        <View style={styles.content}>
+          <View style={styles.profileCard}>
+            <Text style={styles.profileTitle}>Profile</Text>
 
-          <View style={styles.avatarContainer}>
-            <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
-          </View>
-
-          {/* --- DATA SEKARANG DINAMIS --- */}
-          <View style={styles.infoContainer}>
-            <Text style={styles.label}>Name:</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>{profileData.full_name}</Text>
+            <View style={styles.avatarContainer}>
+              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
             </View>
-          </View>
 
-          <View style={styles.infoContainer}>
-            <Text style={styles.label}>NIM:</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>{profileData.registration_number || "Belum diisi"}</Text>
+            {/* --- DATA SEKARANG DINAMIS --- */}
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>Name:</Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{profileData.full_name}</Text>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.infoContainer}>
-            <Text style={styles.label}>Major:</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>{profileData.program_name || "Belum diisi"}</Text>
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>NIM:</Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{profileData.registration_number || "Belum diisi"}</Text>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.infoContainer}>
-            <Text style={styles.label}>Generation:</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>{profileData.generation || "Belum diisi"}</Text>
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>Major:</Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{profileData.program_name || "Belum diisi"}</Text>
+              </View>
             </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>Generation:</Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{profileData.generation || "Belum diisi"}</Text>
+              </View>
+            </View>
+
+            {/* Tombol-tombol tidak berubah */}
+            <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/EditProfil")}>
+              <Text style={styles.settingButtonText}>Setting</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Tombol-tombol tidak berubah */}
-          <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/EditProfil")}>
-            <Text style={styles.settingButtonText}>Setting</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -135,12 +139,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: "#015023",
+    // backgroundColor: "#015023",s
     paddingHorizontal: 0,
     paddingTop: 0,
   },
   profileCard: {
-    backgroundColor: "#015023",
+    // backgroundColor: "#015023",
     borderRadius: 0,
     padding: 30,
     paddingTop: 35,

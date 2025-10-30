@@ -4,29 +4,33 @@ import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
-import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
+const CARD_MARGIN = 12;
+const CARD_WIDTH = (width - 40 - CARD_MARGIN) / 2;
 
-// <-- 2. Pindahkan data ke dalam sebuah array terstruktur
 const DUMMY_CONTENT_DATA = [
   {
     id: "1",
     label: "Grades",
     title: "SVPL",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "/grades", // Tidak bisa diklik
+    route: "/grades",
+    icon: "ribbon-outline",
+    gradient: ["#FFD93D", "#FFA62E"],
   },
   {
     id: "2",
     label: "Your Schedule",
-    title: "HANDOKO",
+    title: "Dosen2",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "/jadwal", // Rute navigasi
+    route: "/jadwal",
+    icon: "calendar-outline",
+    gradient: ["#6BCB77", "#4D96A9"],
   },
   {
     id: "3",
@@ -34,6 +38,8 @@ const DUMMY_CONTENT_DATA = [
     title: "Pemrograman Mobile",
     contents: ["Buat UI Keren", "Implementasi API"],
     route: null,
+    icon: "clipboard-outline",
+    gradient: ["#7FC8F8", "#5AA9E6"],
   },
   {
     id: "4",
@@ -41,6 +47,8 @@ const DUMMY_CONTENT_DATA = [
     title: "Perkuliahan",
     contents: ["Libur tanggal merah", "Jadwal ujian"],
     route: null,
+    icon: "megaphone-outline",
+    gradient: ["#FF6B6B", "#EE5A6F"],
   },
 ];
 
@@ -51,143 +59,125 @@ export default function HomeScreen() {
     Urbanist_600SemiBold,
   });
 
-  // <-- 3. Buat state untuk input pencarian dan data konten
   const [searchQuery, setSearchQuery] = useState("");
   const [allContent, setAllContent] = useState(DUMMY_CONTENT_DATA);
   const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
   const [isLoading, setIsLoading] = useState(false);
 
-  // <-- 4. Terapkan logika filtering setiap kali searchQuery berubah
   useEffect(() => {
     if (searchQuery === "") {
       setFilteredContent(allContent);
     } else {
       const lowercasedQuery = searchQuery.toLowerCase();
       const filteredData = allContent.filter((item) => {
-        // Cari di judul atau label, case-insensitive
         return item.title.toLowerCase().includes(lowercasedQuery) || item.label.toLowerCase().includes(lowercasedQuery);
       });
       setFilteredContent(filteredData);
     }
-  }, [searchQuery, allContent]); // Efek ini berjalan jika searchQuery atau allContent berubah
+  }, [searchQuery, allContent]);
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       setIsLoading(true); // Mulai loading
-  //       const response = await axios.get(API_URL);
-  //       const apiData = response.data; // Data dari Laravel: { message: "...", ... }
-
-  //       // Format data API agar sesuai dengan struktur ContentCard
-  //       const apiContentCard = {
-  //         id: "api-1",
-  //         label: "Info from Server",
-  //         title: apiData.title,
-  //         contents: [apiData.message], // Masukkan pesan dari API ke dalam array contents
-  //         route: null,
-  //       };
-
-  //       // Gabungkan data dari API dengan data dummy
-  //       const combinedData = [apiContentCard, ...DUMMY_CONTENT_DATA];
-
-  //       setAllContent(combinedData);
-  //       setFilteredContent(combinedData);
-  //     } catch (error) {
-  //       console.error("Gagal mengambil data dari server:", error);
-  //       Alert.alert("Koneksi Gagal", "Tidak dapat mengambil data dari server. Menampilkan data offline.");
-  //       // Jika gagal, tampilkan saja data dummy
-  //       setAllContent(DUMMY_CONTENT_DATA);
-  //       setFilteredContent(DUMMY_CONTENT_DATA);
-  //     } finally {
-  //       setIsLoading(false); // Hentikan loading, baik berhasil maupun gagal
-  //     }
-  //   };
-
-  //   fetchData();
-  // }, []);
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
 
-      <LinearGradient colors={["#015023", "#015023"]} style={styles.container}>
-        <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
-          {/* Header Section - Fixed */}
-          <View style={styles.header}>
-            <View style={styles.profileSection}>
-              <Image source={require("../../assets/images/react-logo.png")} style={styles.avatar} />
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>Dosen 1</Text>
-                <Text style={styles.userId}>8888</Text>
+      <View style={styles.container}>
+        <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
+          <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
+            {/* Header Section - Fixed */}
+            <View style={styles.header}>
+              <View style={styles.profileSection}>
+                <Image source={require("../../assets/images/react-logo.png")} style={styles.avatar} />
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>Dosen 1</Text>
+                  <Text style={styles.userId}>8888</Text>
+                </View>
               </View>
-            </View>
 
-            <Link href="/chat" asChild>
-              <TouchableOpacity style={styles.iconsSection} activeOpacity={0.7}>
-                <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
-                <Ionicons name="notifications-outline" size={24} color="white" />
+              <TouchableOpacity onPress={logout} style={{ marginRight: 10 }}>
+                <View>
+                  <Ionicons name="log-out-outline" size={24} color="white" />
+                </View>
               </TouchableOpacity>
-            </Link>
-          </View>
 
-          {/* Main Content - Scrollable */}
-          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-              {/* <-- 5. Hubungkan TextInput ke state */}
-              <TextInput
-                placeholder="Search by title or label..."
-                style={styles.searchInput}
-                placeholderTextColor="#666"
-                value={searchQuery}
-                onChangeText={setSearchQuery} // Langsung update state saat mengetik
-              />
-              <Ionicons name="search-outline" size={20} color="#666" />
-            </View>
-            {/* Content Sections */}
-            {/* <-- 6. Render konten dari state hasil filter */}
-            {isLoading ? (
-              <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 30 }} />
-            ) : filteredContent.length > 0 ? (
-              filteredContent.map((item) => (
-                <TouchableOpacity key={item.id} onPress={() => item.route && router.push(item.route)} disabled={!item.route}>
-                  <ContentCard label={item.label} title={item.title} contents={item.contents} />
+              <Link href="/chat" asChild>
+                <TouchableOpacity style={styles.iconsSection} activeOpacity={0.7}>
+                  <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
+                  <Ionicons name="notifications-outline" size={24} color="white" />
                 </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.noResultsText}>No results found for "{searchQuery}"</Text>
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </LinearGradient>
+              </Link>
+            </View>
+
+            {/* Main Content - Scrollable */}
+            <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
+              {/* Search Bar */}
+              <View style={styles.searchContainer}>
+                <Ionicons name="search-outline" size={20} color="#015023" style={styles.searchIcon} />
+                <TextInput placeholder="Search your content..." style={styles.searchInput} placeholderTextColor="#6B7280" value={searchQuery} onChangeText={setSearchQuery} />
+              </View>
+
+              {/* Grid Content */}
+              {isLoading ? (
+                <ActivityIndicator size="large" color="#ffffff" style={{ marginTop: 30 }} />
+              ) : filteredContent.length > 0 ? (
+                <View style={styles.gridContainer}>
+                  {filteredContent.map((item) => (
+                    <TouchableOpacity key={item.id} onPress={() => item.route && router.push(item.route)} disabled={!item.route} activeOpacity={0.85} style={styles.gridItem}>
+                      <LinearGradient colors={item.gradient || ["#FFD93D", "#FFA62E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardGradient}>
+                        <View style={styles.cardHeader}>
+                          <View style={styles.iconContainer}>
+                            <Ionicons name={item.icon as any} size={24} color="white" />
+                          </View>
+                          {item.route && (
+                            <View style={styles.arrowContainer}>
+                              <Ionicons name="arrow-forward" size={16} color="rgba(255, 255, 255, 0.9)" />
+                            </View>
+                          )}
+                        </View>
+
+                        <View style={styles.cardContent}>
+                          <Text style={styles.cardLabel}>{item.label}</Text>
+                          <Text style={styles.cardTitle} numberOfLines={2}>
+                            {item.title}
+                          </Text>
+                          <View style={styles.contentBadge}>
+                            <Text style={styles.contentCount}>{item.contents.length} items</Text>
+                          </View>
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.noResultsContainer}>
+                  <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+                  <Text style={styles.noResultsText}>No results found</Text>
+                  <Text style={styles.noResultsSubtext}>Try a different search term</Text>
+                </View>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </LinearGradient>
+      </View>
     </>
   );
 }
 
-// <-- Tambahkan style baru untuk pesan "No Results"
 const styles = StyleSheet.create({
-  // ... (semua style Anda yang lama biarkan di sini)
-  noResultsText: {
-    textAlign: "center",
-    marginTop: 20,
-    color: "white",
-    fontSize: 16,
-  },
   container: {
     flex: 1,
+    // backgroundColor: "#015023",
   },
   safeContainer: {
     flex: 1,
     marginBottom: 100,
   },
   header: {
-    backgroundColor: "#015023",
+    // backgroundColor: "#015023",
     paddingHorizontal: 20,
     paddingVertical: 15,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    // borderBottomWidth: 1,
-    // borderBottomColor: "rgba(255, 255, 255, 0.1)",
     elevation: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -214,7 +204,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "rgba(255, 255, 255, 0.8)",
     fontWeight: "400",
-    // fontFamily: "Urbanist_400Regular",
   },
   iconsSection: {
     flexDirection: "row",
@@ -241,50 +230,118 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 24,
+    paddingBottom: 30,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5EFD3",
-    borderWidth: 2,
-    borderColor: "#000",
-    borderRadius: 25,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 7,
-    marginBottom: 25,
-    elevation: 2,
+    paddingVertical: 6,
+    marginBottom: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  searchIcon: {
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: "#333",
+    fontSize: 15,
+    color: "#1F2937",
     fontFamily: "Urbanist_400Regular",
-    fontWeight: "400",
   },
-  contentCard: {
-    backgroundColor: "#F5EFD3",
-    borderWidth: 2,
-    borderColor: "#000",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 12,
-    elevation: 2,
+  gridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  gridItem: {
+    width: CARD_WIDTH,
+    marginBottom: 16,
+  },
+  cardGradient: {
+    borderRadius: 20,
+    padding: 20,
+    minHeight: 180,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  contentText: {
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  iconContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 12,
+    padding: 10,
+  },
+  arrowContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    borderRadius: 20,
+    padding: 6,
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  cardLabel: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.9)",
     fontFamily: "Urbanist_400Regular",
-    fontSize: 14,
-    color: "#333",
-    lineHeight: 20,
     marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  cardTitle: {
+    fontSize: 18,
+    color: "white",
+    fontFamily: "Urbanist_600SemiBold",
+    fontWeight: "600",
+    marginBottom: 12,
+    lineHeight: 24,
+  },
+  contentBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  contentCount: {
+    fontSize: 11,
+    color: "white",
+    fontFamily: "Urbanist_600SemiBold",
+    fontWeight: "600",
+  },
+  noResultsContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  noResultsText: {
+    textAlign: "center",
+    marginTop: 16,
+    color: "white",
+    fontSize: 18,
+    fontFamily: "Urbanist_600SemiBold",
+    fontWeight: "600",
+  },
+  noResultsSubtext: {
+    textAlign: "center",
+    marginTop: 8,
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 14,
+    fontFamily: "Urbanist_400Regular",
   },
 });

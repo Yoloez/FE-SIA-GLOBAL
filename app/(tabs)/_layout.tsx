@@ -41,7 +41,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
               <View style={[styles.iconCircle, { backgroundColor: focused ? ACTIVE_ICON_BG : INACTIVE_ICON_BG, borderColor: focused ? "white" : "#DABC4E" }]}>
-                <Ionicons name="home" size={24} color={ICON_COLOR} />
+                <Ionicons name="home" size={24} color={focused ? "white" : ICON_COLOR} />
               </View>
             </View>
           ),
@@ -52,12 +52,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="presensi"
         options={{
-          tabBarIcon: ({ focused }) => <Ionicons name="qr-code" size={30} color={ICON_COLOR} />,
           tabBarButton: (props) => (
-            <TabBarButton
-              {...props}
-              bgColor={INACTIVE_ICON_BG} // Kirim warna background ke tombol kustom
-            />
+            <TabBarButton {...props}>
+              <Ionicons name="qr-code" size={30} />
+            </TabBarButton>
           ),
         }}
       />
@@ -69,7 +67,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
               <View style={[styles.iconCircle, { backgroundColor: focused ? ACTIVE_ICON_BG : INACTIVE_ICON_BG }, { borderColor: focused ? "white" : "#DABC4E" }]}>
-                <Ionicons name="person" size={24} color={ICON_COLOR} />
+                <Ionicons name="person" size={24} color={focused ? "white" : ICON_COLOR} />
               </View>
             </View>
           ),
@@ -84,6 +82,12 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="EditProfil"
+        options={{
+          href: null, // Ini adalah kuncinya!
+        }}
+      />
+      <Tabs.Screen
+        name="jadwal"
         options={{
           href: null, // Ini adalah kuncinya!
         }}

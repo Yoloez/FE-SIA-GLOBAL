@@ -1,61 +1,81 @@
-import { Slot, SplashScreen, useRouter } from "expo-router";
-import { useEffect } from "react";
+import { Slot, SplashScreen, useRouter, useSegments } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 
-// Mencegah splash screen bawaan untuk hilang secara otomatis.
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { user, isLoggedIn, isLoading } = useAuth();
+  const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
+  const segments = useSegments();
   const router = useRouter();
 
+  // --- INI PERBAIKANNYA ---
+  // State baru untuk memastikan kita tidak merender <Slot> terlalu cepat
+  const [isRouteChecked, setIsRouteChecked] = useState(false);
+
   useEffect(() => {
-    // Jangan lakukan apa-apa jika context masih memuat data sesi.
-    if (isLoading) {
+    // 1. Jangan lakukan apa-apa jika AuthContext masih memuat sesi
+    if (isAuthLoading) {
       return;
     }
 
-    // Kondisi ini akan dipanggil SETELAH login berhasil atau saat refresh
+    const inAuthGroup = segments[0] === "(auth)";
+
     if (isLoggedIn && user) {
-      console.log("User is logged in. Redirecting based on role:", user.role);
+      // PENGGUNA SUDAH LOGIN
+      let targetGroup: string;
       switch (user.role) {
         case "student":
-          router.replace("/(tabs)/");
+          targetGroup = "(tabs)";
           break;
         case "dosen":
-          router.replace("/(dosen)/");
+          targetGroup = "(dosen)";
           break;
         case "admin":
-          router.replace("/(admin)/");
+          targetGroup = "(admin)";
           break;
         case "manager":
-          router.replace("/(manager)/");
+          targetGroup = "(manager)";
           break;
         default:
-          console.log("Peran tidak dikenali, mengarahkan ke default.");
-          router.replace("/(tabs)/");
+          targetGroup = "(tabs)";
           break;
       }
+
+      // 2. Cek apakah pengguna sudah berada di grup yang benar
+      if (segments[0] !== targetGroup) {
+        // Jika belum, pindahkan mereka.
+        router.replace(`/${targetGroup}/`);
+      } else {
+        // Jika sudah, izinkan rendering
+        setIsRouteChecked(true);
+      }
     } else if (!isLoggedIn) {
-      // Kondisi ini akan dipanggil jika tidak ada sesi (saat app start atau setelah logout)
-      console.log("User is not logged in. Redirecting to login.");
-      router.replace("/(auth)/login");
+      // PENGGUNA BELUM LOGIN
+      // 3. Cek apakah mereka sudah di grup (auth)
+      if (!inAuthGroup) {
+        // Jika belum, pindahkan mereka ke login
+        router.replace("/(auth)/login");
+      } else {
+        // Jika sudah, izinkan rendering
+        setIsRouteChecked(true);
+      }
     }
+  }, [isAuthLoading, user, isLoggedIn, segments, router]);
 
-    // Sembunyikan splash screen setelah logika navigasi selesai.
-    SplashScreen.hideAsync();
+  useEffect(() => {
+    // 4. Sembunyikan Splash Screen HANYA SETELAH rute diverifikasi
+    if (isRouteChecked) {
+      SplashScreen.hideAsync();
+    }
+  }, [isRouteChecked]);
 
-    // --- INI PERBAIKANNYA ---
-    // Hapus `router` dari dependency array untuk memutus infinite loop.
-    // Efek ini sekarang hanya akan berjalan jika status otentikasi pengguna berubah.
-  }, [isLoading, user, isLoggedIn]);
-
-  // Selama loading, kita tidak merender apa-apa (splash screen masih terlihat).
-  if (isLoading) {
+  // 5. JANGAN RENDER <Slot> sampai kita yakin rutenya sudah benar
+  if (!isRouteChecked) {
     return null;
   }
 
-  // <Slot /> akan merender halaman yang benar setelah pengalihan selesai.
+  // <Slot /> sekarang aman untuk dirender
   return <Slot />;
 }
 

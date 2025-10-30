@@ -4,32 +4,29 @@ import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
+import React, { useEffect, useState } from "react"; // <-- 1. Impor useState & useEffect
 import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
-const Ip = "192.168.0.159"; //ip rumah
-// const Ip = "10.33.65.27"; //dtedi ip
-const API_URL = `http://${Ip}:8000/api/cek`;
 
 // <-- 2. Pindahkan data ke dalam sebuah array terstruktur
 const DUMMY_CONTENT_DATA = [
   {
     id: "1",
-    label: "Notification",
+    label: "Grades",
     title: "SVPL",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: null, // Tidak bisa diklik
+    route: "/grades", // Tidak bisa diklik
   },
   {
     id: "2",
     label: "Your Schedule",
     title: "HANDOKO",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "../Schedule", // Rute navigasi
+    route: "/jadwal", // Rute navigasi
   },
   {
     id: "3",
@@ -108,11 +105,6 @@ export default function HomeScreen() {
 
   //   fetchData();
   // }, []);
-
-  const handleLogout = useCallback(() => {
-    logout();
-  }, [logout]);
-
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
@@ -151,9 +143,6 @@ export default function HomeScreen() {
               />
               <Ionicons name="search-outline" size={20} color="#666" />
             </View>
-            <TouchableOpacity onPress={handleLogout} style={{ alignSelf: "flex-end", marginBottom: 10 }}>
-              <Text style={{ color: "white", fontSize: 16 }}>Logout</Text>
-            </TouchableOpacity>
             {/* Content Sections */}
             {/* <-- 6. Render konten dari state hasil filter */}
             {isLoading ? (

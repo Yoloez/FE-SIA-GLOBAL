@@ -4,7 +4,7 @@ import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
@@ -158,68 +158,70 @@ export default function CreateLecturerScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <Stack.Screen
-        options={{
-          title: "Tambah Dosen",
-          presentation: "modal",
-          headerStyle: { backgroundColor: "#015023" },
-          headerTintColor: "#fff",
-          headerTitleAlign: "left",
-        }}
-      />
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Icon Plus dengan Circle atau Preview Image */}
-        <TouchableOpacity style={styles.iconContainer} onPress={showImageOptions} activeOpacity={0.8}>
-          <View style={styles.iconCircle}>
-            {profileImage ? (
-              <>
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
-                <View style={styles.editBadge}>
-                  <Ionicons name="camera" size={16} color="#fff" />
-                </View>
-              </>
-            ) : (
-              <Ionicons name="person-add" size={40} color="#015023" />
-            )}
-          </View>
-          <Text style={styles.iconLabel}>{profileImage ? "Ubah Foto" : "Tambah Foto"}</Text>
-        </TouchableOpacity>
-
-        {/* Form */}
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Name:</Text>
-            <TextInput style={styles.input} placeholder="Masukkan nama lengkap" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Username:</Text>
-            <TextInput style={styles.input} placeholder="Masukkan username" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email:</Text>
-            <TextInput style={styles.input} placeholder="Masukkan email" placeholderTextColor="rgba(255,255,255,0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password:</Text>
-            <TextInput style={styles.input} placeholder="Masukkan password" placeholderTextColor="rgba(255,255,255,0.5)" value={password} onChangeText={setPassword} secureTextEntry />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password:</Text>
-            <TextInput style={styles.input} placeholder="Konfirmasi password" placeholderTextColor="rgba(255,255,255,0.5)" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry />
-          </View>
-
-          {/* Save Button */}
-          <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleCreateLecturer} disabled={isLoading} activeOpacity={0.8}>
-            {isLoading ? <ActivityIndicator color="#015023" /> : <Text style={styles.buttonText}>Save</Text>}
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <Stack.Screen
+          options={{
+            title: "Tambah Dosen",
+            presentation: "modal",
+            headerStyle: { backgroundColor: "#015023" },
+            headerTintColor: "#fff",
+            headerTitleAlign: "left",
+          }}
+        />
+        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+          {/* Icon Plus dengan Circle atau Preview Image */}
+          <TouchableOpacity style={styles.iconContainer} onPress={showImageOptions} activeOpacity={0.8}>
+            <View style={styles.iconCircle}>
+              {profileImage ? (
+                <>
+                  <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                  <View style={styles.editBadge}>
+                    <Ionicons name="camera" size={16} color="#fff" />
+                  </View>
+                </>
+              ) : (
+                <Ionicons name="person-add" size={40} color="#015023" />
+              )}
+            </View>
+            <Text style={styles.iconLabel}>{profileImage ? "Ubah Foto" : "Tambah Foto"}</Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+          {/* Form */}
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Name:</Text>
+              <TextInput style={styles.input} placeholder="Masukkan nama lengkap" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username:</Text>
+              <TextInput style={styles.input} placeholder="Masukkan username" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email:</Text>
+              <TextInput style={styles.input} placeholder="Masukkan email" placeholderTextColor="rgba(255,255,255,0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password:</Text>
+              <TextInput style={styles.input} placeholder="Masukkan password" placeholderTextColor="rgba(255,255,255,0.5)" value={password} onChangeText={setPassword} secureTextEntry />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm Password:</Text>
+              <TextInput style={styles.input} placeholder="Konfirmasi password" placeholderTextColor="rgba(255,255,255,0.5)" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry />
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleCreateLecturer} disabled={isLoading} activeOpacity={0.8}>
+              {isLoading ? <ActivityIndicator color="#015023" /> : <Text style={styles.buttonText}>Save</Text>}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -313,5 +315,8 @@ const styles = StyleSheet.create({
     color: "#015023",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  keyboardView: {
+    flex: 1,
   },
 });

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
@@ -52,8 +52,24 @@ export default function ManagerDashboardScreen() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [slideAnim] = useState(new Animated.Value(-width * 0.75));
+  const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
   const [search, setSearch] = useState("");
+  const isAnimating = useRef(false);
+  const isMounted = useRef(true); // Track component mount status
+  const searchTimeoutRef = useRef<number | null>(null);
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      // Cleanup animation
+      slideAnim.stopAnimation();
+      // Clear search timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [slideAnim]);
 
   const fetchClasses = useCallback(async () => {
     if (!token) {
@@ -66,10 +82,12 @@ export default function ManagerDashboardScreen() {
     try {
       const response = await api.get("/manager/classes");
 
-      if (response.data && response.data.data) {
+      if (isMounted.current && response.data && response.data.data) {
         setClasses(response.data.data);
       }
     } catch (error) {
+      if (!isMounted.current) return;
+
       let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
 
       if (axios.isAxiosError(error)) {
@@ -90,7 +108,9 @@ export default function ManagerDashboardScreen() {
 
       Alert.alert("Error", alertMessage);
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   }, [token]);
 
@@ -101,27 +121,53 @@ export default function ManagerDashboardScreen() {
   );
 
   const openMenu = useCallback(() => {
+    if (isAnimating.current) return;
+
+    isAnimating.current = true;
     setMenuVisible(true);
+
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 250,
       useNativeDriver: true,
-    }).start();
+    }).start(() => {
+      if (isMounted.current) {
+        isAnimating.current = false;
+      }
+    });
   }, [slideAnim]);
 
   const closeMenu = useCallback(() => {
+    if (isAnimating.current) return;
+
+    isAnimating.current = true;
+
     Animated.timing(slideAnim, {
       toValue: -width * 0.75,
       duration: 250,
       useNativeDriver: true,
-    }).start(() => setMenuVisible(false));
+    }).start(() => {
+      if (isMounted.current) {
+        setMenuVisible(false);
+        isAnimating.current = false;
+      }
+    });
   }, [slideAnim]);
 
   const handleMenuItemPress = useCallback(
     (route: string) => {
+      if (isAnimating.current) return;
+
       closeMenu();
       setTimeout(() => {
-        router.push(route as any);
+        if (isMounted.current) {
+          try {
+            router.push(route as any);
+          } catch (error) {
+            console.error("Navigation error:", error);
+            Alert.alert("Error", "Gagal membuka halaman. Silakan coba lagi.");
+          }
+        }
       }, 300);
     },
     [closeMenu]
@@ -130,9 +176,20 @@ export default function ManagerDashboardScreen() {
   const handleLogout = useCallback(() => {
     Alert.alert("Konfirmasi Logout", "Apakah Anda yakin ingin keluar?", [
       { text: "Batal", style: "cancel" },
-      { text: "Logout", style: "destructive", onPress: () => logout() },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => {
+          closeMenu();
+          setTimeout(() => {
+            if (isMounted.current) {
+              logout();
+            }
+          }, 300);
+        },
+      },
     ]);
-  }, [logout]);
+  }, [logout, closeMenu]);
 
   const filteredClasses = useMemo(() => {
     if (!search.trim()) return classes;
@@ -150,13 +207,17 @@ export default function ManagerDashboardScreen() {
           onPress: async () => {
             try {
               await api.delete(`/manager/classes/${classId}`);
-              Alert.alert("Sukses", "Kelas berhasil dihapus.");
-              fetchClasses();
+              if (isMounted.current) {
+                Alert.alert("Sukses", "Kelas berhasil dihapus.");
+                fetchClasses();
+              }
             } catch (error) {
               if (axios.isAxiosError(error)) {
                 console.error("Gagal menghapus kelas:", error.response?.data);
               }
-              Alert.alert("Gagal", "Gagal menghapus kelas.");
+              if (isMounted.current) {
+                Alert.alert("Gagal", "Gagal menghapus kelas.");
+              }
             }
           },
         },
@@ -167,12 +228,23 @@ export default function ManagerDashboardScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: ClassItem }) => (
-      <TouchableOpacity style={styles.card} onPress={() => router.push(`/(manager)/${item.id_class}`)} activeOpacity={0.9}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => {
+          try {
+            router.push(`/(manager)/${item.id_class}`);
+          } catch (error) {
+            console.error("Navigation error:", error);
+            Alert.alert("Error", "Gagal membuka detail kelas. Silakan coba lagi.");
+          }
+        }}
+        activeOpacity={0.9}
+      >
         <View style={styles.cardPattern}>
-          {/* Geometric circles pattern */}
-          {[...Array(24)].map((_, i) => {
-            const row = Math.floor(i / 6);
-            const col = i % 6;
+          {/* Simplified pattern - reduced from 24 to 12 circles */}
+          {[...Array(12)].map((_, i) => {
+            const row = Math.floor(i / 4);
+            const col = i % 4;
             const isEven = (row + col) % 2 === 0;
 
             return (
@@ -181,8 +253,8 @@ export default function ManagerDashboardScreen() {
                 style={[
                   styles.patternCircleContainer,
                   {
-                    left: col * 16.66 + "%",
-                    top: row * 25 + "%",
+                    left: col * 25 + "%",
+                    top: row * 33.33 + "%",
                   } as any,
                 ]}
               >
@@ -203,7 +275,7 @@ export default function ManagerDashboardScreen() {
           </View>
 
           <View style={styles.cardInfo}>
-            <Text style={{ fontSize: 15, fontWeight: "medium" }} numberOfLines={2}>
+            <Text style={{ fontSize: 15, fontWeight: "500" }} numberOfLines={2}>
               Jumlah Mahasiswa: {item.member_class}
             </Text>
             <Text style={styles.cardTitleNew} numberOfLines={2}>
@@ -216,6 +288,41 @@ export default function ManagerDashboardScreen() {
       </TouchableOpacity>
     ),
     [handleDeleteClass]
+  );
+
+  const ListHeaderComponent = useMemo(
+    () => (
+      <View style={styles.searchWrapper}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Cari mata kuliah..."
+          placeholderTextColor="#aaa"
+          value={search}
+          onChangeText={(text) => {
+            // Clear existing timeout
+            if (searchTimeoutRef.current) {
+              clearTimeout(searchTimeoutRef.current);
+            }
+            // Set new timeout to debounce search
+            searchTimeoutRef.current = setTimeout(() => {
+              setSearch(text);
+            }, 300);
+          }}
+        />
+        <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
+      </View>
+    ),
+    [search]
+  );
+
+  const ListEmptyComponent = useMemo(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="school-outline" size={64} color="#ccc" />
+        <Text style={styles.emptyText}>Belum ada kelas yang dibuat.</Text>
+      </View>
+    ),
+    []
   );
 
   return (
@@ -234,92 +341,71 @@ export default function ManagerDashboardScreen() {
       />
 
       {/* Hamburger Menu Modal */}
-      <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu}>
-        <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeMenu} />
-          <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
-            <View style={styles.menuHeader}>
-              <Text style={styles.menuHeaderText}>Menu</Text>
-              <TouchableOpacity onPress={closeMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="close" size={28} color="#015023" />
-              </TouchableOpacity>
-            </View>
+      {menuVisible && (
+        <SafeAreaView edges={["top", "left", "right"]}>
+          <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu} statusBarTranslucent>
+            <View style={styles.modalContainer}>
+              <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeMenu} />
+              <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
+                <View style={styles.menuHeader}>
+                  <Text style={styles.menuHeaderText}>Menu</Text>
+                  <TouchableOpacity onPress={closeMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="close" size={28} color="#015023" />
+                  </TouchableOpacity>
+                </View>
 
-            <ScrollView style={styles.menuList}>
-              {menuItems.map((item) => (
-                <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuItemPress(item.route)} activeOpacity={0.7}>
-                  <View style={styles.menuIconContainer}>
-                    <Ionicons name={item.icon} size={24} color="#015023" />
-                  </View>
-                  <Text style={styles.menuItemText}>{item.title}</Text>
-                  <Ionicons name="chevron-forward" size={20} color="#999" />
+                <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
+                  {menuItems.map((item) => (
+                    <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuItemPress(item.route)} activeOpacity={0.7}>
+                      <View style={styles.menuIconContainer}>
+                        <Ionicons name={item.icon} size={24} color="#015023" />
+                      </View>
+                      <Text style={styles.menuItemText}>{item.title}</Text>
+                      <Ionicons name="chevron-forward" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+                  <Ionicons name="log-out-outline" size={20} color="#015023" />
+                  <Text style={styles.logoutButtonText}>Logout</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#FFD43B",
-                paddingVertical: 16,
-                borderRadius: 12,
-                marginHorizontal: 20,
-                alignItems: "center",
-                flexDirection: "row",
-                justifyContent: "center",
-                marginVertical: 15,
-                elevation: 3,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3,
-              }}
-              onPress={handleLogout}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="log-out-outline" size={20} color="#015023" />
-              <Text style={styles.logoutButtonText}>Logout</Text>
-            </TouchableOpacity>
 
-            <View style={styles.menuFooter}>
-              <Text style={styles.menuFooterText}>Dashboard Manajer SIA UGN</Text>
+                <View style={styles.menuFooter}>
+                  <Text style={styles.menuFooterText}>Dashboard Manajer SIA UGN</Text>
+                </View>
+              </Animated.View>
             </View>
-          </Animated.View>
-        </View>
-      </Modal>
+          </Modal>
+        </SafeAreaView>
+      )}
 
       <View style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-          {!isLoading && (
-            <View style={styles.searchWrapper}>
-              <TextInput style={styles.searchInput} placeholder="Cari mata kuliah..." placeholderTextColor="#aaa" value={search} onChangeText={setSearch} />
-              <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
-            </View>
-          )}
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#fff" />
-              <Text style={styles.loadingText}>Memuat data...</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredClasses}
-              renderItem={renderItem}
-              keyExtractor={(item) => `class-${item.id_class}`}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="school-outline" size={64} color="#ccc" />
-                  <Text style={styles.emptyText}>Belum ada kelas yang dibuat.</Text>
-                </View>
-              }
-              contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
-              scrollEnabled={false}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={10}
-              updateCellsBatchingPeriod={50}
-              initialNumToRender={10}
-              windowSize={10}
-            />
-          )}
-        </ScrollView>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.loadingText}>Memuat data...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredClasses}
+            renderItem={renderItem}
+            keyExtractor={(item) => `class-${item.id_class}`}
+            ListHeaderComponent={ListHeaderComponent}
+            ListEmptyComponent={ListEmptyComponent}
+            contentContainerStyle={{ paddingTop: 20, paddingBottom: 20 }}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={5}
+            updateCellsBatchingPeriod={100}
+            initialNumToRender={5}
+            windowSize={5}
+            getItemLayout={(data, index) => ({
+              length: 200,
+              offset: 200 * index,
+              index,
+            })}
+          />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -364,6 +450,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
+    marginTop: 12,
     backgroundColor: "#f5f5f5",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
@@ -412,6 +499,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFD43B",
     paddingVertical: 16,
     borderRadius: 12,
+    marginHorizontal: 20,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",

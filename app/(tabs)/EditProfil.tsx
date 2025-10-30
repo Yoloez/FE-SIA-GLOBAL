@@ -1,5 +1,6 @@
 import api from "@/api/axios";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router"; // <-- 1. Impor useRouter
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -72,80 +73,91 @@ export default function EditProfilScreen() {
 
   if (isFetching) {
     return (
-      <View style={[styles.content, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large" color="#fff" />
+      <View style={[styles.containerLoading]}>
+        <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#fff" />
+        </LinearGradient>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: "Edit Profil" }} />
-      <StatusBar barStyle="light-content" backgroundColor="#1a5f3f" />
-      <View style={styles.content}>
-        <View style={styles.profileCard}>
-          <Text style={styles.profileTitle}>Edit Profile</Text>
+    <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ title: "Edit Profil" }} />
+        <StatusBar barStyle="light-content" backgroundColor="#1a5f3f" />
+        <View style={styles.content}>
+          <View style={styles.profileCard}>
+            <Text style={styles.profileTitle}>Edit Profile</Text>
 
-          <View style={styles.avatarContainer}>
-            <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+            <View style={styles.avatarContainer}>
+              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+            </View>
+
+            {/* Form Fields */}
+            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
+              <ScrollView style={{ flex: 1, width: "100%" }} showsVerticalScrollIndicator={false}>
+                <View style={styles.infoContainer}>
+                  <Text style={styles.label}>Nama Lengkap:</Text>
+                  <View style={styles.infoBox}>
+                    <TextInput style={styles.infoText} value={fullName} onChangeText={setFullName} />
+                  </View>
+                </View>
+
+                <View style={styles.infoContainer}>
+                  <Text style={styles.label}>Email:</Text>
+                  <View style={styles.infoBox}>
+                    <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                  </View>
+                </View>
+
+                <Text style={styles.passwordSectionTitle}>Ubah Password (Opsional)</Text>
+                <View style={styles.infoContainer}>
+                  <Text style={styles.label}>Password Saat Ini:</Text>
+                  <View style={styles.infoBox}>
+                    <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
+                  </View>
+                </View>
+                <View style={styles.infoContainer}>
+                  <Text style={styles.label}>Password Baru:</Text>
+                  <View style={styles.infoBox}>
+                    <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+                  </View>
+                </View>
+                <View style={styles.infoContainer}>
+                  <Text style={styles.label}>Konfirmasi Password Baru:</Text>
+                  <View style={styles.infoBox}>
+                    <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry />
+                  </View>
+                </View>
+
+                {/* Save Button */}
+                <TouchableOpacity style={styles.settingButton} onPress={handleSave} disabled={isLoading}>
+                  {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <Text style={styles.settingButtonText}>Save Changes</Text>}
+                </TouchableOpacity>
+              </ScrollView>
+            </KeyboardAvoidingView>
           </View>
-
-          {/* Form Fields */}
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
-            <ScrollView style={{ flex: 1, width: "100%" }} showsVerticalScrollIndicator={false}>
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Nama Lengkap:</Text>
-                <View style={styles.infoBox}>
-                  <TextInput style={styles.infoText} value={fullName} onChangeText={setFullName} />
-                </View>
-              </View>
-
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Email:</Text>
-                <View style={styles.infoBox}>
-                  <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-                </View>
-              </View>
-
-              <Text style={styles.passwordSectionTitle}>Ubah Password (Opsional)</Text>
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Password Saat Ini:</Text>
-                <View style={styles.infoBox}>
-                  <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
-                </View>
-              </View>
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Password Baru:</Text>
-                <View style={styles.infoBox}>
-                  <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
-                </View>
-              </View>
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Konfirmasi Password Baru:</Text>
-                <View style={styles.infoBox}>
-                  <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry />
-                </View>
-              </View>
-
-              {/* Save Button */}
-              <TouchableOpacity style={styles.settingButton} onPress={handleSave} disabled={isLoading}>
-                {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <Text style={styles.settingButtonText}>Save Changes</Text>}
-              </TouchableOpacity>
-            </ScrollView>
-          </KeyboardAvoidingView>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#015023",
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 80,
+    backgroundColor: "transparent",
+  },
+
+  containerLoading: {
+    flex: 1,
+    backgroundColor: "white",
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   header: {
     paddingHorizontal: 20,
@@ -169,12 +181,10 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    backgroundColor: "#015023",
     paddingHorizontal: 0,
     paddingTop: 0,
   },
   profileCard: {
-    backgroundColor: "#015023",
     borderRadius: 0,
     padding: 30,
     paddingTop: 35,
@@ -253,7 +263,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#e8d5b7",
+    // backgroundColor: "#e8d5b7",
     alignItems: "center",
     justifyContent: "center",
   },

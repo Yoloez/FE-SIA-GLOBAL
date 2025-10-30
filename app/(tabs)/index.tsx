@@ -129,7 +129,7 @@ export default function HomeScreen() {
     <>
       <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
 
-      <LinearGradient colors={["#015023", "#015023"]} style={styles.container}>
+      <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
         <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
           {/* Header Section - Fixed */}
           <View style={styles.header}>
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: 100,
   },
   header: {
-    backgroundColor: "#015023",
+    // backgroundColor: "#015023",
     paddingHorizontal: 20,
     paddingVertical: 15,
     flexDirection: "row",

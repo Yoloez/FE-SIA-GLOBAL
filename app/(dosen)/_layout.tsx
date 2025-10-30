@@ -26,7 +26,7 @@ export default function TabLayout() {
           borderColor: "#DABC4E",
           elevation: 0, // Hapus shadow di Android
           borderTopWidth: 0, // Hapus border di iOS
-          backgroundColor: TAB_BAR_BACKGROUND,
+          backgroundColor: "transparent",
           height: 65 + insets.bottom, // Tambahkan safe area bottom
           paddingBottom: insets.bottom, // Padding untuk area navigasi Android
           paddingTop: 10, // Sedikit padding atas untuk estetika

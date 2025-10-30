@@ -83,7 +83,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+    <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" />
 
@@ -134,9 +134,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
   },

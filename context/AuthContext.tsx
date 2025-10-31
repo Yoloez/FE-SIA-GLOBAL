@@ -1,41 +1,88 @@
-import React, { createContext, useContext, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-// 1. Definisikan "bentuk" atau tipe dari data yang ada di dalam context
-interface AuthContextType {
+// Tipe data untuk User, pastikan sesuai
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: "mahasiswa" | "dosen" | "admin" | "manager" | "student" | "applicant" | null;
+}
+
+interface AuthContextData {
+  user: User | null;
+  token: string | null;
   isLoggedIn: boolean;
-  login: () => void;
-  logout: () => void;
+  isLoading: boolean;
+  login: (userData: User, authToken: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-// 2. Beri tahu tipe saat membuat context. Nilainya bisa AuthContextType atau null.
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-// 3. Definisikan tipe untuk props dari AuthProvider, khususnya untuk 'children'
-interface AuthProviderProps {
-  children: React.ReactNode;
-}
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-// Komponen "Penyedia Wadah"
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => {
+    const loadUserData = async () => {
+      console.log("========================================");
+      console.log("[INVESTIGASI] App Start: Mencoba memuat data sesi...");
+      try {
+        const storedToken = await AsyncStorage.getItem("userToken");
+        const storedUserData = await AsyncStorage.getItem("userData");
 
-  const login = () => setIsLoggedIn(true);
-  const logout = () => setIsLoggedIn(false);
+        console.log("[INVESTIGASI] Token dari storage:", storedToken ? "Ditemukan" : "Kosong");
+        console.log("[INVESTIGASI] Data user dari storage:", storedUserData ? "Ditemukan" : "Kosong");
 
-  // Objek value sekarang cocok dengan tipe AuthContextType
-  const value = { isLoggedIn, login, logout };
+        if (storedToken && storedUserData) {
+          const parsedUser = JSON.parse(storedUserData);
+          setUser(parsedUser);
+          setToken(storedToken);
+          console.log("[INVESTIGASI] Sesi berhasil dimuat untuk pengguna:", parsedUser.name);
+        } else {
+          console.log("[INVESTIGASI] Tidak ada sesi aktif yang ditemukan.");
+        }
+      } catch (e) {
+        console.error("[INVESTIGASI] GAGAL memuat data dari storage", e);
+      } finally {
+        setIsLoading(false);
+        console.log("========================================");
+      }
+    };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+    loadUserData();
+  }, []);
 
-// Hook untuk mempermudah mengambil isi "wadah"
-export function useAuth() {
-  const context = useContext(AuthContext);
+  const login = async (userData: User, authToken: string) => {
+    console.log("========================================");
+    console.log("[INVESTIGASI] Login: Mencoba menyimpan data sesi...");
+    try {
+      setUser(userData);
+      setToken(authToken);
+      await AsyncStorage.setItem("userToken", authToken);
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+      console.log("[INVESTIGASI] Data sesi untuk", userData.name, "berhasil disimpan.");
+    } catch (e) {
+      console.error("[INVESTIGASI] GAGAL menyimpan data ke storage", e);
+    }
+    console.log("========================================");
+  };
 
-  // 4. Tambahkan pengecekan agar TypeScript yakin context tidak akan pernah null saat digunakan
-  if (context === null) {
-    throw new Error("useAuth harus digunakan di dalam AuthProvider");
-  }
+  const logout = async () => {
+    try {
+      setUser(null);
+      setToken(null);
+      await AsyncStorage.removeItem("userToken");
+      await AsyncStorage.removeItem("userData");
+      // Pengalihan sekarang ditangani oleh _layout.tsx
+    } catch (e) {
+      console.error("Gagal menghapus data pengguna", e);
+    }
+  };
 
-  return context;
-}
+  return <AuthContext.Provider value={{ user, token, isLoggedIn: !!user, isLoading, login, logout }}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => useContext(AuthContext);

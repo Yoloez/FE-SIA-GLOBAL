@@ -1,4 +1,3 @@
-// app/(tabs)/_layout.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -9,7 +8,7 @@ import TabBarButton from "../../components/TabBarButton";
 const TAB_BAR_BACKGROUND = "#015023";
 const ACTIVE_ICON_BG = "#FACC15"; // Warna kuning untuk background ikon aktif
 const INACTIVE_ICON_BG = "#FEFBEA"; // Warna krem untuk background ikon non-aktif
-const ICON_COLOR = "#B48F2A"; // Warna gold untuk ikon di dalam lingkaran
+const ICON_COLOR = "#DABC4E"; // Warna gold untuk ikon di dalam lingkaran
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -35,6 +34,7 @@ export default function TabLayout() {
       }}
     >
       {/* Tab Dashboard (Kiri) */}
+
       <Tabs.Screen
         name="index"
         options={{
@@ -49,6 +49,7 @@ export default function TabLayout() {
       />
 
       {/* Tab Presensi (Tengah - Kustom) */}
+
       <Tabs.Screen
         name="presensi"
         options={{
@@ -61,8 +62,9 @@ export default function TabLayout() {
       />
 
       {/* Tab Profil (Kanan) */}
+
       <Tabs.Screen
-        name="profil"
+        name="ProfilDosen"
         options={{
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
@@ -77,19 +79,27 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          href: null, // Ini adalah kuncinya!
+          href: null,
         }}
       />
-      <Tabs.Screen
-        name="EditProfil"
-        options={{
-          href: null, // Ini adalah kuncinya!
-        }}
-      />
+
       <Tabs.Screen
         name="jadwal"
         options={{
-          href: null, // Ini adalah kuncinya!
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="class-grades"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="grades"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

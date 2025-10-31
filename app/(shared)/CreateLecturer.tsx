@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.3)",
     paddingHorizontal: 15,
     fontSize: 16,
-    color: "#fff",
+    color: "white",
     borderRadius: 10,
   },
   button: {

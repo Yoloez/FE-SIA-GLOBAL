@@ -99,13 +99,9 @@ export default function GradeInputScreen() {
           <Text style={styles.gradeDisplayText}>{item.selectedGrade || "--"}</Text>
         </View>
 
-        <TouchableOpacity style={styles.editButton} onPress={() => handleSaveGrade(item.id, item.subject_id, item.selectedGrade)} activeOpacity={0.7}>
-          <Ionicons name="create-outline" size={22} color="#4a4a4a" />
-        </TouchableOpacity>
-
         <View style={styles.pickerWrapper}>
-          <Picker selectedValue={item.selectedGrade} style={styles.picker} onValueChange={(itemValue) => handleGradeChange(item.id, itemValue)} dropdownIconColor="#4a4a4a">
-            <Picker.Item label="--" value="" />
+          <Picker selectedValue={item.selectedGrade} style={styles.picker} onValueChange={(itemValue) => handleGradeChange(item.id, itemValue)} dropdownIconColor="#2d5f3f">
+            <Picker.Item label="Pilih Nilai" value="" />
             <Picker.Item label="A" value="A" />
             <Picker.Item label="A-" value="A-" />
             <Picker.Item label="B+" value="B+" />
@@ -116,6 +112,10 @@ export default function GradeInputScreen() {
             <Picker.Item label="E" value="E" />
           </Picker>
         </View>
+
+        <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveGrade(item.id, item.subject_id, item.selectedGrade)} activeOpacity={0.7}>
+          <Ionicons name="checkmark-circle" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -126,7 +126,7 @@ export default function GradeInputScreen() {
         <Stack.Screen options={{ headerShown: false }} />
 
         {/* Header dengan Background Image */}
-        <ImageBackground source={require("../../../assets/images/kairi.png")} style={styles.headerBackground} imageStyle={styles.headerBackgroundImage}>
+        <ImageBackground source={require("../../../assets/images/batik.png")} style={styles.headerBackground} imageStyle={styles.headerBackgroundImage}>
           <View style={styles.headerOverlay}>
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
               <Ionicons name="arrow-back" size={24} color="#2d5f3f" />
@@ -190,13 +190,17 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingTop: 10,
     paddingBottom: 30,
-    paddingHorizontal: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerBackgroundImage: {
-    opacity: 0.15,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    opacity: 0.45,
   },
   headerOverlay: {
     position: "relative",
+    paddingHorizontal: 20,
   },
   backButton: {
     width: 40,
@@ -307,11 +311,11 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
   },
   gradeDisplayContainer: {
     width: 50,
-    height: 40,
+    height: 44,
     borderRadius: 10,
     backgroundColor: "#ffffff",
     borderWidth: 2,
@@ -327,25 +331,36 @@ const styles = StyleSheet.create({
   pickerWrapper: {
     backgroundColor: "#ffffff",
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#c9b872",
+    borderWidth: 2,
+    borderColor: "#2d5f3f",
     overflow: "hidden",
-    width: 30,
-    height: 40,
+    height: 44,
+    alignSelf: "center",
+    minWidth: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
   picker: {
-    height: 40,
-    width: 70,
-    color: "#4a4a4a",
-    fontSize: 13,
+    height: 44,
+    width: "130%",
+    color: "#2d5f3f",
+    fontSize: 20,
+    justifyContent: "center",
+    fontWeight: "600",
   },
-  editButton: {
-    width: 40,
-    height: 40,
+  saveButton: {
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: "#2d5f3f",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   loadingContainer: {
     flex: 1,

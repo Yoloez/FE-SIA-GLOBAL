@@ -13,16 +13,9 @@ interface Subject {
   name_subject: string;
 }
 
-// Tipe data untuk objek AcademicPeriod
 interface AcademicPeriod {
   id: number;
   name: string;
-}
-
-interface ScheduleInput {
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
 }
 
 // Mapping hari untuk menghindari array index issues
@@ -32,6 +25,8 @@ const DAY_NAMES: { [key: number]: string } = {
   3: "Rabu",
   4: "Kamis",
   5: "Jumat",
+  6: "Sabtu",
+  7: "Minggu",
 };
 
 export default function CreateClassScreen() {
@@ -46,8 +41,9 @@ export default function CreateClassScreen() {
   const [codeClass, setCodeClass] = useState("");
   const [memberClass, setMemberClass] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [schedulesList, setSchedulesList] = useState<ScheduleInput[]>([]);
-  const [currentDay, setCurrentDay] = useState<number>(1);
+
+  // Ubah ke single schedule (bukan array)
+  const [dayOfWeek, setDayOfWeek] = useState<number>(1);
   const [startTime, setStartTime] = useState(""); // Format "HH:MM"
   const [endTime, setEndTime] = useState("");
 
@@ -85,7 +81,6 @@ export default function CreateClassScreen() {
 
   // Format input waktu secara otomatis
   const formatTimeInput = (text: string): string => {
-    // Hapus karakter non-digit
     const cleaned = text.replace(/[^\d]/g, "");
 
     if (cleaned.length <= 2) {
@@ -106,14 +101,26 @@ export default function CreateClassScreen() {
     setEndTime(formatted);
   };
 
-  const handleAddSchedule = () => {
-    // Validasi input kosong
+  const handleCreateClass = async () => {
+    // Validasi input dasar
+    if (!selectedSubject || !selectedPeriod || !codeClass.trim() || !memberClass.trim()) {
+      Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
+      return;
+    }
+
+    // Validasi kapasitas kelas
+    const capacity = parseInt(memberClass, 10);
+    if (isNaN(capacity) || capacity <= 0) {
+      Alert.alert("Input Tidak Valid", "Kapasitas kelas harus berupa angka positif.");
+      return;
+    }
+
+    // Validasi waktu
     if (!startTime.trim() || !endTime.trim()) {
       Alert.alert("Input Tidak Valid", "Jam mulai dan selesai harus diisi.");
       return;
     }
 
-    // Validasi format waktu
     if (!validateTimeFormat(startTime)) {
       Alert.alert("Format Tidak Valid", "Format jam mulai harus HH:MM (contoh: 08:00)");
       return;
@@ -135,60 +142,17 @@ export default function CreateClassScreen() {
       return;
     }
 
-    // Cek duplikasi jadwal (hari dan waktu yang sama)
-    const isDuplicate = schedulesList.some((schedule) => schedule.day_of_week === currentDay && schedule.start_time === startTime && schedule.end_time === endTime);
-
-    if (isDuplicate) {
-      Alert.alert("Jadwal Duplikat", "Jadwal dengan hari dan waktu yang sama sudah ditambahkan.");
-      return;
-    }
-
-    const newSchedule: ScheduleInput = {
-      day_of_week: currentDay,
-      start_time: startTime,
-      end_time: endTime,
-    };
-
-    setSchedulesList([...schedulesList, newSchedule]);
-
-    // Reset form jadwal
-    setStartTime("");
-    setEndTime("");
-  };
-
-  // Fungsi untuk menghapus jadwal dari daftar
-  const handleRemoveSchedule = (indexToRemove: number) => {
-    setSchedulesList(schedulesList.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleCreateClass = async () => {
-    // Validasi input dasar
-    if (!selectedSubject || !selectedPeriod || !codeClass.trim() || !memberClass.trim()) {
-      Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
-      return;
-    }
-
-    // Validasi kapasitas kelas
-    const capacity = parseInt(memberClass, 10);
-    if (isNaN(capacity) || capacity <= 0) {
-      Alert.alert("Input Tidak Valid", "Kapasitas kelas harus berupa angka positif.");
-      return;
-    }
-
-    // Validasi jadwal minimal 1
-    if (schedulesList.length === 0) {
-      Alert.alert("Jadwal Kosong", "Tambahkan minimal 1 jadwal untuk kelas ini.");
-      return;
-    }
-
     setIsLoading(true);
     try {
+      // Kirim data sesuai format backend yang baru
       await api.post("/manager/classes", {
         id_subject: selectedSubject,
         academic_period_id: selectedPeriod,
         code_class: codeClass,
         member_class: capacity,
-        schedules: schedulesList,
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        end_time: endTime,
       });
 
       if (isMounted.current) {
@@ -229,7 +193,7 @@ export default function CreateClassScreen() {
             <Text style={styles.headerTitle}>Buat Kelas Baru</Text>
           </View>
 
-          {/* Form  */}
+          {/* Form */}
           <Text style={styles.label}>Pilih Periode Akademik *</Text>
           <View style={styles.pickerContainer}>
             <Picker selectedValue={selectedPeriod} onValueChange={(itemValue) => setSelectedPeriod(itemValue)} style={styles.picker}>
@@ -259,48 +223,21 @@ export default function CreateClassScreen() {
           <Text style={styles.label}>Jadwal Kelas *</Text>
           <View style={styles.scheduleForm}>
             <View style={styles.pickerContainer}>
-              <Picker selectedValue={currentDay} onValueChange={(itemValue) => setCurrentDay(itemValue)}>
+              <Picker selectedValue={dayOfWeek} onValueChange={(itemValue) => setDayOfWeek(itemValue)}>
                 <Picker.Item label="Senin" value={1} />
                 <Picker.Item label="Selasa" value={2} />
                 <Picker.Item label="Rabu" value={3} />
                 <Picker.Item label="Kamis" value={4} />
                 <Picker.Item label="Jumat" value={5} />
+                <Picker.Item label="Sabtu" value={6} />
+                <Picker.Item label="Minggu" value={7} />
               </Picker>
             </View>
             <View style={styles.timeRow}>
               <TextInput style={[styles.input, styles.timeInput]} value={startTime} onChangeText={handleStartTimeChange} placeholder="Mulai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} />
               <TextInput style={[styles.input, styles.timeInput]} value={endTime} onChangeText={handleEndTimeChange} placeholder="Selesai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} />
             </View>
-            <TouchableOpacity style={styles.addScheduleButton} onPress={handleAddSchedule}>
-              <Text style={styles.addScheduleButtonText}>+ Tambah Jadwal Ini</Text>
-            </TouchableOpacity>
           </View>
-
-          {/* Daftar Jadwal yang Ditambahkan */}
-          {schedulesList.length > 0 && (
-            <View style={styles.scheduleListContainer}>
-              <Text style={styles.scheduleListTitle}>Jadwal yang Ditambahkan:</Text>
-              {schedulesList.map((schedule, index) => {
-                const dayName = DAY_NAMES[schedule.day_of_week] || "Unknown";
-                return (
-                  <View key={`schedule-${index}`} style={styles.scheduleItem}>
-                    <View style={styles.scheduleItemContent}>
-                      <Text style={styles.scheduleItemNumber}>#{index + 1}</Text>
-                      <View style={styles.scheduleItemDetails}>
-                        <Text style={styles.scheduleItemDay}>{dayName}</Text>
-                        <Text style={styles.scheduleItemTime}>
-                          {schedule.start_time} - {schedule.end_time}
-                        </Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity onPress={() => handleRemoveSchedule(index)} style={styles.deleteButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="trash-outline" size={20} color="#B00020" />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-          )}
 
           <View style={styles.buttonContainer}>
             {isLoading ? (

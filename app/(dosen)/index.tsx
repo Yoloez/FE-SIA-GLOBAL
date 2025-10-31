@@ -1,3 +1,4 @@
+import ContentCard from "@/components/ContentCard";
 import { Urbanist_400Regular } from "@expo-google-fonts/urbanist/400Regular";
 import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
@@ -10,8 +11,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
-const CARD_MARGIN = 12;
-const CARD_WIDTH = (width - 40 - CARD_MARGIN) / 2;
+const CARD_MARGIN = 5;
+const CARD_WIDTH = (width - 70 - CARD_MARGIN * 3) / 4;
 
 const DUMMY_CONTENT_DATA = [
   {
@@ -20,16 +21,16 @@ const DUMMY_CONTENT_DATA = [
     title: "SVPL",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
     route: "/grades",
-    icon: "ribbon-outline",
+    icon: "ribbon",
     gradient: ["#FFD93D", "#FFA62E"],
   },
   {
     id: "2",
-    label: "Your Schedule",
+    label: "Schedule",
     title: "Dosen2",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
     route: "/jadwal",
-    icon: "calendar-outline",
+    icon: "calendar",
     gradient: ["#6BCB77", "#4D96A9"],
   },
   {
@@ -38,19 +39,62 @@ const DUMMY_CONTENT_DATA = [
     title: "Pemrograman Mobile",
     contents: ["Buat UI Keren", "Implementasi API"],
     route: null,
-    icon: "clipboard-outline",
+    icon: "clipboard",
     gradient: ["#7FC8F8", "#5AA9E6"],
   },
   {
     id: "4",
-    label: "Pengumuman",
+    label: "News",
     title: "Perkuliahan",
     contents: ["Libur tanggal merah", "Jadwal ujian"],
     route: null,
-    icon: "megaphone-outline",
+    icon: "megaphone",
     gradient: ["#FF6B6B", "#EE5A6F"],
   },
+  {
+    id: "5",
+    label: "Library",
+    title: "Books",
+    contents: ["Digital", "Physical"],
+    route: null,
+    icon: "library",
+    gradient: ["#B08BBB", "#9B59B6"],
+  },
+  {
+    id: "6",
+    label: "Profile",
+    title: "Account",
+    contents: ["Settings", "Info"],
+    route: null,
+    icon: "person",
+    gradient: ["#F8B500", "#F28900"],
+  },
+  {
+    id: "7",
+    label: "Events",
+    title: "Campus",
+    contents: ["Upcoming", "Past"],
+    route: null,
+    icon: "calendar-number",
+    gradient: ["#00D9FF", "#0099CC"],
+  },
+  {
+    id: "8",
+    label: "More",
+    title: "Options",
+    contents: ["Settings"],
+    route: null,
+    icon: "apps",
+    gradient: ["#A8E6CF", "#56AB91"],
+  },
 ];
+interface ContentItem {
+  id: string;
+  label: string;
+  title: string;
+  contents: string[];
+  route: string | null;
+}
 
 export default function HomeScreen() {
   const { logout } = useAuth();
@@ -64,13 +108,23 @@ export default function HomeScreen() {
   const [filteredContent, setFilteredContent] = useState(DUMMY_CONTENT_DATA);
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleContentPress = (item: ContentItem) => {
+    if (!item.route) return;
+
+    try {
+      router.push(item.route as any);
+    } catch (error) {
+      console.error("Navigation error:", error);
+    }
+  };
+
   useEffect(() => {
     if (searchQuery === "") {
       setFilteredContent(allContent);
     } else {
       const lowercasedQuery = searchQuery.toLowerCase();
       const filteredData = allContent.filter((item) => {
-        return item.title.toLowerCase().includes(lowercasedQuery) || item.label.toLowerCase().includes(lowercasedQuery);
+        return item.label.toLowerCase().includes(lowercasedQuery);
       });
       setFilteredContent(filteredData);
     }
@@ -99,7 +153,7 @@ export default function HomeScreen() {
                 </View>
               </TouchableOpacity>
 
-              <Link href="/chat" asChild>
+              <Link href="../(chat)/index" asChild>
                 <TouchableOpacity style={styles.iconsSection} activeOpacity={0.7}>
                   <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
                   <Ionicons name="notifications-outline" size={24} color="white" />
@@ -112,7 +166,7 @@ export default function HomeScreen() {
               {/* Search Bar */}
               <View style={styles.searchContainer}>
                 <Ionicons name="search-outline" size={20} color="#015023" style={styles.searchIcon} />
-                <TextInput placeholder="Search your content..." style={styles.searchInput} placeholderTextColor="#6B7280" value={searchQuery} onChangeText={setSearchQuery} />
+                <TextInput placeholder="Search menu..." style={styles.searchInput} placeholderTextColor="#6B7280" value={searchQuery} onChangeText={setSearchQuery} />
               </View>
 
               {/* Grid Content */}
@@ -121,31 +175,16 @@ export default function HomeScreen() {
               ) : filteredContent.length > 0 ? (
                 <View style={styles.gridContainer}>
                   {filteredContent.map((item) => (
-                    <TouchableOpacity key={item.id} onPress={() => item.route && router.push(item.route)} disabled={!item.route} activeOpacity={0.85} style={styles.gridItem}>
-                      <LinearGradient colors={item.gradient || ["#FFD93D", "#FFA62E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardGradient}>
-                        <View style={styles.cardHeader}>
-                          <View style={styles.iconContainer}>
-                            <Ionicons name={item.icon as any} size={24} color="white" />
-                          </View>
-                          {item.route && (
-                            <View style={styles.arrowContainer}>
-                              <Ionicons name="arrow-forward" size={16} color="rgba(255, 255, 255, 0.9)" />
-                            </View>
-                          )}
-                        </View>
-
-                        <View style={styles.cardContent}>
-                          <Text style={styles.cardLabel}>{item.label}</Text>
-                          <Text style={styles.cardTitle} numberOfLines={2}>
-                            {item.title}
-                          </Text>
-                          <View style={styles.contentBadge}>
-                            <Text style={styles.contentCount}>{item.contents.length} items</Text>
-                          </View>
-                        </View>
+                    <TouchableOpacity key={item.id} onPress={() => handleContentPress(item)} disabled={!item.route} activeOpacity={0.7} style={styles.iconCard}>
+                      <LinearGradient colors={["#F5EFD3", "white"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconGradient}>
+                        <Ionicons name={item.icon as any} size={28} color="black" />
                       </LinearGradient>
+                      <Text style={styles.iconLabel} numberOfLines={1}>
+                        {item.label}
+                      </Text>
                     </TouchableOpacity>
                   ))}
+                  <ContentCard label="Grades" title="SVPL" contents={["satu", "dua", "tiga", "GOKILLLL"]} />
                 </View>
               ) : (
                 <View style={styles.noResultsContainer}>
@@ -165,14 +204,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor: "#015023",
   },
   safeContainer: {
     flex: 1,
     marginBottom: 100,
   },
   header: {
-    // backgroundColor: "#015023",
     paddingHorizontal: 20,
     paddingVertical: 15,
     flexDirection: "row",
@@ -239,8 +276,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginBottom: 24,
+    paddingVertical: 5,
+    marginBottom: 28,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -261,68 +298,33 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
-  gridItem: {
+  iconCard: {
     width: CARD_WIDTH,
-    marginBottom: 16,
+    alignItems: "center",
+    marginBottom: 24,
   },
-  cardGradient: {
+  iconGradient: {
+    borderColor: "black",
+    borderWidth: 1,
+    width: CARD_WIDTH,
+    height: CARD_WIDTH,
     borderRadius: 20,
-    padding: 20,
-    minHeight: 180,
+    justifyContent: "center",
+    alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+    marginBottom: 8,
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  iconContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 12,
-    padding: 10,
-  },
-  arrowContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-    borderRadius: 20,
-    padding: 6,
-  },
-  cardContent: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  cardLabel: {
-    fontSize: 11,
-    color: "rgba(255, 255, 255, 0.9)",
-    fontFamily: "Urbanist_400Regular",
-    marginBottom: 4,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  cardTitle: {
-    fontSize: 18,
-    color: "white",
-    fontFamily: "Urbanist_600SemiBold",
-    fontWeight: "600",
-    marginBottom: 12,
-    lineHeight: 24,
-  },
-  contentBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignSelf: "flex-start",
-  },
-  contentCount: {
+  iconLabel: {
     fontSize: 11,
     color: "white",
     fontFamily: "Urbanist_600SemiBold",
     fontWeight: "600",
+    textAlign: "center",
+    letterSpacing: 0.3,
   },
   noResultsContainer: {
     alignItems: "center",

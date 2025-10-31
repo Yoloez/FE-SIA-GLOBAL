@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -7,37 +6,38 @@ import { ActivityIndicator, ImageBackground, SafeAreaView, ScrollView, StatusBar
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 
-// Definisikan tipe data untuk schedule item
-interface ScheduleItem {
-  id_schedule: number;
+// Interface disesuaikan dengan data dari API controller
+interface ClassScheduleItem {
   id_class: number;
+  code_class: string;
   day_of_week: number;
   start_time: string;
   end_time: string;
-  room: string;
-  lecturer_name?: string;
-  class: {
-    id_class: number;
-    code_class: string;
-    subject: {
-      id_subject: number;
-      name_subject: string;
-    };
+  room: string | null;
+  subject: {
+    id_subject: number;
+    name_subject: string;
   };
+  academic_period?: {
+    id: number;
+    name: string;
+  };
+  // Untuk data dosen, tambahkan jika ada
+  lecturer_name?: string;
 }
 
 export default function ScheduleScreen() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function untuk mendapatkan awal minggu (Senin)
   function getWeekStart(date: Date): Date {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(diff));
   }
 
@@ -68,11 +68,9 @@ export default function ScheduleScreen() {
     setIsLoading(true);
     try {
       const response = await api.get("/lecturer/schedules");
-      setSchedules(response.data.data);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Gagal memuat jadwal:", error.response?.data);
-      }
+      setSchedules(response.data.data || []);
+    } catch (error: any) {
+      console.error("Gagal memuat jadwal:", error.response?.data);
       alert("Gagal memuat jadwal Anda.");
     } finally {
       setIsLoading(false);
@@ -91,7 +89,6 @@ export default function ScheduleScreen() {
     newWeekStart.setDate(currentWeekStart.getDate() - 7);
     setCurrentWeekStart(newWeekStart);
 
-    // Set selected date ke hari yang sama di minggu baru
     const newSelectedDate = new Date(selectedDate);
     newSelectedDate.setDate(selectedDate.getDate() - 7);
     setSelectedDate(newSelectedDate);
@@ -103,7 +100,6 @@ export default function ScheduleScreen() {
     newWeekStart.setDate(currentWeekStart.getDate() + 7);
     setCurrentWeekStart(newWeekStart);
 
-    // Set selected date ke hari yang sama di minggu baru
     const newSelectedDate = new Date(selectedDate);
     newSelectedDate.setDate(selectedDate.getDate() + 7);
     setSelectedDate(newSelectedDate);
@@ -234,7 +230,7 @@ export default function ScheduleScreen() {
             <View style={styles.scheduleList}>
               {filteredSchedules.length > 0 ? (
                 filteredSchedules.map((schedule) => (
-                  <ImageBackground key={schedule.id_schedule} source={require("../../assets/images/kairi.png")} style={styles.scheduleCard} imageStyle={styles.scheduleCardImage}>
+                  <ImageBackground key={schedule.id_class} source={require("../../assets/images/batik.png")} style={styles.scheduleCard} imageStyle={styles.scheduleCardImage}>
                     {/* Overlay */}
                     <View style={styles.cardOverlay}>
                       <View style={styles.cardHeader}>
@@ -246,13 +242,13 @@ export default function ScheduleScreen() {
                         </Text>
                       </View>
 
-                      <Text style={styles.scheduleTitle}>{schedule.class?.subject?.name_subject || "Subject Name"}</Text>
-                      <Text style={styles.scheduleCode}>{schedule.class?.code_class || "Class Code"}</Text>
+                      <Text style={styles.scheduleTitle}>{schedule.subject?.name_subject || "Subject Name"}</Text>
+                      <Text style={styles.scheduleCode}>{schedule.code_class || "Class Code"}</Text>
 
                       <View style={styles.scheduleInfo}>
                         <View style={styles.infoRow}>
                           <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <Text style={styles.infoText}>{schedule.lecturer_name || "Lecturer Name"}</Text>
+                          <Text style={styles.infoText}>{schedule.lecturer_name || user?.name || "Lecturer Name"}</Text>
                         </View>
                         <View style={styles.infoRow}>
                           <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
@@ -398,10 +394,10 @@ const styles = StyleSheet.create({
   },
   scheduleCardImage: {
     borderRadius: 20,
-    opacity: 0.2,
+    opacity: 1,
   },
   cardOverlay: {
-    backgroundColor: "rgba(232, 213, 183, 0.85)",
+    backgroundColor: "rgba(232, 213, 183, 0.2)",
     padding: 20,
   },
   cardHeader: {

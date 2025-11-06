@@ -161,7 +161,7 @@ export default function ClassListScreen() {
             <Text style={styles.resultCount}>{filteredClasses.length} kelas ditemukan</Text>
           </View>
           <TouchableOpacity
-            onPress={() => router.push("/(shared)/AddClasses")}
+            onPress={() => router.push("/(admin)/AddClasses")}
             style={styles.addButton}
           >
             <Ionicons name="add-circle" size={36} color="#fff" />

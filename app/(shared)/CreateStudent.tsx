@@ -34,7 +34,7 @@ export default function StudentListScreen() {
   const fetchStudents = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      const response = await api.get("/manager/students");
+      const response = await api.get("/students");
       setStudents(response.data.data);
     } catch (error) {
       console.error("Gagal mengambil data mahasiswa:", error);

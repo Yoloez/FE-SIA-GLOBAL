@@ -112,7 +112,7 @@ export default function ListLecturerScreen() {
 
   const handleAddLecturer = () => {
     // Arahkan ke halaman tambah dosen (dokumen kedua)
-    router.push("/(shared)/createLecturer");
+    router.push("/(admin)/AddLecturer");
   };
 
   const renderLecturerItem = ({ item }: { item: Lecturer }) => (

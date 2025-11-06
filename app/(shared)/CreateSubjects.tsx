@@ -166,7 +166,7 @@ export default function SubjectListScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={() => router.push("/(shared)/AddSubjects")
+            onPress={() => router.push("/(admin)/AddSubjects")
 }
             style={styles.addButton}
           >

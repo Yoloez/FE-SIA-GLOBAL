@@ -1,84 +1,216 @@
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { Stack, useRouter } from "expo-router";
-import React, { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 
-export default function CreateSubjectScreen() {
+interface Subject {
+  id_subject: number;
+  name_subject: string;
+  code_subject: string;
+  sks: number;
+}
+
+export default function SubjectListScreen() {
   const { token } = useAuth();
   const router = useRouter();
 
-  const [nameSubject, setNameSubject] = useState("");
-  const [codeSubject, setCodeSubject] = useState("");
-  const [sks, setSks] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleCreateSubject = async () => {
-    if (!nameSubject || !codeSubject || !sks) {
-      Alert.alert("Error", "Semua kolom wajib diisi.");
-      return;
-    }
-
-    setIsLoading(true);
-
+  // Fetch subjects list
+  const fetchSubjects = useCallback(async () => {
+    setIsLoadingList(true);
     try {
-      const response = await api.post("/manager/subjects", {
-        name_subject: nameSubject,
-        code_subject: codeSubject,
-        sks: parseInt(sks, 10),
-      });
-
-      Alert.alert("Sukses", `Mata kuliah "${response.data.data.name_subject}" berhasil ditambahkan.`);
-      router.back();
+      const response = await api.get("/manager/subjects");
+      setSubjects(response.data.data);
     } catch (error) {
-      console.error("Gagal menambah mata kuliah:", error);
-
-      let errorMessage = "Terjadi kesalahan. Silakan coba lagi.";
-      if (axios.isAxiosError(error) && error.response) {
-        if (error.response.status === 422) {
-          const errors = error.response.data.errors;
-        } else if (error.response.status === 403) {
-          errorMessage = "Anda tidak memiliki hak akses untuk melakukan aksi ini.";
-        }
-      }
-      Alert.alert("Gagal", errorMessage);
+      console.error("Gagal mengambil data mata kuliah:", error);
+      Alert.alert("Error", "Gagal mengambil data mata kuliah");
     } finally {
-      setIsLoading(false);
+      setIsLoadingList(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSubjects();
+    }, [fetchSubjects])
+  );
+
+  const handleDeleteSubject = useCallback(
+    (subjectId: number, subjectName: string) => {
+      Alert.alert(
+        "Konfirmasi Hapus",
+        `Apakah Anda yakin ingin menghapus mata kuliah "${subjectName}"? Tindakan ini tidak dapat dibatalkan.`,
+        [
+          { text: "Batal", style: "cancel" },
+          {
+            text: "Hapus",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await api.delete(`/manager/subjects/${subjectId}`);
+                Alert.alert("Sukses", "Mata kuliah berhasil dihapus.");
+                fetchSubjects();
+              } catch (error) {
+                if (axios.isAxiosError(error))
+                  console.error("Gagal menghapus mata kuliah:", error.response?.data);
+                Alert.alert("Gagal", "Gagal menghapus mata kuliah.");
+              }
+            },
+          },
+        ]
+      );
+    },
+    [fetchSubjects]
+  );
+
+  // Filter subjects
+  const filteredSubjects = useMemo(() => {
+    if (!searchQuery.trim()) return subjects;
+    const query = searchQuery.toLowerCase();
+    return subjects.filter(
+      (subject) =>
+        subject.name_subject.toLowerCase().includes(query) ||
+        subject.code_subject.toLowerCase().includes(query)
+    );
+  }, [subjects, searchQuery]);
+
+  const clearSearch = useCallback(() => setSearchQuery(""), []);
+
+  const renderSubjectItem = useCallback(
+    ({ item }: { item: Subject }) => (
+      <View style={styles.subjectCard}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.subjectName} numberOfLines={1}>
+            {item.name_subject}
+          </Text>
+          <Text style={styles.subjectCode}>Kode: {item.code_subject}</Text>
+          <Text style={styles.subjectSks}>SKS: {item.sks}</Text>
+        </View>
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="create-outline" size={22} color="#015023" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleDeleteSubject(item.id_subject, item.name_subject)}
+          >
+            <Ionicons name="trash-outline" size={22} color="#B00020" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    ),
+    [handleDeleteSubject]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen
+        options={{
+          title: "Daftar Mata Kuliah",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
+              <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Custom Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Tambah Mata Kuliah</Text>
+      <View style={styles.container}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cari mata kuliah (nama, kode)..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <Text style={styles.label}>Nama Mata Kuliah:</Text>
-          <TextInput style={styles.input} placeholder="Contoh: Pemrograman Web Lanjut" placeholderTextColor="#rgba(255,255,255,0.5)" value={nameSubject} onChangeText={setNameSubject} />
+        {/* Header List */}
+        <View style={styles.listHeader}>
+          <View>
+            <Text style={styles.listTitle}>Daftar Mata Kuliah</Text>
+            {searchQuery.length > 0 && (
+              <Text style={styles.resultCount}>{filteredSubjects.length} hasil ditemukan</Text>
+            )}
+          </View>
 
-          <Text style={styles.label}>Kode Mata Kuliah:</Text>
-          <TextInput style={styles.input} placeholder="Contoh IF-212" placeholderTextColor="#rgba(255,255,255,0.5)" value={codeSubject} onChangeText={setCodeSubject} autoCapitalize="characters" />
-
-          <Text style={styles.label}>Jumlah SKS:</Text>
-          <TextInput style={styles.input} placeholder="Contoh 3" placeholderTextColor="#rgba(255,255,255,0.5)" value={sks} onChangeText={setSks} keyboardType="numeric" />
-
-          <TouchableOpacity style={styles.saveButton} onPress={handleCreateSubject} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#1a5230" /> : <Text style={styles.saveButtonText}>Save</Text>}
+          <TouchableOpacity
+            onPress={() => router.push("/(shared)/AddSubjects")
+}
+            style={styles.addButton}
+          >
+            <Ionicons name="add-circle-outline" size={28} color="white" />
           </TouchableOpacity>
         </View>
-      </ScrollView>
+
+        {/* List Mata Kuliah */}
+        <View style={styles.listContainer}>
+          {isLoadingList ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#ffffff" />
+              <Text style={styles.loadingText}>Memuat data...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredSubjects}
+              renderItem={renderSubjectItem}
+              keyExtractor={(item) => `subject-${item.id_subject}`}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons
+                    name={searchQuery ? "search-outline" : "book-outline"}
+                    size={64}
+                    color="rgba(255,255,255,0.6)"
+                  />
+                  <Text style={styles.emptyText}>
+                    {searchQuery
+                      ? `Tidak ada mata kuliah yang cocok dengan "${searchQuery}"`
+                      : "Belum ada mata kuliah yang ditambahkan."}
+                  </Text>
+                  {searchQuery && (
+                    <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
+                      <Text style={styles.clearSearchText}>Hapus Pencarian</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              }
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            />
+          )}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -86,89 +218,142 @@ export default function CreateSubjectScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#1a5230",
+    backgroundColor: "#015023",
   },
   container: {
-    flexGrow: 1,
-    paddingBottom: 40,
+    flex: 1,
+    backgroundColor: "#015023",
+    padding: 20,
   },
-  header: {
+  searchContainer: {
+    marginBottom: 20,
+  },
+  searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 10,
-    elevation: 3, // ← ini buat Android
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    elevation: 2,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
-  backButton: {
-    marginRight: 15,
+  searchIcon: {
+    marginRight: 10,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
+  searchInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#333",
   },
-  addIconContainer: {
-    alignItems: "center",
-    marginTop: 30,
-    marginBottom: 40,
+  clearButton: {
+    padding: 5,
   },
-  addIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.3)",
   },
-  addText: {
-    fontSize: 16,
+  listTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
     color: "#ffffff",
-    fontWeight: "500",
   },
-  form: {
-    marginTop: 30,
-    paddingHorizontal: 20,
+  resultCount: {
+    fontSize: 14,
+    color: "#FFD43B",
+    marginTop: 4,
   },
-  label: {
-    fontSize: 16,
-    color: "#ffffff",
-    marginBottom: 10,
-    fontWeight: "400",
+  addButton: {
+    padding: 5,
   },
-  input: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    height: 50,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    color: "#ffffff",
-    marginBottom: 25,
+  listContainer: {
+    flex: 1,
   },
-  saveButton: {
-    backgroundColor: "#DABC4E",
-    paddingVertical: 18,
-    borderRadius: 25,
+  subjectCard: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
+    justifyContent: "space-between",
+    backgroundColor: "#F5EFD3",
+    borderRadius: 16,
+    borderColor: "#333",
+    borderWidth: 2,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  saveButtonText: {
-    color: "#1a5230",
-    fontSize: 18,
-    fontWeight: "700",
+  subjectName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  subjectCode: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 2,
+  },
+  subjectSks: {
+    fontSize: 14,
+    color: "#666",
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 18,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: "#fff",
+    fontSize: 14,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 16,
+    color: "#ffffff",
+    fontSize: 16,
+    paddingHorizontal: 20,
+    lineHeight: 24,
+  },
+  clearSearchButton: {
+    marginTop: 20,
+    backgroundColor: "#FFD43B",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  clearSearchText: {
+    color: "#015023",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

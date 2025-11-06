@@ -25,7 +25,7 @@ function RootLayoutNav() {
       // PENGGUNA SUDAH LOGIN
       let targetGroup: string;
       switch (user.role) {
-        case "student":
+        case "mahasiswa":
           targetGroup = "(mahasiswa)";
           break;
         case "dosen":

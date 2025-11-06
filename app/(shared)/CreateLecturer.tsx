@@ -1,258 +1,235 @@
 import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
-import axios from "axios";
-import * as ImagePicker from "expo-image-picker";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
-interface Program {
-  id_program: number;
+interface Lecturer {
+  id: number;
   name: string;
+  email: string;
+  nip?: string;
+  profile_image?: string;
+  username?: string;
 }
 
-export default function CreateLecturerScreen() {
+export default function ListLecturerScreen() {
   const { token } = useAuth();
   const router = useRouter();
 
-  // State untuk setiap input form
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  // State untuk list dosen
+  const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+  const [filteredLecturers, setFilteredLecturers] = useState<Lecturer[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [selectedProgram, setSelectedProgram] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const fetchPrograms = async () => {
-      try {
-        const response = await api.get("/manager/programs");
-        setPrograms(response.data.data);
-      } catch (error) {
-        Alert.alert("Error", "Gagal memuat daftar program studi.");
-      }
-    };
-    fetchPrograms();
+    fetchLecturers();
   }, []);
 
-  // Fungsi untuk memilih gambar
-  const pickImage = async () => {
+  useEffect(() => {
+    filterLecturers();
+  }, [searchQuery, lecturers]);
+
+  // Fetch daftar dosen
+  const fetchLecturers = async () => {
     try {
-      // Minta permission
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (permissionResult.granted === false) {
-        Alert.alert("Permission Required", "Izinkan akses ke galeri untuk memilih foto.");
-        return;
-      }
-
-      // Buka image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setProfileImage(result.assets[0].uri);
-      }
+      setIsLoading(true);
+      const response = await api.get("/manager/lecturers");
+      console.log("Response lecturers:", response.data); // Debug log
+      setLecturers(response.data.data || []);
     } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Gagal memilih gambar.");
-    }
-  };
-
-  // Fungsi untuk mengambil foto dengan kamera
-  const takePhoto = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-
-      if (permissionResult.granted === false) {
-        Alert.alert("Permission Required", "Izinkan akses ke kamera untuk mengambil foto.");
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setProfileImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error("Error taking photo:", error);
-      Alert.alert("Error", "Gagal mengambil foto.");
-    }
-  };
-
-  // Tampilkan pilihan untuk memilih gambar
-  const showImageOptions = () => {
-    Alert.alert("Pilih Foto", "Pilih sumber foto profil", [
-      {
-        text: "Galeri",
-        onPress: pickImage,
-      },
-      {
-        text: "Kamera",
-        onPress: takePhoto,
-      },
-      {
-        text: "Batal",
-        style: "cancel",
-      },
-    ]);
-  };
-
-  const handleCreateLecturer = async () => {
-    if (!name || !username || !email || !password || !passwordConfirmation) {
-      Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
-      return;
-    }
-    if (password !== passwordConfirmation) {
-      Alert.alert("Input Tidak Valid", "Password dan konfirmasi password tidak cocok.");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Buat FormData untuk mengirim file
-      const formData = new FormData();
-      formData.append("name", name);
-      formData.append("username", username);
-      formData.append("email", email);
-      formData.append("id_program", selectedProgram);
-      formData.append("password", password);
-      formData.append("password_confirmation", passwordConfirmation);
-
-      // Jika ada gambar, tambahkan ke FormData
-      if (profileImage) {
-        // Debug log
-        console.log("Profile Image URI:", profileImage);
-
-        const filename = profileImage.split("/").pop() || "profile.jpg";
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : "image/jpeg";
-
-        // Format yang benar untuk React Native FormData
-        const imageFile = {
-          uri: profileImage,
-          name: filename,
-          type: type,
-        };
-
-        console.log("Image file object:", imageFile);
-        formData.append("profile_image", imageFile as any);
-      }
-
-      // Debug: Log FormData contents
-      console.log("Sending FormData with image:", profileImage ? "Yes" : "No");
-
-      const response = await api.post("/manager/lecturers", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Accept: "application/json",
-        },
-        transformRequest: (data) => data, // Penting: jangan transform FormData
-      });
-
-      Alert.alert("Sukses", `Dosen "${response.data.data.name}" berhasil ditambahkan.`);
-      router.back();
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Gagal menambah dosen:", error.response?.data);
-        console.error("Error details:", error);
-        const message = error.response?.data?.message || "Terjadi kesalahan saat menghubungi server.";
-        Alert.alert("Gagal", message);
-      }
+      console.error("Error fetching lecturers:", error);
+      Alert.alert("Error", "Gagal memuat daftar dosen.");
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
 
-  return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <Stack.Screen
-          options={{
-            title: "Tambah Dosen",
-            presentation: "modal",
-            headerStyle: { backgroundColor: "#015023" },
-            headerTintColor: "#fff",
-            headerTitleAlign: "left",
-          }}
-        />
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-          {/* Icon Plus dengan Circle atau Preview Image */}
-          <TouchableOpacity style={styles.iconContainer} onPress={showImageOptions} activeOpacity={0.8}>
-            <View style={styles.iconCircle}>
-              {profileImage ? (
-                <>
-                  <Image source={{ uri: profileImage }} style={styles.profileImage} />
-                  <View style={styles.editBadge}>
-                    <Ionicons name="camera" size={16} color="#fff" />
-                  </View>
-                </>
-              ) : (
-                <Ionicons name="person-add" size={40} color="#015023" />
-              )}
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchLecturers();
+  };
+
+  const filterLecturers = () => {
+    if (!searchQuery.trim()) {
+      setFilteredLecturers(lecturers);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = lecturers.filter(
+      (lecturer) =>
+        lecturer.name.toLowerCase().includes(query) ||
+        lecturer.email.toLowerCase().includes(query) ||
+        (lecturer.nip && lecturer.nip.toLowerCase().includes(query))
+    );
+    setFilteredLecturers(filtered);
+  };
+
+  const handleEditLecturer = (lecturerId: number) => {
+    router.push(`/(shared)/editDosen?id=${lecturerId}`);
+  };
+
+  const handleDeleteLecturer = (lecturer: Lecturer) => {
+    Alert.alert(
+      "Hapus Dosen",
+      `Apakah Anda yakin ingin menghapus "${lecturer.name}"?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/manager/lecturers/${lecturer.id}`);
+              Alert.alert("Sukses", "Dosen berhasil dihapus.");
+              fetchLecturers();
+            } catch (error) {
+              console.error("Error deleting lecturer:", error);
+              Alert.alert("Error", "Gagal menghapus dosen.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAddLecturer = () => {
+    // Arahkan ke halaman tambah dosen (dokumen kedua)
+    router.push("/(shared)/createLecturer");
+  };
+
+  const renderLecturerItem = ({ item }: { item: Lecturer }) => (
+    <View style={styles.lecturerCard}>
+      <View style={styles.lecturerContent}>
+        <View style={styles.avatarContainer}>
+          {item.profile_image ? (
+            <Image source={{ uri: item.profile_image }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Ionicons name="person" size={40} color="#999" />
             </View>
-            <Text style={styles.iconLabel}>{profileImage ? "Ubah Foto" : "Tambah Foto"}</Text>
+          )}
+        </View>
+
+        <View style={styles.lecturerInfo}>
+          <Text style={styles.lecturerName}>{item.name}</Text>
+          <Text style={styles.lecturerEmail}>{item.email}</Text>
+          {item.nip && <Text style={styles.lecturerNip}>NIP: {item.nip}</Text>}
+        </View>
+
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => handleEditLecturer(item.id)}
+          >
+            <Ionicons name="create-outline" size={26} color="#015023" />
           </TouchableOpacity>
 
-          {/* Form */}
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan nama lengkap" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} />
-            </View>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => handleDeleteLecturer(item)}
+          >
+            <Ionicons name="trash-outline" size={26} color="#dc3545" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan username" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan email" placeholderTextColor="rgba(255,255,255,0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-            </View>
-
-            <Text style={styles.label}>Program Studi</Text>
-            <View style={styles.pickerContainer}>
-              <Picker selectedValue={selectedProgram} onValueChange={(itemValue) => setSelectedProgram(itemValue)}>
-                <Picker.Item label="-- Pilih Program Studi --" value={null} />
-                {programs.map((program) => (
-                  <Picker.Item key={program.id_program} label={program.name} value={program.id_program} />
-                ))}
-              </Picker>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan password" placeholderTextColor="rgba(255,255,255,0.5)" value={password} onChangeText={setPassword} secureTextEntry />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password:</Text>
-              <TextInput style={styles.input} placeholder="Konfirmasi password" placeholderTextColor="rgba(255,255,255,0.5)" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry />
-            </View>
-
-            {/* Save Button */}
-            <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleCreateLecturer} disabled={isLoading} activeOpacity={0.8}>
-              {isLoading ? <ActivityIndicator color="#015023" /> : <Text style={styles.buttonText}>Save</Text>}
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen
+        options={{
+          title: "Daftar Dosen",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
+              <Ionicons name="arrow-back" size={28} color="#ffffff" />
             </TouchableOpacity>
+          ),
+        }}
+      />
+
+      <View style={styles.container}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={22} color="#999" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari Dosen (nama, email, NIP)..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        {/* Header list */}
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>Daftar Dosen</Text>
+          <TouchableOpacity
+            onPress={handleAddLecturer}
+            style={styles.addButton}
+          >
+            <Ionicons name="add-circle" size={40} color="#ffffffff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Divider */}
+        <View style={styles.divider} />
+
+        {/* List Dosen */}
+        {isLoading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#DABC4E" />
+            <Text style={styles.loadingText}>Memuat daftar dosen...</Text>
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+        ) : (
+          <FlatList
+            data={filteredLecturers}
+            renderItem={renderLecturerItem}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#ffffffff"
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.4)" />
+                <Text style={styles.emptyText}>
+                  {searchQuery
+                    ? "Tidak ada dosen yang sesuai pencarian"
+                    : "Belum ada dosen. Tekan tombol + untuk menambahkan."}
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -262,101 +239,134 @@ const styles = StyleSheet.create({
     backgroundColor: "#015023",
   },
   container: {
-    flexGrow: 1,
-    padding: 24,
-  },
-  iconContainer: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderWidth: 3,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 15,
-    overflow: "hidden",
-    position: "relative",
-  },
-  profileImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 60,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 8,
-    marginBottom: 20,
-    marginHorizontal: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    justifyContent: "center",
-  },
-  editBadge: {
-    position: "absolute",
-    bottom: 5,
-    right: 5,
+    flex: 1,
     backgroundColor: "#015023",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
+    padding: 20,
+  },
+  searchContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  iconLabel: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "500",
-  },
-  form: {
-    width: "100%",
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    color: "#fff",
-    marginBottom: 8,
-    fontWeight: "500",
-  },
-  input: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    height: 50,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    paddingHorizontal: 15,
-    fontSize: 16,
-    color: "white",
-    borderRadius: 10,
-  },
-  button: {
-    backgroundColor: "#DABC4E",
-    paddingVertical: 16,
+    backgroundColor: "#fff",
     borderRadius: 25,
-    alignItems: "center",
-    marginTop: 30,
-    elevation: 3,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+    height: 56,
+    elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  searchIcon: {
+    marginRight: 12,
   },
-  buttonText: {
-    color: "#015023",
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#333",
+  },
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  listTitle: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#ffffff",
+  },
+  addButton: {
+    padding: 4,
+  },
+  divider: {
+    height: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    marginBottom: 20,
+  },
+  listContainer: {
+    paddingBottom: 20,
+  },
+  lecturerCard: {
+    backgroundColor: "#F5E6C8",
+    borderRadius: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  lecturerContent: {
+    flexDirection: "row",
+    padding: 16,
+    alignItems: "center",
+  },
+  avatarContainer: {
+    marginRight: 16,
+  },
+  avatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+  },
+  avatarPlaceholder: {
+    backgroundColor: "#E8E8E8",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  lecturerInfo: {
+    flex: 1,
+  },
+  lecturerName: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#000",
+    marginBottom: 4,
   },
-  keyboardView: {
+  lecturerEmail: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  lecturerNip: {
+    fontSize: 14,
+    color: "#666",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 4,
+    marginLeft: 8,
+  },
+  iconButton: {
+    padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingContainer: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 16,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 100,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 16,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 16,
+    paddingHorizontal: 20,
+    lineHeight: 24,
   },
 });

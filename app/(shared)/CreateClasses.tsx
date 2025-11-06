@@ -1,13 +1,20 @@
 import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
-// Tipe data untuk objek Subject
 interface Subject {
   id_subject: number;
   name_subject: string;
@@ -18,7 +25,17 @@ interface AcademicPeriod {
   name: string;
 }
 
-// Mapping hari untuk menghindari array index issues
+interface Class {
+  id_class: number;
+  code_class: string;
+  member_class: number;
+  id_subject: number;
+  id_academic_period: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
 const DAY_NAMES: { [key: number]: string } = {
   1: "Senin",
   2: "Selasa",
@@ -29,377 +46,240 @@ const DAY_NAMES: { [key: number]: string } = {
   7: "Minggu",
 };
 
-export default function CreateClassScreen() {
+export default function ClassListScreen() {
   const { token } = useAuth();
   const router = useRouter();
   const isMounted = useRef(true);
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<number | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<number | null>(null);
-  const [codeClass, setCodeClass] = useState("");
-  const [memberClass, setMemberClass] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Ubah ke single schedule (bukan array)
-  const [dayOfWeek, setDayOfWeek] = useState<number>(1);
-  const [startTime, setStartTime] = useState(""); // Format "HH:MM"
-  const [endTime, setEndTime] = useState("");
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     isMounted.current = true;
-
-    const fetchInitialData = async () => {
-      try {
-        const [subjectsResponse, periodsResponse] = await Promise.all([api.get("/manager/subjects"), api.get("/manager/academic-periods")]);
-
-        if (isMounted.current) {
-          setSubjects(subjectsResponse.data.data || []);
-          setPeriods(periodsResponse.data.data || []);
-        }
-      } catch (error) {
-        if (isMounted.current) {
-          console.error("Error fetching initial data:", error);
-          Alert.alert("Error", "Gagal memuat data awal. Pastikan server berjalan.");
-        }
-      }
-    };
-
-    fetchInitialData();
-
+    fetchData();
     return () => {
       isMounted.current = false;
     };
   }, []);
 
-  // Validasi format waktu HH:MM
-  const validateTimeFormat = (time: string): boolean => {
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return timeRegex.test(time);
-  };
-
-  // Format input waktu secara otomatis
-  const formatTimeInput = (text: string): string => {
-    const cleaned = text.replace(/[^\d]/g, "");
-
-    if (cleaned.length <= 2) {
-      return cleaned;
-    } else if (cleaned.length <= 4) {
-      return `${cleaned.slice(0, 2)}:${cleaned.slice(2)}`;
-    }
-    return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
-  };
-
-  const handleStartTimeChange = (text: string) => {
-    const formatted = formatTimeInput(text);
-    setStartTime(formatted);
-  };
-
-  const handleEndTimeChange = (text: string) => {
-    const formatted = formatTimeInput(text);
-    setEndTime(formatted);
-  };
-
-  const handleCreateClass = async () => {
-    // Validasi input dasar
-    if (!selectedSubject || !selectedPeriod || !codeClass.trim() || !memberClass.trim()) {
-      Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
-      return;
-    }
-
-    // Validasi kapasitas kelas
-    const capacity = parseInt(memberClass, 10);
-    if (isNaN(capacity) || capacity <= 0) {
-      Alert.alert("Input Tidak Valid", "Kapasitas kelas harus berupa angka positif.");
-      return;
-    }
-
-    // Validasi waktu
-    if (!startTime.trim() || !endTime.trim()) {
-      Alert.alert("Input Tidak Valid", "Jam mulai dan selesai harus diisi.");
-      return;
-    }
-
-    if (!validateTimeFormat(startTime)) {
-      Alert.alert("Format Tidak Valid", "Format jam mulai harus HH:MM (contoh: 08:00)");
-      return;
-    }
-
-    if (!validateTimeFormat(endTime)) {
-      Alert.alert("Format Tidak Valid", "Format jam selesai harus HH:MM (contoh: 10:00)");
-      return;
-    }
-
-    // Validasi waktu mulai harus lebih awal dari waktu selesai
-    const [startHour, startMin] = startTime.split(":").map(Number);
-    const [endHour, endMin] = endTime.split(":").map(Number);
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-
-    if (startMinutes >= endMinutes) {
-      Alert.alert("Waktu Tidak Valid", "Jam mulai harus lebih awal dari jam selesai.");
-      return;
-    }
-
-    setIsLoading(true);
+  const fetchData = async () => {
     try {
-      // Kirim data sesuai format backend yang baru
-      await api.post("/manager/classes", {
-        id_subject: selectedSubject,
-        id_academic_period: selectedPeriod,
-        code_class: codeClass,
-        member_class: capacity,
-        day_of_week: dayOfWeek,
-        start_time: startTime,
-        end_time: endTime,
-      });
-
+      const [subjectsRes, periodsRes, classesRes] = await Promise.all([
+        api.get("/manager/subjects"),
+        api.get("/manager/academic-periods"),
+        api.get("/manager/classes"),
+      ]);
       if (isMounted.current) {
-        Alert.alert("Sukses", "Kelas baru berhasil dibuat.", [
-          {
-            text: "OK",
-            onPress: () => {
-              if (isMounted.current) {
-                router.replace("/(manager)");
-              }
-            },
-          },
-        ]);
+        setSubjects(subjectsRes.data.data || []);
+        setPeriods(periodsRes.data.data || []);
+        setClasses(classesRes.data.data || []);
+        setIsLoadingClasses(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       if (isMounted.current) {
-        console.error("Error creating class:", error);
-        const message = error?.response?.data?.message || "Terjadi kesalahan saat membuat kelas.";
-        Alert.alert("Gagal", message);
-      }
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
+        Alert.alert("Error", "Gagal memuat data.");
+        setIsLoadingClasses(false);
       }
     }
   };
+
+  const handleDeleteClass = async (classId: number) => {
+    Alert.alert(
+      "Konfirmasi Hapus",
+      "Apakah Anda yakin ingin menghapus kelas ini?",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/manager/classes/${classId}`);
+              Alert.alert("Sukses", "Kelas berhasil dihapus.");
+              fetchData();
+            } catch (error) {
+              Alert.alert("Gagal", "Terjadi kesalahan saat menghapus kelas.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const getSubjectName = (id_subject: number) => {
+    const subject = subjects.find((s) => s.id_subject === id_subject);
+    return subject ? subject.name_subject : "Tidak diketahui";
+  };
+
+  const getPeriodName = (id_academic_period: number) => {
+    const period = periods.find((p) => p.id_academic_period === id_academic_period);
+    return period ? period.name : "Tidak diketahui";
+  };
+
+  const filteredClasses = classes.filter((cls) => {
+    const subjectName = getSubjectName(cls.id_subject).toLowerCase();
+    const periodName = getPeriodName(cls.id_academic_period).toLowerCase();
+    const query = searchQuery.toLowerCase();
+
+    return (
+      cls.code_class.toLowerCase().includes(query) ||
+      subjectName.includes(query) ||
+      periodName.includes(query)
+    );
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {/* Custom Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Buat Kelas Baru</Text>
+      <Stack.Screen
+        options={{
+          title: "Admin Dashboard",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
+        }}
+      />
+      <View style={styles.container}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari kelas (kode, mata kuliah)..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        {/* Header */}
+        <View style={styles.listHeader}>
+          <View>
+            <Text style={styles.listTitle}>Daftar Kelas</Text>
+            <Text style={styles.resultCount}>{filteredClasses.length} kelas ditemukan</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => router.push("/(shared)/AddClasses")}
+            style={styles.addButton}
+          >
+            <Ionicons name="add-circle" size={36} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
-          {/* Form */}
-          <Text style={styles.label}>Pilih Periode Akademik *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker selectedValue={selectedPeriod} onValueChange={(itemValue) => setSelectedPeriod(itemValue)} style={styles.picker}>
-              <Picker.Item label="-- Pilih Periode --" value={null} />
-              {periods.map((period) => (
-                <Picker.Item key={period.id_academic_period} label={period.name} value={period.id_academic_period} />
-              ))}
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Pilih Mata Kuliah *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker selectedValue={selectedSubject} onValueChange={(itemValue) => setSelectedSubject(itemValue)} style={styles.picker}>
-              <Picker.Item label="-- Pilih Mata Kuliah --" value={null} />
-              {subjects.map((subject) => (
-                <Picker.Item key={subject.id_subject} label={subject.name_subject} value={subject.id_subject} />
-              ))}
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Kode Kelas *</Text>
-          <TextInput style={styles.input} value={codeClass} onChangeText={setCodeClass} placeholder="Contoh: A, B, Pagi" placeholderTextColor="#999" />
-
-          <Text style={styles.label}>Kapasitas Kelas *</Text>
-          <TextInput style={styles.input} value={memberClass} onChangeText={setMemberClass} placeholder="Contoh: 40" placeholderTextColor="#999" keyboardType="numeric" maxLength={3} />
-
-          <Text style={styles.label}>Jadwal Kelas *</Text>
-          <View style={styles.scheduleForm}>
-            <View style={styles.pickerContainer}>
-              <Picker selectedValue={dayOfWeek} onValueChange={(itemValue) => setDayOfWeek(itemValue)}>
-                <Picker.Item label="Senin" value={1} />
-                <Picker.Item label="Selasa" value={2} />
-                <Picker.Item label="Rabu" value={3} />
-                <Picker.Item label="Kamis" value={4} />
-                <Picker.Item label="Jumat" value={5} />
-                <Picker.Item label="Sabtu" value={6} />
-                <Picker.Item label="Minggu" value={7} />
-              </Picker>
+        {/* List Kelas */}
+        <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
+          {isLoadingClasses ? (
+            <ActivityIndicator size="large" color="#DABC4E" style={styles.loader} />
+          ) : filteredClasses.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="school-outline" size={64} color="#fff" />
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? "Tidak ada kelas yang ditemukan"
+                  : "Belum ada kelas. Tekan + untuk menambah kelas baru"}
+              </Text>
             </View>
-            <View style={styles.timeRow}>
-              <TextInput style={[styles.input, styles.timeInput]} value={startTime} onChangeText={handleStartTimeChange} placeholder="Mulai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} />
-              <TextInput style={[styles.input, styles.timeInput]} value={endTime} onChangeText={handleEndTimeChange} placeholder="Selesai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} />
-            </View>
-          </View>
-
-          <View style={styles.buttonContainer}>
-            {isLoading ? (
-              <ActivityIndicator size="large" color="#DABC4E" />
-            ) : (
-              <TouchableOpacity style={styles.button} onPress={handleCreateClass} activeOpacity={0.8}>
-                <Text style={styles.buttonText}>Buat Kelas</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          ) : (
+            filteredClasses.map((cls) => (
+              <View key={cls.id_class} style={styles.classCard}>
+                <View style={styles.classCardContent}>
+                  <View style={styles.classInfo}>
+                    <Text style={styles.className}>{getSubjectName(cls.id_subject)}</Text>
+                    <Text style={styles.classDetail}>Kelas: {cls.code_class}</Text>
+                    <Text style={styles.classDetail}>
+                      Periode: {getPeriodName(cls.id_academic_period)}
+                    </Text>
+                    <Text style={styles.classDetail}>
+                      {DAY_NAMES[cls.day_of_week]}, {cls.start_time} - {cls.end_time}
+                    </Text>
+                    <Text style={styles.classDetail}>
+                      Kapasitas: {cls.member_class} mahasiswa
+                    </Text>
+                  </View>
+                  <View style={styles.classActions}>
+                    <TouchableOpacity style={styles.editButton}>
+                      <Ionicons name="create-outline" size={24} color="#DABC4E" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteClass(cls.id_class)}
+                    >
+                      <Ionicons name="trash-outline" size={24} color="#ff4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#015023",
-  },
-  container: {
-    paddingBottom: 40,
-  },
-  header: {
+  safeArea: { flex: 1, backgroundColor: "#015023" },
+  container: { flex: 1, padding: 20 },
+  searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 10,
-    marginBottom: 20,
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 8,
-    paddingHorizontal: 20,
-  },
-  input: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 25,
+    paddingHorizontal: 15,
     height: 50,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 10,
     marginBottom: 20,
-    marginHorizontal: 20,
-    fontSize: 16,
-    color: "white",
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 20,
-    marginHorizontal: 20,
-    justifyContent: "center",
-  },
-  picker: {
-    height: 50,
-    color: "white",
-  },
-  buttonContainer: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  button: {
-    backgroundColor: "#DABC4E",
-    paddingVertical: 15,
-    borderRadius: 8,
+  searchIcon: { marginRight: 10 },
+  searchInput: { flex: 1, fontSize: 16, color: "#333" },
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.3)",
+    paddingBottom: 10,
+    marginBottom: 20,
   },
-  buttonText: {
-    color: "#015023",
+  listTitle: { fontSize: 22, fontWeight: "bold", color: "#fff" },
+  resultCount: { color: "#FFD43B", fontSize: 14, marginTop: 5 },
+  addButton: { padding: 5 },
+  listContainer: { flex: 1 },
+  loader: { marginTop: 50 },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 100,
+  },
+  emptyText: {
+    color: "#fff",
+    fontSize: 16,
+    marginTop: 10,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  classCard: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 2,
+  },
+  classCardContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  classInfo: { flex: 1 },
+  className: {
     fontSize: 18,
     fontWeight: "bold",
-  },
-  scheduleForm: {
-    padding: 15,
-    borderRadius: 8,
-  },
-  timeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 10,
-  },
-  timeInput: {
-    flex: 1,
-    marginHorizontal: 0,
-  },
-  addScheduleButton: {
-    backgroundColor: "#DABC4E",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginHorizontal: 20,
-    marginTop: 10,
-  },
-  addScheduleButtonText: {
     color: "#015023",
-    fontSize: 16,
-    fontWeight: "600",
+    marginBottom: 5,
   },
-  scheduleListContainer: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  scheduleListTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 12,
-  },
-  scheduleItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 15,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  scheduleItemContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  scheduleItemNumber: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#015023",
-    marginRight: 12,
-    minWidth: 30,
-  },
-  scheduleItemDetails: {
-    flex: 1,
-  },
-  scheduleItemDay: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 2,
-  },
-  scheduleItemTime: {
-    fontSize: 14,
-    color: "#666",
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  keyboardView: {
-    flex: 1,
-  },
+  classDetail: { fontSize: 14, color: "#666", marginBottom: 3 },
+  classActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  editButton: { padding: 8 },
+  deleteButton: { padding: 8 },
 });

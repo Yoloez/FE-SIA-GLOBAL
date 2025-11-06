@@ -150,6 +150,12 @@ export default function HomeScreen() {
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
               </TouchableOpacity>
 
+              <TouchableOpacity onPress={logout} style={{ marginRight: 10 }}>
+                <View>
+                  <Ionicons name="log-out-outline" size={24} color="white" />
+                </View>
+              </TouchableOpacity>
+
               <TouchableOpacity onPress={handleNotificationPress} style={styles.iconButton} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="notifications-outline" size={24} color="white" />
               </TouchableOpacity>

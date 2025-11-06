@@ -3,10 +3,10 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 // Tipe data untuk User, pastikan sesuai
 interface User {
-  id: number;
+  id_user_si: number;
   name: string;
   email: string;
-  role: "mahasiswa" | "dosen" | "admin" | "manager" | "student" | "applicant" | null;
+  role: "mahasiswa" | "dosen" | "admin" | "manager" | "student" | null;
 }
 
 interface AuthContextData {

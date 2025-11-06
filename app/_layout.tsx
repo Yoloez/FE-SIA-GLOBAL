@@ -26,7 +26,7 @@ function RootLayoutNav() {
       let targetGroup: string;
       switch (user.role) {
         case "student":
-          targetGroup = "(tabs)";
+          targetGroup = "(mahasiswa)";
           break;
         case "dosen":
           targetGroup = "(dosen)";

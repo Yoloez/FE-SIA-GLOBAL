@@ -1,399 +1,263 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
-import { Stack, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 
-interface Program {
-  id_program: number;
+interface Student {
+  id_student: number;
   name: string;
+  email: string;
+  registration_number: string;
+  program_name: string;
 }
 
-export default function CreateStudentScreen() {
+export default function StudentListScreen() {
   const router = useRouter();
-  const isMounted = useRef(true);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // State untuk form
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [registrationNumber, setRegistrationNumber] = useState("");
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [selectedProgram, setSelectedProgram] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Cleanup on unmount
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      abortControllerRef.current?.abort();
-    };
-  }, []);
-
-  // Mengambil daftar program studi dari API
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      abortControllerRef.current = new AbortController();
-
-      try {
-        const response = await api.get("/manager/programs", {
-          signal: abortControllerRef.current.signal,
-        });
-
-        if (isMounted.current && response.data?.data) {
-          setPrograms(response.data.data);
-        }
-      } catch (error: any) {
-        // Ignore abort errors
-        if (error.name === "AbortError" || error.name === "CanceledError") {
-          return;
-        }
-
-        if (isMounted.current) {
-          console.error("Error fetching programs:", error);
-          Alert.alert("Error", "Gagal memuat daftar program studi. Silakan coba lagi.");
-        }
-      } finally {
-        if (isMounted.current) {
-          setIsLoadingPrograms(false);
-        }
-      }
-    };
-
-    fetchPrograms();
-  }, []);
-
-  // Validasi email
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  // Fungsi untuk menangani pembuatan mahasiswa baru
-  const handleCreateStudent = async () => {
-    // Dismiss keyboard
-    Keyboard.dismiss();
-
-    // Validasi input
-    if (!name.trim() || !username.trim() || !email.trim() || !password || !passwordConfirmation || !registrationNumber.trim() || !selectedProgram) {
-      Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      Alert.alert("Input Tidak Valid", "Format email tidak valid.");
-      return;
-    }
-
-    if (password.length < 8) {
-      Alert.alert("Input Tidak Valid", "Password minimal 8 karakter.");
-      return;
-    }
-
-    if (password !== passwordConfirmation) {
-      Alert.alert("Input Tidak Valid", "Password dan konfirmasi password tidak cocok.");
-      return;
-    }
-
-    if (!isMounted.current) return;
-
-    setIsLoading(true);
-
+  // Fetch students list
+  const fetchStudents = useCallback(async () => {
+    setIsLoadingList(true);
     try {
-      await api.post("/manager/students", {
-        name: name.trim(),
-        username: username.trim(),
-        email: email.trim(),
-        registration_number: registrationNumber.trim(),
-        password: password,
-        password_confirmation: passwordConfirmation,
-        id_program: selectedProgram,
-      });
+      const response = await api.get("/students");
+      setStudents(response.data.data);
+    } catch (error) {
+      console.error("Gagal mengambil data mahasiswa:", error);
+      Alert.alert("Error", "Gagal mengambil data mahasiswa");
+    } finally {
+      setIsLoadingList(false);
+    }
+  }, []);
 
-      if (isMounted.current) {
-        Alert.alert("Sukses", "Akun mahasiswa baru berhasil dibuat.", [
+  useFocusEffect(
+    useCallback(() => {
+      fetchStudents();
+    }, [fetchStudents])
+  );
+
+  const handleDeleteStudent = useCallback(
+    (studentId: number, studentName: string) => {
+      Alert.alert(
+        "Konfirmasi Hapus",
+        `Apakah Anda yakin ingin menghapus mahasiswa "${studentName}"?`,
+        [
+          { text: "Batal", style: "cancel" },
           {
-            text: "OK",
-            onPress: () => {
-              if (isMounted.current) {
-                router.back();
+            text: "Hapus",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await api.delete(`/manager/students/${studentId}`);
+                Alert.alert("Sukses", "Data mahasiswa berhasil dihapus.");
+                fetchStudents();
+              } catch (error) {
+                if (axios.isAxiosError(error))
+                  console.error("Gagal menghapus mahasiswa:", error.response?.data);
+                Alert.alert("Gagal", "Gagal menghapus mahasiswa.");
               }
             },
           },
-        ]);
-      }
-    } catch (error) {
-      if (!isMounted.current) return;
+        ]
+      );
+    },
+    [fetchStudents]
+  );
 
-      if (axios.isAxiosError(error)) {
-        console.error("Gagal menambah mahasiswa:", error.response?.data);
-        const message = error.response?.data?.message || error.response?.data?.errors || "Terjadi kesalahan saat menambahkan mahasiswa.";
-        Alert.alert("Gagal", typeof message === "string" ? message : JSON.stringify(message));
-      } else {
-        Alert.alert("Gagal", "Terjadi kesalahan yang tidak terduga.");
-      }
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // Loading state untuk programs
-  if (isLoadingPrograms) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4AF37" />
-          <Text style={styles.loadingText}>Memuat data...</Text>
-        </View>
-      </SafeAreaView>
+  // Filter search
+  const filteredStudents = useMemo(() => {
+    if (!searchQuery.trim()) return students;
+    const q = searchQuery.toLowerCase();
+    return students.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q) ||
+        s.registration_number.toLowerCase().includes(q)
     );
-  }
+  }, [students, searchQuery]);
+
+  const clearSearch = useCallback(() => setSearchQuery(""), []);
+
+  const renderStudentItem = useCallback(
+    ({ item }: { item: Student }) => (
+      <View style={styles.card}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.info}>Email: {item.email}</Text>
+          <Text style={styles.info}>NIM: {item.registration_number}</Text>
+          <Text style={styles.info}>Program: {item.program_name}</Text>
+        </View>
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="create-outline" size={22} color="#015023" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleDeleteStudent(item.id_student, item.name)}
+          >
+            <Ionicons name="trash-outline" size={22} color="#B00020" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    ),
+    [handleDeleteStudent]
+  );
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}>
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <Stack.Screen options={{ headerShown: false }} />
-
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          {/* Custom Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton} disabled={isLoading}>
+    <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen
+        options={{
+          title: "Daftar Mahasiswa",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
               <Ionicons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Tambah Mahasiswa Baru</Text>
-          </View>
+          ),
+        }}
+      />
 
-          {/* Add Icon Button */}
-          <View style={styles.addIconContainer}>
-            <View style={styles.addIconCircle}>
-              <Ionicons name="add" size={32} color="#ffffff" />
-            </View>
-            <Text style={styles.addText}>Tambah foto</Text>
-          </View>
-
-          {/* Form */}
-          <Text style={styles.label}>Nama Lengkap</Text>
-          <TextInput style={styles.input} placeholder="Nama sesuai ijazah" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} editable={!isLoading} maxLength={100} />
-
-          <Text style={styles.label}>Username</Text>
-          <TextInput style={styles.input} placeholder="Username unik" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} editable={!isLoading} maxLength={50} />
-
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Email aktif"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isLoading}
-            maxLength={100}
-          />
-
-          <Text style={styles.label}>Nomor Induk Mahasiswa (NIM)</Text>
-          <TextInput style={styles.input} placeholder="Contoh: 24/123456/SV/12345" placeholderTextColor="rgba(255,255,255,0.5)" value={registrationNumber} onChangeText={setRegistrationNumber} editable={!isLoading} maxLength={50} />
-
-          <Text style={styles.label}>Program Studi</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedProgram}
-              onValueChange={(itemValue) => {
-                if (itemValue !== null && itemValue !== undefined) {
-                  setSelectedProgram(itemValue as number);
-                }
-              }}
-              enabled={!isLoading}
-              style={styles.picker}
-            >
-              <Picker.Item label="-- Pilih Program Studi --" value={0} color="#999" />
-              {programs.map((program) => (
-                <Picker.Item key={program.id_program} label={program.name} value={program.id_program} />
-              ))}
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Minimal 8 karakter"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!isLoading}
-            maxLength={100}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={styles.label}>Konfirmasi Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ulangi password"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={passwordConfirmation}
-            onChangeText={setPasswordConfirmation}
-            secureTextEntry
-            editable={!isLoading}
-            maxLength={100}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <View style={styles.buttonContainer}>
-            {isLoading ? (
-              <View style={styles.loadingButton}>
-                <ActivityIndicator size="small" color="#1a5230" />
-                <Text style={styles.loadingButtonText}>Memproses...</Text>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.button} onPress={handleCreateStudent} activeOpacity={0.8}>
-                <Text style={styles.buttonText}>Tambah Mahasiswa</Text>
+      <View style={styles.container}>
+        {/* Search bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cari mahasiswa (nama, email, NIM)..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#666" />
               </TouchableOpacity>
             )}
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+        </View>
+
+        {/* Header list */}
+        <View style={styles.listHeader}>
+          <View>
+            <Text style={styles.listTitle}>Daftar Mahasiswa</Text>
+            {searchQuery.length > 0 && (
+              <Text style={styles.resultCount}>{filteredStudents.length} hasil ditemukan</Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            onPress={() => router.push("/(shared)/AddStudent")}
+            style={styles.addButton}
+          >
+            <Ionicons name="add-circle-outline" size={28} color="white" />
+          </TouchableOpacity>
+        </View>
+
+        {/* List */}
+        <View style={styles.listContainer}>
+          {isLoadingList ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#ffffff" />
+              <Text style={styles.loadingText}>Memuat data...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredStudents}
+              renderItem={renderStudentItem}
+              keyExtractor={(item) => `student-${item.id_student}`}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons
+                    name={searchQuery ? "search-outline" : "people-outline"}
+                    size={64}
+                    color="rgba(255,255,255,0.6)"
+                  />
+                  <Text style={styles.emptyText}>
+                    {searchQuery
+                      ? `Tidak ada mahasiswa yang cocok dengan "${searchQuery}"`
+                      : "Belum ada mahasiswa yang ditambahkan."}
+                  </Text>
+                </View>
+              }
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            />
+          )}
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#1a5230" },
-  container: { paddingBottom: 40 },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#ffffff",
-  },
-
-  // Style untuk header
-  header: {
+  safeArea: { flex: 1, backgroundColor: "#015023" },
+  container: { flex: 1, backgroundColor: "#015023", padding: 20 },
+  searchContainer: { marginBottom: 20 },
+  searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 10,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    elevation: 2,
   },
-  backButton: {
-    marginRight: 15,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-
-  // Style untuk icon
-  addIconContainer: {
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  addIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
+  searchIcon: { marginRight: 10 },
+  searchInput: { flex: 1, paddingVertical: 14, fontSize: 16, color: "#333" },
+  clearButton: { padding: 5 },
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.3)",
   },
-  addText: {
-    fontSize: 16,
-    color: "#ffffff",
-    fontWeight: "500",
-  },
-
-  // Style form
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 8,
-    paddingHorizontal: 20,
-  },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 20,
-    marginHorizontal: 20,
-    fontSize: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    color: "#ffffff",
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 8,
-    marginBottom: 20,
-    marginHorizontal: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    overflow: "hidden",
-  },
-  picker: {
-    height: 50,
-    color: "#ffffff",
-  },
-  buttonContainer: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  button: {
-    backgroundColor: "#D4AF37",
-    paddingVertical: 18,
-    borderRadius: 25,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
-  buttonText: {
-    color: "#1a5230",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  loadingButton: {
-    backgroundColor: "#D4AF37",
-    paddingVertical: 18,
-    borderRadius: 25,
-    alignItems: "center",
+  listTitle: { fontSize: 20, fontWeight: "bold", color: "#fff" },
+  resultCount: { fontSize: 14, color: "#FFD43B", marginTop: 4 },
+  addButton: { padding: 5 },
+  listContainer: { flex: 1 },
+  card: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F5EFD3",
+    borderRadius: 16,
+    borderColor: "#333",
+    borderWidth: 2,
+    padding: 16,
+    marginBottom: 12,
+  },
+  name: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 4 },
+  info: { fontSize: 14, color: "#555" },
+  actions: { flexDirection: "row", gap: 8 },
+  actionButton: {
+    width: 36,
+    height: 36,
     justifyContent: "center",
-    opacity: 0.7,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.5)",
+    borderRadius: 18,
   },
-  loadingButtonText: {
-    color: "#1a5230",
-    fontSize: 18,
-    fontWeight: "700",
-    marginLeft: 10,
-  },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 60 },
+  loadingText: { marginTop: 10, color: "#fff", fontSize: 14 },
+  emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 60 },
+  emptyText: { textAlign: "center", marginTop: 16, color: "#fff", fontSize: 16 },
 });

@@ -163,7 +163,7 @@ export default function StudentListScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={() => router.push("/(shared)/AddStudent")}
+            onPress={() => router.push("/(admin)/AddStudent")}
             style={styles.addButton}
           >
             <Ionicons name="add-circle-outline" size={28} color="white" />

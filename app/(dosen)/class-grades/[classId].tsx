@@ -8,11 +8,11 @@ import api from "../../../api/axios";
 
 // Tipe data untuk Mahasiswa
 interface Student {
-  id: number;
+  id_user_si: number;
   name: string;
   email: string;
   grade: { grade: string } | null;
-  subject_id: number;
+  id_subject: number;
   selectedGrade: string;
 }
 
@@ -39,7 +39,7 @@ export default function GradeInputScreen() {
       );
 
       // Misal kamu mau update info kelas dari subjectsData
-      const subject = subjectsData.find((s: any) => s.id === Number(classId));
+      const subject = subjectsData.find((s: any) => s.id_subject === Number(classId));
       setClassInfo({
         name: subject?.name || "Analisis dan Desain Perangkat Lunak",
         code: subject?.code,
@@ -59,7 +59,7 @@ export default function GradeInputScreen() {
 
   // Fungsi untuk mengubah nilai di state secara lokal
   const handleGradeChange = (studentId: number, grade: string) => {
-    setStudents((prevStudents) => prevStudents.map((student) => (student.id === studentId ? { ...student, selectedGrade: grade } : student)));
+    setStudents((prevStudents) => prevStudents.map((student) => (student.id_user_si === studentId ? { ...student, selectedGrade: grade } : student)));
   };
 
   // Fungsi untuk menyimpan satu nilai ke database
@@ -70,8 +70,8 @@ export default function GradeInputScreen() {
     }
     try {
       await api.post("/lecturer/grades", {
-        user_si_id: studentId,
-        subject_id: subjectId,
+        id_user_si: studentId,
+        id_subject: subjectId,
         grade: grade,
       });
       Alert.alert("Sukses", "Nilai berhasil disimpan.");
@@ -100,7 +100,7 @@ export default function GradeInputScreen() {
         </View>
 
         <View style={styles.pickerWrapper}>
-          <Picker selectedValue={item.selectedGrade} style={styles.picker} onValueChange={(itemValue) => handleGradeChange(item.id, itemValue)} dropdownIconColor="#2d5f3f">
+          <Picker selectedValue={item.selectedGrade} style={styles.picker} onValueChange={(itemValue) => handleGradeChange(item.id_user_si, itemValue)} dropdownIconColor="#2d5f3f">
             <Picker.Item label="Pilih Nilai" value="" />
             <Picker.Item label="A" value="A" />
             <Picker.Item label="A-" value="A-" />
@@ -113,7 +113,7 @@ export default function GradeInputScreen() {
           </Picker>
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveGrade(item.id, item.subject_id, item.selectedGrade)} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveGrade(item.id_user_si, item.id_subject, item.selectedGrade)} activeOpacity={0.7}>
           <Ionicons name="checkmark-circle" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
@@ -161,7 +161,7 @@ export default function GradeInputScreen() {
             <FlatList
               data={students}
               renderItem={renderItem}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item) => item.id_user_si.toString()}
               contentContainerStyle={styles.listContainer}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>

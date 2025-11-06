@@ -1,4 +1,5 @@
 import api from "@/api/axios";
+import { ClassDetails, User } from "@/types/class.types";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -6,24 +7,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  profile_image: string;
-}
-
-interface ClassDetails {
-  id_class: number;
-  code_class: string;
-  member_class: number;
-  schedule: string;
-  subject: { id_subject: number; name_subject: string };
-  academic_period: { id: number; name: string };
-  lecturers: User[];
-  students: User[];
-}
 
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/50";
 
@@ -91,7 +74,7 @@ export default function ClassDetailScreen() {
   }, [classDetails, searchQuery]);
 
   const handleRemoveMember = useCallback(
-    (memberId: number, memberName: string, role: "dosen" | "student") => {
+    (memberId: number, memberName: string, role: "dosen" | "mahasiswa") => {
       if (!isMounted.current) return;
 
       const endpoint = role === "dosen" ? "lecturers" : "students";
@@ -121,7 +104,7 @@ export default function ClassDetailScreen() {
   );
 
   const renderMemberItem = useCallback(
-    ({ item, role }: { item: User; role: "dosen" | "student" }) => {
+    ({ item, role }: { item: User; role: "dosen" | "mahasiswa" }) => {
       const imageUri = item.profile_image?.trim() || PLACEHOLDER_IMAGE;
 
       return (
@@ -137,7 +120,7 @@ export default function ClassDetailScreen() {
               {item.email}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => handleRemoveMember(item.id, item.name, role)} style={styles.removeButton}>
+          <TouchableOpacity onPress={() => handleRemoveMember(item.id_user_si, item.name, role)} style={styles.removeButton}>
             <Ionicons name="close-circle" size={24} color="#B00020" />
           </TouchableOpacity>
         </View>
@@ -150,7 +133,7 @@ export default function ClassDetailScreen() {
     if (!classDetails) return [];
 
     const createSection = (type: string, key: string, data?: any) => ({ type, key, data });
-    const memberSections = (members: User[], type: string, prefix: string) => (members.length > 0 ? members.map((m) => createSection(type, `${prefix}-${m.id}`, m)) : [createSection(`${prefix}-empty`, `${prefix}-empty`)]);
+    const memberSections = (members: User[], type: string, prefix: string) => (members.length > 0 ? members.map((m) => createSection(type, `${prefix}-${m.id_user_si}`, m)) : [createSection(`${prefix}-empty`, `${prefix}-empty`)]);
 
     return [
       createSection("header", "header"),
@@ -253,10 +236,10 @@ export default function ClassDetailScreen() {
           return <EmptyState icon="briefcase-outline" text={searchQuery ? "Tidak ada dosen yang sesuai pencarian" : "Belum ada dosen yang ditambahkan"} />;
 
         case "students-header":
-          return <SectionHeader icon="people-outline" title="Daftar Mahasiswa" onAdd={() => navigateToAssign("student")} />;
+          return <SectionHeader icon="people-outline" title="Daftar Mahasiswa" onAdd={() => navigateToAssign("mahasiswa")} />;
 
         case "student":
-          return renderMemberItem({ item: item.data, role: "student" });
+          return renderMemberItem({ item: item.data, role: "mahasiswa" });
 
         case "student-empty":
           return <EmptyState icon="people-outline" text={searchQuery ? "Tidak ada mahasiswa yang sesuai pencarian" : "Belum ada mahasiswa yang ditambahkan"} />;

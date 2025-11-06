@@ -9,12 +9,12 @@ import { useAuth } from "../../context/AuthContext";
 
 // Tipe data untuk objek Subject
 interface Subject {
-  id: number;
+  id_subject: number;
   name_subject: string;
 }
 
 interface AcademicPeriod {
-  id: number;
+  id_academic_period: number;
   name: string;
 }
 
@@ -147,7 +147,7 @@ export default function CreateClassScreen() {
       // Kirim data sesuai format backend yang baru
       await api.post("/manager/classes", {
         id_subject: selectedSubject,
-        academic_period_id: selectedPeriod,
+        id_academic_period: selectedPeriod,
         code_class: codeClass,
         member_class: capacity,
         day_of_week: dayOfWeek,
@@ -199,7 +199,7 @@ export default function CreateClassScreen() {
             <Picker selectedValue={selectedPeriod} onValueChange={(itemValue) => setSelectedPeriod(itemValue)} style={styles.picker}>
               <Picker.Item label="-- Pilih Periode --" value={null} />
               {periods.map((period) => (
-                <Picker.Item key={period.id} label={period.name} value={period.id} />
+                <Picker.Item key={period.id_academic_period} label={period.name} value={period.id_academic_period} />
               ))}
             </Picker>
           </View>
@@ -209,7 +209,7 @@ export default function CreateClassScreen() {
             <Picker selectedValue={selectedSubject} onValueChange={(itemValue) => setSelectedSubject(itemValue)} style={styles.picker}>
               <Picker.Item label="-- Pilih Mata Kuliah --" value={null} />
               {subjects.map((subject) => (
-                <Picker.Item key={subject.id} label={subject.name_subject} value={subject.id} />
+                <Picker.Item key={subject.id_subject} label={subject.name_subject} value={subject.id_subject} />
               ))}
             </Picker>
           </View>

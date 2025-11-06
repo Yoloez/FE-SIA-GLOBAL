@@ -12,7 +12,7 @@ interface StaffProfile {
 }
 
 interface Manager {
-  id: number;
+  id_user_si: number;
   name: string;
   email: string;
   staff_profile: StaffProfile | null;
@@ -113,7 +113,7 @@ export default function AdminDashboardScreen() {
           <TouchableOpacity style={styles.actionButton}>
             <Ionicons name="create-outline" size={22} color="#015023" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteManager(item.id, item.name)}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteManager(item.id_user_si, item.name)}>
             <Ionicons name="trash-outline" size={22} color="#B00020" />
           </TouchableOpacity>
         </View>
@@ -173,7 +173,7 @@ export default function AdminDashboardScreen() {
             <FlatList
               data={filteredManagers}
               renderItem={renderManagerItem}
-              keyExtractor={(item) => `manager-${item.id}`}
+              keyExtractor={(item) => `manager-${item.id_user_si}`}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Ionicons name={searchQuery ? "search-outline" : "people-outline"} size={64} color="#ccc" />

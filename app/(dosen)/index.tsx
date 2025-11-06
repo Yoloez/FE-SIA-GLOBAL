@@ -1,4 +1,3 @@
-import ContentCard from "@/components/ContentCard";
 import { Urbanist_400Regular } from "@expo-google-fonts/urbanist/400Regular";
 import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
@@ -133,7 +132,6 @@ export default function HomeScreen() {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#015023" translucent={false} />
-
       <View style={styles.container}>
         <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
           <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
@@ -177,16 +175,18 @@ export default function HomeScreen() {
                   {filteredContent.map((item) => (
                     <TouchableOpacity key={item.id} onPress={() => handleContentPress(item)} disabled={!item.route} activeOpacity={0.7} style={styles.iconCard}>
                       <LinearGradient colors={["#F5EFD3", "white"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconGradient}>
-                        <Ionicons name={item.icon as any} size={28} color="black" />
+                        <Ionicons name={item.icon as any} size={28} color="#DABC4E" />
                       </LinearGradient>
                       <Text style={styles.iconLabel} numberOfLines={1}>
                         {item.label}
                       </Text>
                     </TouchableOpacity>
                   ))}
-                  <ContentCard label="Grades" title="SVPL" contents={["satu", "dua", "tiga", "GOKILLLL"]} />
                 </View>
               ) : (
+                // <View>
+                //   {/* <ContentCard label="Grades" title="SVPL" contents={["satu", "dua", "tiga", "GOKILLLL"]} /> */}
+                // </View>
                 <View style={styles.noResultsContainer}>
                   <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
                   <Text style={styles.noResultsText}>No results found</Text>

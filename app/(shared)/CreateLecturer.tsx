@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
 interface Program {
-  id: number;
+  id_program: number;
   name: string;
 }
 
@@ -129,7 +129,7 @@ export default function CreateLecturerScreen() {
       formData.append("name", name);
       formData.append("username", username);
       formData.append("email", email);
-      formData.append("program_id", selectedProgram);
+      formData.append("id_program", selectedProgram);
       formData.append("password", password);
       formData.append("password_confirmation", passwordConfirmation);
 
@@ -230,7 +230,7 @@ export default function CreateLecturerScreen() {
               <Picker selectedValue={selectedProgram} onValueChange={(itemValue) => setSelectedProgram(itemValue)}>
                 <Picker.Item label="-- Pilih Program Studi --" value={null} />
                 {programs.map((program) => (
-                  <Picker.Item key={program.id} label={program.name} value={program.id} />
+                  <Picker.Item key={program.id_program} label={program.name} value={program.id_program} />
                 ))}
               </Picker>
             </View>

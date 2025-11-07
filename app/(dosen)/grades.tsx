@@ -10,10 +10,14 @@ interface LecturerClass {
   code_class: string;
   subject: {
     name_subject: string;
+    sks: number;
   };
   academic_period: {
     name: string;
   };
+  room?: string;
+  schedule?: string;
+  student_count?: number;
 }
 
 export default function LecturerClassesScreen() {
@@ -44,21 +48,41 @@ export default function LecturerClassesScreen() {
       onPress={() => router.push(`/(dosen)/class-grades/${item.id_class}`)}
       activeOpacity={0.7}
     >
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          <Ionicons name="book-outline" size={28} color="#666" />
+      <View style={styles.cardContent}>
+        <View style={styles.leftSection}>
+          <View style={styles.courseBadge}>
+            <Text style={styles.courseBadgeText}>Kelas</Text>
+          </View>
+        </View>
+        
+        <View style={styles.rightSection}>
+          <Text style={styles.scheduleText}>
+            {item.schedule || "09:15 - 10:55"}
+          </Text>
         </View>
       </View>
       
-      <View style={styles.classInfo}>
+      <View style={styles.classDetails}>
         <Text style={styles.className}>{item.subject.name_subject}</Text>
-        <Text style={styles.classDetails}>
-          Kelas {item.code_class} - {item.academic_period.name}
+        <Text style={styles.classCode}>
+          Class: {item.code_class}, SKS: {item.subject.sks || 2}
         </Text>
-      </View>
-      
-      <View style={styles.arrowButton}>
-        <Ionicons name="chevron-forward" size={24} color="#2d5f3f" />
+        
+        <View style={styles.infoRow}>
+          <View style={styles.infoItem}>
+            <Ionicons name="people" size={16} color="#8B7355" />
+            <Text style={styles.infoText}>
+              {item.student_count || 80} Student
+            </Text>
+          </View>
+          
+          <View style={styles.infoItem}>
+            <Ionicons name="location" size={16} color="#8B7355" />
+            <Text style={styles.infoText}>
+              {item.room || "R.Kelas CU 207"}
+            </Text>
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -77,28 +101,13 @@ export default function LecturerClassesScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#2d2d2d" />
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Text style={styles.backText}>Kelas</Text>
         </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <View style={styles.courseBadge}>
-            <Text style={styles.courseBadgeText}>course</Text>
-          </View>
-          <Text style={styles.headerTitle}>SVPL</Text>
-          <Text style={styles.headerSubtitle}>kelas: PLBB, SKS 2</Text>
-          <View style={styles.classCount}>
-            <Ionicons name="school-outline" size={16} color="#666" />
-            <Text style={styles.classCountText}>{classes.length} Mahasiswa</Text>
-          </View>
-        </View>
       </View>
 
       {/* Class List Section */}
       <View style={styles.listContainer}>
-        <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Daftar Nilai Mahasiswa</Text>
-        </View>
-        
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2d5f3f" />
@@ -131,123 +140,95 @@ const styles = StyleSheet.create({
     backgroundColor: '#015023',
   },
   headerContainer: {
-    backgroundColor: '#F5EFD3',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    borderTopLeftRadius:24,
-    borderTopRightRadius:24,
     paddingTop: 16,
-    paddingBottom: 24,
+    paddingBottom: 16,
     paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   backButton: {
-    marginBottom: 12,
-  },
-  headerContent: {
-    marginTop: 8,
-  },
-  courseBadge: {
-    backgroundColor: '#015023',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  courseBadgeText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2d2d2d',
-    marginBottom: 6,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  classCount: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
-  classCountText: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 4,
+  backText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '500',
   },
   listContainer: {
     flex: 1,
-    marginTop: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: '#F5EFD3',
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  listHeader: {
-    backgroundColor: '#DABC4E',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  listTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2d2d2d',
+    paddingHorizontal: 16,
   },
   listContent: {
-    paddingHorizontal: 16,
     paddingVertical: 8,
     flexGrow: 1,
   },
   classCard: {
+    backgroundColor: '#F5EFD3',
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  leftSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+  },
+  courseBadge: {
+    backgroundColor: '#D4A574',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 12,
-    padding: 12,
-    marginVertical: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  avatarContainer: {
-    marginRight: 12,
+  courseBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
+  rightSection: {
+    alignItems: 'flex-end',
   },
-  classInfo: {
-    flex: 1,
+  scheduleText: {
+    fontSize: 13,
+    color: '#8B7355',
+    fontWeight: '500',
+  },
+  classDetails: {
+    marginTop: 4,
   },
   className: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2d2d2d',
     marginBottom: 4,
   },
-  classDetails: {
+  classCode: {
     fontSize: 13,
-    color: '#666',
+    color: '#8B7355',
+    marginBottom: 12,
   },
-  arrowButton: {
-    padding: 8,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#8B7355',
   },
   loadingContainer: {
     flex: 1,
@@ -264,7 +245,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#666',
+    color: '#fff',
     fontSize: 15,
     marginTop: 16,
     lineHeight: 22,

@@ -25,14 +25,11 @@ export default function CreateSubjectScreen() {
     setIsLoading(true);
 
     try {
-      const response = await api.post(
-        "/manager/subjects",
-        {
-          name_subject: nameSubject,
-          code_subject: codeSubject,
-          sks: parseInt(sks, 10),
-        }
-      );
+      const response = await api.post("/manager/subjects", {
+        name_subject: nameSubject,
+        code_subject: codeSubject,
+        sks: parseInt(sks, 10),
+      });
 
       Alert.alert("Sukses", `Mata kuliah "${response.data.data.name_subject}" berhasil ditambahkan.`);
       router.back();
@@ -64,58 +61,21 @@ export default function CreateSubjectScreen() {
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Tambah Mata Kuliah</Text>
-          
-        </View>
-
-        {/* Add Icon Button */}
-        <View style={styles.addIconContainer}>
-          <View style={styles.addIconCircle}>
-            <Ionicons name="add" size={32} color="#ffffff" />
-          </View>
-          <Text style={styles.addText}>Tambah Mata Kuliah</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
           <Text style={styles.label}>Nama Mata Kuliah:</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="Contoh: Pemrograman Web Lanjut" 
-            placeholderTextColor="#rgba(255,255,255,0.5)"
-            value={nameSubject} 
-            onChangeText={setNameSubject} 
-          />
+          <TextInput style={styles.input} placeholder="Contoh: Pemrograman Web Lanjut" placeholderTextColor="#rgba(255,255,255,0.5)" value={nameSubject} onChangeText={setNameSubject} />
 
           <Text style={styles.label}>Kode Mata Kuliah:</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="Contoh IF-212" 
-            placeholderTextColor="#rgba(255,255,255,0.5)"
-            value={codeSubject} 
-            onChangeText={setCodeSubject} 
-            autoCapitalize="characters" 
-          />
+          <TextInput style={styles.input} placeholder="Contoh IF-212" placeholderTextColor="#rgba(255,255,255,0.5)" value={codeSubject} onChangeText={setCodeSubject} autoCapitalize="characters" />
 
           <Text style={styles.label}>Jumlah SKS:</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="Contoh 3" 
-            placeholderTextColor="#rgba(255,255,255,0.5)"
-            value={sks} 
-            onChangeText={setSks} 
-            keyboardType="numeric" 
-          />
+          <TextInput style={styles.input} placeholder="Contoh 3" placeholderTextColor="#rgba(255,255,255,0.5)" value={sks} onChangeText={setSks} keyboardType="numeric" />
 
-          <TouchableOpacity 
-            style={styles.saveButton} 
-            onPress={handleCreateSubject} 
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#1a5230" />
-            ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
-            )}
+          <TouchableOpacity style={styles.saveButton} onPress={handleCreateSubject} disabled={isLoading}>
+            {isLoading ? <ActivityIndicator color="#1a5230" /> : <Text style={styles.saveButtonText}>Save</Text>}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -138,7 +98,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     paddingTop: 10,
-    
   },
   backButton: {
     marginRight: 15,
@@ -171,6 +130,7 @@ const styles = StyleSheet.create({
   },
   form: {
     paddingHorizontal: 20,
+    paddingTop: 30,
   },
   label: {
     fontSize: 16,

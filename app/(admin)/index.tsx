@@ -9,20 +9,19 @@ import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
-interface Subject {
-  id_subject: number;
-  name_subject: string;
-}
-interface AcademicPeriod {
-  id: number;
-  name: string;
-}
 interface ClassItem {
   id_class: number;
   code_class: string;
-  subject: Subject;
-  academic_period: AcademicPeriod;
+  name_subject: string;
+  code_subject: string;
+  academic_period_name: string;
   member_class: number;
+  total_students: number;
+  schedule: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
 }
 
 interface MenuItem {
@@ -33,11 +32,11 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "/(admin)/CreateSubjects" },
-  { id: "2", title: "Buat Kelas", icon: "school-outline", route: "/(admin)/CreateClasses" },
-  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "/(admin)/CreateLecturer" },
-  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "/(admin)/CreateStudent" },
-  { id: "5", title: "List Manager", icon: "id-card-outline", route: "/(admin)/ListManager" },
+  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "../(admin)/CreateSubjects" },
+  { id: "2", title: "Buat Kelas", icon: "school-outline", route: "../(admin)/CreateClasses" },
+  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "../(admin)/CreateLecturer" },
+  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "../(admin)/CreateStudent" },
+  { id: "5", title: "Tambah Manager", icon: "id-card-outline", route: "../(admin)/ListManager" },
 ];
 
 const ITEM_HEIGHT = 210;
@@ -64,7 +63,9 @@ export default function ManagerDashboardScreen() {
     try {
       const response = await api.get("/manager/classes");
       if (isMounted.current) {
-        setClasses(response.data.data || []);
+        // Validasi data yang valid saja
+        const validClasses = (response.data.data || []).filter((item: ClassItem) => item.name_subject && item.code_class && item.academic_period_name);
+        setClasses(validClasses);
       }
     } catch (error) {
       if (!isMounted.current) return;
@@ -76,6 +77,33 @@ export default function ManagerDashboardScreen() {
       if (isMounted.current) setIsLoading(false);
     }
   }, []);
+
+  const handleToggleActive = useCallback(
+    (id: number, currentStatus: boolean, name: string) => {
+      const newStatus = !currentStatus;
+      const statusText = newStatus ? "aktif" : "nonaktif";
+
+      Alert.alert("Konfirmasi Status", `Ubah status kelas "${name}" menjadi ${statusText}?`, [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Ubah",
+          onPress: async () => {
+            try {
+              await api.patch(`/manager/classes/${id}/toggle-status`, {
+                is_active: newStatus,
+              });
+              Alert.alert("Sukses", `Status kelas berhasil diubah menjadi ${statusText}.`);
+              fetchClasses();
+            } catch (error) {
+              console.error("Toggle active error:", error);
+              Alert.alert("Gagal", "Gagal mengubah status kelas.");
+            }
+          },
+        },
+      ]);
+    },
+    [fetchClasses]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -142,34 +170,65 @@ export default function ManagerDashboardScreen() {
   const filteredClasses = useMemo(() => {
     if (!search.trim()) return classes;
     const q = search.toLowerCase();
-    return classes.filter((c) => c.subject.name_subject.toLowerCase().includes(q) || c.code_class.toLowerCase().includes(q) || c.academic_period.name.toLowerCase().includes(q));
+    return classes.filter((c) => c.name_subject?.toLowerCase().includes(q) || c.code_class?.toLowerCase().includes(q) || c.academic_period_name?.toLowerCase().includes(q) || c.code_subject?.toLowerCase().includes(q));
   }, [classes, search]);
 
   const renderItem = useCallback(
     ({ item }: { item: ClassItem }) => (
       <ImageBackground source={require("../../assets/images/batik.png")} style={[styles.card, CARD_STYLE]} imageStyle={styles.cardImage}>
-        <TouchableOpacity style={styles.cardContent} onPress={() => router.push(`/(admin)/${item.id_class}`)} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.cardContent} onPress={() => router.push(`/(manager)/${item.id_class}`)} activeOpacity={0.9}>
           <View style={styles.cardTop}>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Kelas</Text>
             </View>
-            <TouchableOpacity onPress={() => handleDelete(item.id_class, `${item.subject.name_subject} - ${item.code_class}`)} style={styles.deleteBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="trash-bin-outline" size={20} color="red" />
-            </TouchableOpacity>
+
+            <View style={styles.actionButtons}>
+              {/* Toggle Active Button */}
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleToggleActive(item.id_class, item.is_active || false, `${item.name_subject} - ${item.code_class}`);
+                }}
+                style={[styles.toggleBtn, { backgroundColor: item.is_active ? "#10b981" : "#6b7280" }]}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name={item.is_active ? "checkmark-circle" : "close-circle"} size={20} color="white" />
+              </TouchableOpacity>
+
+              {/* Delete Button */}
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item.id_class, `${item.name_subject} - ${item.code_class}`);
+                }}
+                style={styles.deleteBtn}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="trash-bin-outline" size={20} color="red" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.cardInfo}>
-            <Text style={styles.memberText}>Kapasitas: {item.member_class} mahasiswa</Text>
+            {/* Status Badge */}
+            <View style={[styles.statusBadge, { backgroundColor: item.is_active ? "#d1fae5" : "#fee2e2" }]}>
+              <Text style={[styles.statusText, { color: item.is_active ? "#065f46" : "#991b1b" }]}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
+            </View>
+
+            <Text style={styles.memberText}>
+              Kapasitas: {item.total_students || 0}/{item.member_class} mahasiswa
+            </Text>
             <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.subject.name_subject}
+              {item.name_subject || "Mata Kuliah"}
             </Text>
             <Text style={styles.cardSubtitle}>Kelas {item.code_class}</Text>
-            <Text style={styles.cardPeriod}>{item.academic_period.name}</Text>
+            {item.schedule && <Text style={styles.cardSchedule}>{item.schedule}</Text>}
+            <Text style={styles.cardPeriod}>{item.academic_period_name}</Text>
           </View>
         </TouchableOpacity>
       </ImageBackground>
     ),
-    [handleDelete]
+    [handleDelete, handleToggleActive]
   );
 
   const keyExtractor = useCallback((item: ClassItem) => `class-${item.id_class}`, []);
@@ -293,6 +352,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  cardSchedule: {
+    fontSize: 13,
+    color: "#D4AF37",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
   menuHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -381,4 +446,28 @@ const styles = StyleSheet.create({
   },
   searchIcon: { position: "absolute", left: 12, top: 11 },
   listContent: { paddingTop: 20, paddingBottom: 2 },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  toggleBtn: {
+    padding: 8,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
 });

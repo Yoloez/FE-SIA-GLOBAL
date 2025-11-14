@@ -2,9 +2,10 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
+
 
 const { width } = Dimensions.get("window");
 
@@ -19,6 +20,18 @@ interface ProfileData {
 
 const Profil = () => {
   const { logout, user } = useAuth();
+
+  const handleLogoutConfirm = () => {
+  Alert.alert(
+    "Konfirmasi Logout",
+    "Apakah kamu yakin ingin keluar?",
+    [
+      { text: "Batal", style: "cancel" },
+      { text: "Keluar", style: "destructive", onPress: () => handleLogout() }
+    ]
+  );
+};
+
 
   // --- State untuk menyimpan data profil dan status loading ---
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -111,7 +124,8 @@ const Profil = () => {
               <Text style={styles.settingButtonText}>Setting</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
+            <TouchableOpacity activeOpacity={0.9} onPress={handleLogoutConfirm} style={styles.logoutButton}>
+
               <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
           </View>
@@ -139,7 +153,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // backgroundColor: "#015023",s
+    // backgroundColor: "#015023",
     paddingHorizontal: 0,
     paddingTop: 0,
   },

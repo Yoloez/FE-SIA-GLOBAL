@@ -3,7 +3,7 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
@@ -23,6 +23,17 @@ const ProfilDosen = () => {
   const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handleLogoutConfirm = () => {
+    Alert.alert(
+      "Konfirmasi Logout",
+      "Apakah kamu yakin ingin keluar?",
+      [
+        { text: "Batal", style: "cancel" },
+        { text: "Keluar", style: "destructive", onPress: () => handleLogout() }
+      ]
+    );
+  };
 
   // --- Fungsi untuk mengambil data profil dari API ---
   const fetchProfile = useCallback(async () => {
@@ -92,7 +103,7 @@ const ProfilDosen = () => {
               </View>
             </View>
 
-            <TouchableOpacity activeOpacity={0.9} onPress={handleLogout} style={styles.logoutButton}>
+            <TouchableOpacity activeOpacity={0.9} onPress={handleLogoutConfirm} style={styles.logoutButton}>
               <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
           </View>

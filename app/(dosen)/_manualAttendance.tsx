@@ -21,6 +21,12 @@ export default function AttendanceList() {
     { id: 13, name: 'Jessie', nim: '24/123456/SV/54321', checked: false },
     { id: 14, name: 'Rex', nim: '24/123456/SV/54321', checked: false },
     { id: 15, name: 'Hamm', nim: '24/123456/SV/54321', checked: false },
+     { id: 16, name: 'Hamm', nim: '24/123456/SV/54321', checked: false },
+    { id: 17, name: 'Woody', nim: '24/123456/SV/54321', checked: true },
+    { id: 18, name: 'Buzz', nim: '24/123456/SV/54321', checked: false },
+    { id: 19, name: 'Jessie', nim: '24/123456/SV/54321', checked: false },
+    { id: 20, name: 'Rex', nim: '24/123456/SV/54321', checked: false },
+    { id: 21, name: 'Hamm', nim: '24/123456/SV/54321', checked: false },
   ]);
 
   const toggleStudent = (id) => {
@@ -31,17 +37,22 @@ export default function AttendanceList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.innerContainer}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton}
-           onPress={() => router.push('/_presencePage')}
-          >
-            <ArrowLeft size={24} color="#fff" />
-            <Text style={styles.headerText}>Attendance</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton}
+         onPress={() => router.push('/_presencePage')}
+        >
+          <ArrowLeft size={24} color="#fff" />
+          <Text style={styles.headerText}>Attendance</Text>
+        </TouchableOpacity>
+      </View>
 
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Student List Card */}
         <View style={styles.cardContainer}>
           <View style={styles.card}>
@@ -52,13 +63,8 @@ export default function AttendanceList() {
               <Text style={styles.courseDetail}>Student: 50</Text>
             </View>
 
-            {/* Student List with ScrollView */}
-            <ScrollView 
-              style={styles.studentList}
-              contentContainerStyle={styles.studentListContent}
-              showsVerticalScrollIndicator={true}
-              nestedScrollEnabled={true}
-            >
+            {/* Student List */}
+            <View style={styles.studentList}>
               {students.map((student) => (
                 <TouchableOpacity
                   key={student.id}
@@ -68,7 +74,7 @@ export default function AttendanceList() {
                 >
                   {/* Avatar */}
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>🐱</Text>
+                    <Text style={styles.avatarText}>?</Text>
                   </View>
                   
                   {/* Info */}
@@ -85,7 +91,7 @@ export default function AttendanceList() {
                   </View>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
           </View>
         </View>
 
@@ -95,7 +101,7 @@ export default function AttendanceList() {
             <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -103,11 +109,8 @@ export default function AttendanceList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a5c3a',
-     paddingTop: 20,
-  },
-  innerContainer: {
-    flex: 1,
+    backgroundColor: '#015023',
+    paddingTop: 20,
   },
   header: {
     paddingTop: 20,
@@ -124,14 +127,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 8,
   },
-  cardContainer: {
+  scrollContainer: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120, // Padding besar untuk navigasi bottom
+  },
+  cardContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
   },
   card: {
-    flex: 1,
-    backgroundColor: '#f5f1e8',
+    backgroundColor: '#F5EFD3',
     borderRadius: 24,
     padding: 20,
   },
@@ -153,10 +159,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   studentList: {
-    flex: 1,
-  },
-  studentListContent: {
-    paddingBottom: 10,
+    // Hapus flex: 1
   },
   studentItem: {
     flexDirection: 'row',
@@ -200,10 +203,11 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   saveButton: {
-    backgroundColor: '#d4af37',
+    backgroundColor: '#DABC4E',
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',

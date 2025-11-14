@@ -103,7 +103,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="_manualAttendace"
+        name="_manualAttendance"
         options={{
           href: null,
         }}

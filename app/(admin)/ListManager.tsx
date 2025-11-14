@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
+import { handleApiError, isAbortError } from "../../utils/errorHandler";
 
 interface StaffProfile {
   employee_id_number: string;
@@ -23,6 +23,15 @@ export default function AdminDashboardScreen() {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const isMounted = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const handleLogout = useCallback(() => {
     Alert.alert("Konfirmasi Logout", "Apakah Anda yakin ingin keluar?", [
@@ -39,21 +48,42 @@ export default function AdminDashboardScreen() {
   }, [logout]);
 
   const fetchManagers = useCallback(async () => {
+    // Batalkan request sebelumnya
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Buat abort controller baru
+    if (typeof AbortController !== "undefined") {
+      abortControllerRef.current = new AbortController();
+    }
+
     setIsLoading(true);
     try {
-      const response = await api.get("/admin/managers");
-      setManagers(response.data.data);
+      const response = await api.get("/admin/managers", {
+        signal: abortControllerRef.current?.signal,
+      });
+
+      if (isMounted.current) {
+        setManagers(response.data.data || []);
+      }
     } catch (error) {
-      console.error("Gagal mengambil data manajer:", error);
-      Alert.alert("Error", "Gagal mengambil data manajer");
+      if (!isMounted.current || isAbortError(error)) return;
+
+      const apiError = handleApiError(error);
+      Alert.alert("Error", apiError.message);
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      fetchManagers();
+      if (isMounted.current) {
+        fetchManagers();
+      }
     }, [fetchManagers])
   );
 
@@ -67,11 +97,15 @@ export default function AdminDashboardScreen() {
           onPress: async () => {
             try {
               await api.delete(`/admin/managers/${managerId}`);
-              Alert.alert("Sukses", "Manajer berhasil dihapus.");
-              fetchManagers();
+              if (isMounted.current) {
+                Alert.alert("Sukses", "Manajer berhasil dihapus.");
+                fetchManagers();
+              }
             } catch (error) {
-              if (axios.isAxiosError(error)) console.error("Gagal menghapus manajer:", error.response?.data);
-              Alert.alert("Gagal", "Gagal menghapus manajer.");
+              if (isMounted.current) {
+                const apiError = handleApiError(error);
+                Alert.alert("Gagal", apiError.message);
+              }
             }
           },
         },

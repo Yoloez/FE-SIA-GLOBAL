@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
+import { handleApiError, isAbortError } from "../../utils/errorHandler";
 
 const { width } = Dimensions.get("window");
 
@@ -50,31 +50,50 @@ export default function ManagerDashboardScreen() {
   const [search, setSearch] = useState("");
   const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
   const isMounted = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   React.useEffect(() => {
     return () => {
       isMounted.current = false;
       slideAnim.stopAnimation();
+      // Batalkan request jika masih berlangsung
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
-  }, []);
+  }, [slideAnim]);
 
   const fetchClasses = useCallback(async () => {
+    // Batalkan request sebelumnya jika ada
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Buat abort controller baru
+    if (typeof AbortController !== "undefined") {
+      abortControllerRef.current = new AbortController();
+    }
+
     setIsLoading(true);
     try {
-      const response = await api.get("/manager/classes");
+      const response = await api.get("/manager/classes", {
+        signal: abortControllerRef.current?.signal,
+      });
+
       if (isMounted.current) {
         // Validasi data yang valid saja
-        const validClasses = (response.data.data || []).filter((item: ClassItem) => item.name_subject && item.code_class && item.academic_period_name);
+        const validClasses = (response.data.data || []).filter((item: ClassItem) => item && item.name_subject && item.code_class && item.academic_period_name);
         setClasses(validClasses);
       }
     } catch (error) {
-      if (!isMounted.current) return;
+      if (!isMounted.current || isAbortError(error)) return;
 
-      const message = axios.isAxiosError(error) ? (error.response ? `Gagal memuat kelas. Error ${error.response.status}.` : "Tidak dapat terhubung ke server.") : "Terjadi kesalahan.";
-
-      Alert.alert("Error", message);
+      const apiError = handleApiError(error);
+      Alert.alert("Error", apiError.message);
     } finally {
-      if (isMounted.current) setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -92,11 +111,15 @@ export default function ManagerDashboardScreen() {
               await api.patch(`/manager/classes/${id}/toggle-status`, {
                 is_active: newStatus,
               });
-              Alert.alert("Sukses", `Status kelas berhasil diubah menjadi ${statusText}.`);
-              fetchClasses();
+              if (isMounted.current) {
+                Alert.alert("Sukses", `Status kelas berhasil diubah menjadi ${statusText}.`);
+                fetchClasses();
+              }
             } catch (error) {
-              console.error("Toggle active error:", error);
-              Alert.alert("Gagal", "Gagal mengubah status kelas.");
+              if (isMounted.current) {
+                const apiError = handleApiError(error);
+                Alert.alert("Gagal", apiError.message);
+              }
             }
           },
         },
@@ -107,7 +130,9 @@ export default function ManagerDashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchClasses();
+      if (isMounted.current) {
+        fetchClasses();
+      }
     }, [fetchClasses])
   );
 
@@ -126,7 +151,11 @@ export default function ManagerDashboardScreen() {
   const handleMenuNav = useCallback(
     (route: string) => {
       toggleMenu(false);
-      setTimeout(() => router.push(route as any), 300);
+      setTimeout(() => {
+        if (isMounted.current) {
+          router.push(route as any);
+        }
+      }, 300);
     },
     [toggleMenu]
   );
@@ -155,10 +184,15 @@ export default function ManagerDashboardScreen() {
           onPress: async () => {
             try {
               await api.delete(`/manager/classes/${id}`);
-              Alert.alert("Sukses", "Kelas berhasil dihapus.");
-              fetchClasses();
+              if (isMounted.current) {
+                Alert.alert("Sukses", "Kelas berhasil dihapus.");
+                fetchClasses();
+              }
             } catch (error) {
-              Alert.alert("Gagal", "Gagal menghapus kelas.");
+              if (isMounted.current) {
+                const apiError = handleApiError(error);
+                Alert.alert("Gagal", apiError.message);
+              }
             }
           },
         },
@@ -176,14 +210,13 @@ export default function ManagerDashboardScreen() {
   const renderItem = useCallback(
     ({ item }: { item: ClassItem }) => (
       <ImageBackground source={require("../../assets/images/batik.png")} style={[styles.card, CARD_STYLE]} imageStyle={styles.cardImage}>
-        <TouchableOpacity style={styles.cardContent} onPress={() => router.push(`/(manager)/${item.id_class}`)} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.cardContent} onPress={() => router.push(`/(admin)/${item.id_class}`)} activeOpacity={0.9}>
           <View style={styles.cardTop}>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Kelas</Text>
             </View>
 
             <View style={styles.actionButtons}>
-              {/* Toggle Active Button */}
               <TouchableOpacity
                 onPress={(e) => {
                   e.stopPropagation();
@@ -195,7 +228,6 @@ export default function ManagerDashboardScreen() {
                 <Ionicons name={item.is_active ? "checkmark-circle" : "close-circle"} size={20} color="white" />
               </TouchableOpacity>
 
-              {/* Delete Button */}
               <TouchableOpacity
                 onPress={(e) => {
                   e.stopPropagation();
@@ -210,7 +242,6 @@ export default function ManagerDashboardScreen() {
           </View>
 
           <View style={styles.cardInfo}>
-            {/* Status Badge */}
             <View style={[styles.statusBadge, { backgroundColor: item.is_active ? "#d1fae5" : "#fee2e2" }]}>
               <Text style={[styles.statusText, { color: item.is_active ? "#065f46" : "#991b1b" }]}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
             </View>

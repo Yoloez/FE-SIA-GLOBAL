@@ -38,7 +38,7 @@ const DAY_NAMES: { [key: number]: string } = {
 };
 
 export default function ClassListScreen() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const isMounted = useRef(true);
 
@@ -92,14 +92,28 @@ export default function ClassListScreen() {
     ]);
   };
 
-  const getSubjectName = (id_subject: number) => {
-    const subject = subjects.find((s) => s.id_subject === id_subject);
-    return subject ? subject.name_subject : "Tidak diketahui";
+  const getSubjectName = (subject: Subject | number) => {
+    if (typeof subject === "object") {
+      return subject.name_subject;
+    }
+    const subj = subjects.find((s) => s.id_subject === subject);
+    return subj ? subj.name_subject : "Tidak diketahui";
   };
 
   const getPeriodName = (id_academic_period: number) => {
     const period = periods.find((p) => p.id_academic_period === id_academic_period);
     return period ? period.name : "Tidak diketahui";
+  };
+
+  const handleAddClasses = () => {
+    // Routing dinamis berdasarkan role user
+    if (user?.role === "admin") {
+      router.push("/(admin)/AddClasses");
+    } else if (user?.role === "manager") {
+      router.push("/(manager)/AddClasses");
+    } else {
+      Alert.alert("Error", "Role Anda tidak diizinkan untuk menambah kelas.");
+    }
   };
 
   const filteredClasses = classes.filter((cls) => {
@@ -133,7 +147,7 @@ export default function ClassListScreen() {
             <Text style={styles.listTitle}>Daftar Kelas</Text>
             <Text style={styles.resultCount}>{filteredClasses.length} kelas ditemukan</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push("/(manager)/AddClasses")} style={styles.addButton}>
+          <TouchableOpacity onPress={handleAddClasses} style={styles.addButton}>
             <Ionicons name="add-circle" size={36} color="#fff" />
           </TouchableOpacity>
         </View>

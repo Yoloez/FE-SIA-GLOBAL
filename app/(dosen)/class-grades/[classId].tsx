@@ -128,7 +128,7 @@ export default function GradeInputScreen() {
         {/* Header dengan Background Image */}
         <ImageBackground source={require("../../../assets/images/batik.png")} style={styles.headerBackground} imageStyle={styles.headerBackgroundImage}>
           <View style={styles.headerOverlay}>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.push("../grades")} activeOpacity={0.7}>
               <Ionicons name="arrow-back" size={24} color="#2d5f3f" />
             </TouchableOpacity>
 

@@ -1,14 +1,14 @@
 import api from "@/api/axios";
-import { ClassDetails, User } from "@/types/class.types";
+import { ClassDetails } from "@/types/class.types";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
-const PLACEHOLDER_IMAGE = "https://via.placeholder.com/50";
+type TabType = "lecturers" | "students";
 
 export default function ClassDetailScreen() {
   const { classId } = useLocalSearchParams<{ classId: string }>();
@@ -16,6 +16,7 @@ export default function ClassDetailScreen() {
   const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<TabType>("lecturers");
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -45,7 +46,12 @@ export default function ClassDetailScreen() {
 
       if (isMounted.current) {
         console.error("Error fetching class details:", error);
-        Alert.alert("Error", "Gagal memuat detail kelas.", [{ text: "OK", onPress: () => isMounted.current && router.back() }]);
+        Alert.alert("Error", "Gagal memuat detail kelas.", [
+          {
+            text: "OK",
+            onPress: () => isMounted.current && router.back(),
+          },
+        ]);
       }
     } finally {
       if (isMounted.current) setIsLoading(false);
@@ -63,9 +69,14 @@ export default function ClassDetailScreen() {
     if (!classDetails) return { lecturers: [], students: [] };
 
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return { lecturers: classDetails.lecturers || [], students: classDetails.students || [] };
+    if (!query) {
+      return {
+        lecturers: classDetails.lecturers || [],
+        students: classDetails.students || [],
+      };
+    }
 
-    const filterByQuery = (user: User) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query);
+    const filterByQuery = (user: any) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query);
 
     return {
       lecturers: (classDetails.lecturers || []).filter(filterByQuery),
@@ -104,13 +115,11 @@ export default function ClassDetailScreen() {
   );
 
   const renderMemberItem = useCallback(
-    ({ item, role }: { item: User; role: "dosen" | "mahasiswa" }) => {
-      const imageUri = item.profile_image?.trim() || PLACEHOLDER_IMAGE;
-
-      return (
-        <View style={styles.memberCard}>
-          <View style={styles.memberAvatar}>
-            <Image source={{ uri: imageUri }} style={styles.avatarImage} />
+    ({ item }: { item: any }) => (
+      <View style={styles.memberItem}>
+        <View style={styles.memberContent}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{item.name?.charAt(0).toUpperCase() || "?"}</Text>
           </View>
           <View style={styles.memberInfo}>
             <Text style={styles.memberName} numberOfLines={1}>
@@ -120,212 +129,392 @@ export default function ClassDetailScreen() {
               {item.email}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => handleRemoveMember(item.id_user_si, item.name, role)} style={styles.removeButton}>
-            <Ionicons name="close-circle" size={24} color="#B00020" />
-          </TouchableOpacity>
         </View>
-      );
-    },
-    [handleRemoveMember]
-  );
-
-  const sections = useMemo(() => {
-    if (!classDetails) return [];
-
-    const createSection = (type: string, key: string, data?: any) => ({ type, key, data });
-    const memberSections = (members: User[], type: string, prefix: string) => (members.length > 0 ? members.map((m) => createSection(type, `${prefix}-${m.id_user_si}`, m)) : [createSection(`${prefix}-empty`, `${prefix}-empty`)]);
-
-    return [
-      createSection("header", "header"),
-      createSection("stats", "stats"),
-      createSection("search", "search"),
-      createSection("lecturers-header", "lecturers-header"),
-      ...memberSections(filteredData.lecturers, "lecturer", "lecturer"),
-      createSection("students-header", "students-header"),
-      ...memberSections(filteredData.students, "student", "student"),
-    ];
-  }, [classDetails, filteredData]);
-
-  const EmptyState = ({ icon, text }: { icon: string; text: string }) => (
-    <View style={styles.emptyState}>
-      <Ionicons name={icon as any} size={48} color="#ccc" />
-      <Text style={styles.emptyText}>{text}</Text>
-    </View>
-  );
-
-  const SectionHeader = ({ icon, title, onAdd }: { icon: string; title: string; onAdd: () => void }) => (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionTitleContainer}>
-        <Ionicons name={icon as any} size={24} color="white" />
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity
+          onPress={() => {
+            const role = activeTab === "lecturers" ? "dosen" : "mahasiswa";
+            handleRemoveMember(item.id_user_si || item.id, item.name, role);
+          }}
+          style={styles.deleteButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="close-circle" size={24} color="#ef4444" />
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.addButton} onPress={onAdd} activeOpacity={0.7}>
-        <Ionicons name="add" size={18} color="#fff" />
-      </TouchableOpacity>
-    </View>
+    ),
+    [activeTab, handleRemoveMember]
   );
 
-  const renderItem = useCallback(
-    ({ item }: any) => {
-      if (!classDetails) return null;
-
-      const navigateToAssign = (role: string) => router.push(`/(admin)/AssignMember?classId=${classId}&role=${role}`);
-
-      switch (item.type) {
-        case "header":
-          return (
-            <View style={styles.headerCard}>
-              <View style={styles.headerTop}>
-                <View style={styles.codeBadge}>
-                  <Text style={styles.codeText}>{classDetails.code_class}</Text>
-                </View>
-              </View>
-              <Text style={styles.title} numberOfLines={2}>
-                {classDetails.subject?.name_subject ?? "Tidak ada data"}
-              </Text>
-              <View style={styles.infoRow}>
-                <Ionicons name="calendar-outline" size={16} color="#666" />
-                <Text style={styles.infoText}>{classDetails.academic_period?.name ?? "Tidak ada data"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="time-outline" size={16} color="#666" />
-                <Text style={styles.infoText}>{classDetails.schedule || "Belum ada jadwal"}</Text>
-              </View>
-            </View>
-          );
-
-        case "stats":
-          return (
-            <View style={styles.statsContainer}>
-              <View style={styles.statBox}>
-                <Ionicons name="people" size={32} color="#015023" />
-                <Text style={styles.statNumber}>
-                  {classDetails.students?.length || 0}/{classDetails.member_class}
-                </Text>
-                <Text style={styles.statLabel}>Mahasiswa</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBox}>
-                <Ionicons name="person" size={32} color="#015023" />
-                <Text style={styles.statNumber}>{classDetails.lecturers?.length || 0}</Text>
-                <Text style={styles.statLabel}>Dosen</Text>
-              </View>
-            </View>
-          );
-
-        case "search":
-          return (
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-              <TextInput style={styles.searchInput} placeholder="Cari dosen atau mahasiswa..." placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
-                  <Ionicons name="close-circle" size={20} color="#666" />
-                </TouchableOpacity>
-              )}
-            </View>
-          );
-
-        case "lecturers-header":
-          return <SectionHeader icon="briefcase-outline" title="Dosen Pengajar" onAdd={() => navigateToAssign("dosen")} />;
-
-        case "lecturer":
-          return renderMemberItem({ item: item.data, role: "dosen" });
-
-        case "lecturer-empty":
-          return <EmptyState icon="briefcase-outline" text={searchQuery ? "Tidak ada dosen yang sesuai pencarian" : "Belum ada dosen yang ditambahkan"} />;
-
-        case "students-header":
-          return <SectionHeader icon="people-outline" title="Daftar Mahasiswa" onAdd={() => navigateToAssign("mahasiswa")} />;
-
-        case "student":
-          return renderMemberItem({ item: item.data, role: "mahasiswa" });
-
-        case "student-empty":
-          return <EmptyState icon="people-outline" text={searchQuery ? "Tidak ada mahasiswa yang sesuai pencarian" : "Belum ada mahasiswa yang ditambahkan"} />;
-
-        default:
-          return null;
-      }
-    },
-    [classDetails, searchQuery, renderMemberItem, classId]
-  );
+  const currentData = activeTab === "lecturers" ? filteredData.lecturers : filteredData.students;
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Stack.Screen options={{ title: "Detail Kelas", headerStyle: { backgroundColor: "#015023" }, headerTintColor: "#fff" }} />
+        <Stack.Screen
+          options={{
+            headerShown: false,
+          }}
+        />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#DABC4E" />
+          <ActivityIndicator size="large" color="#015023" />
           <Text style={styles.loadingText}>Memuat detail kelas...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!classDetails) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Stack.Screen options={{ title: "Detail Kelas", headerStyle: { backgroundColor: "#015023" }, headerTintColor: "#fff" }} />
-        <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>Detail kelas tidak ditemukan.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <Stack.Screen options={{ title: "Detail Kelas", headerStyle: { backgroundColor: "#015023" }, headerTintColor: "#fff" }} />
-      <FlatList
-        data={sections}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.key}
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        initialNumToRender={10}
-        windowSize={10}
+    <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
       />
+
+      {/* Header Modern */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={28} color="#015023" />
+        </TouchableOpacity>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {classDetails?.code_class || "Kelas"}
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>
+            {classDetails?.subject?.name_subject || ""}
+          </Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Class Stats Card */}
+      {classDetails && (
+        <View style={styles.statsCard}>
+          <View style={styles.statItem}>
+            <Ionicons name="school-outline" size={18} color="#015023" />
+            <View style={styles.statTextContainer}>
+              <Text style={styles.statLabel}>Kapasitas</Text>
+              <Text style={styles.statValue}>{classDetails.member_class}</Text>
+            </View>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Ionicons name="people-outline" size={18} color="#015023" />
+            <View style={styles.statTextContainer}>
+              <Text style={styles.statLabel}>Mahasiswa</Text>
+              <Text style={styles.statValue}>{classDetails.students?.length || 0}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          onPress={() => {
+            setActiveTab("lecturers");
+            setSearchQuery("");
+          }}
+          style={[styles.tab, activeTab === "lecturers" && styles.activeTab]}
+        >
+          <Ionicons name="person-circle-outline" size={20} color={activeTab === "lecturers" ? "#015023" : "#9ca3af"} />
+          <Text style={[styles.tabText, activeTab === "lecturers" && styles.activeTabText]}>Dosen ({classDetails?.lecturers?.length || 0})</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            setActiveTab("students");
+            setSearchQuery("");
+          }}
+          style={[styles.tab, activeTab === "students" && styles.activeTab]}
+        >
+          <Ionicons name="people-outline" size={20} color={activeTab === "students" ? "#015023" : "#9ca3af"} />
+          <Text style={[styles.tabText, activeTab === "students" && styles.activeTabText]}>Mahasiswa ({classDetails?.students?.length || 0})</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
+      {currentData.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+          <TextInput style={styles.searchInput} placeholder="Cari nama atau email..." placeholderTextColor="#d1d5db" value={searchQuery} onChangeText={setSearchQuery} />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      )}
+
+      {/* Members List */}
+      {currentData.length > 0 ? (
+        <FlatList
+          data={currentData}
+          renderItem={renderMemberItem}
+          keyExtractor={(item, index) => `${activeTab}-${item.id_user_si}-${index}`}
+          contentContainerStyle={styles.listContainer}
+          scrollEnabled={true}
+          showsVerticalScrollIndicator={false}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+        />
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Ionicons name={activeTab === "lecturers" ? "person-circle-outline" : "people-outline"} size={48} color="#d1d5db" />
+          <Text style={styles.emptyText}>{searchQuery ? "Tidak ditemukan" : `Belum ada ${activeTab === "lecturers" ? "dosen" : "mahasiswa"}`}</Text>
+          <Text style={styles.emptySubtext}>{!searchQuery && `Tambahkan ${activeTab === "lecturers" ? "dosen" : "mahasiswa"} untuk kelas ini`}</Text>
+        </View>
+      )}
+
+      {/* Action Button */}
+      <View style={styles.actionBar}>
+        <TouchableOpacity
+          onPress={() =>
+            router.push({
+              pathname: "./AssignMember",
+              params: {
+                classId,
+                role: activeTab === "lecturers" ? "dosen" : "mahasiswa",
+              },
+            })
+          }
+          style={styles.addButton}
+        >
+          <Ionicons name="add-circle" size={24} color="white" />
+          <Text style={styles.addButtonText}>Tambah {activeTab === "lecturers" ? "Dosen" : "Mahasiswa"}</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#015023" },
-  container: { padding: 20, paddingBottom: 40 },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 12, fontSize: 16, color: "#fff" },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  headerCard: { backgroundColor: "#F5EFD3", borderRadius: 20, padding: 24, marginBottom: 20, elevation: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  codeBadge: { backgroundColor: "#015023", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  codeText: { color: "#DABC4E", fontSize: 14, fontWeight: "bold" },
-  title: { fontSize: 24, fontWeight: "bold", color: "#333", marginBottom: 16 },
-  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  infoText: { fontSize: 15, color: "#666", marginLeft: 8, flex: 1 },
-  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#F5EFD3", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, elevation: 2 },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 16, color: "#333", padding: 0 },
-  clearButton: { padding: 4, marginLeft: 8 },
-  statsContainer: { flexDirection: "row", backgroundColor: "#F5EFD3", borderRadius: 20, padding: 20, marginBottom: 24, elevation: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-  statBox: { flex: 1, alignItems: "center", paddingVertical: 12 },
-  statDivider: { width: 1, backgroundColor: "#e0e0e0", marginHorizontal: 16 },
-  statNumber: { fontSize: 28, fontWeight: "bold", color: "#015023", marginTop: 8 },
-  statLabel: { fontSize: 14, color: "#666", marginTop: 4 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16, marginTop: 8 },
-  sectionTitleContainer: { flexDirection: "row", alignItems: "center", gap: 10 },
-  sectionTitle: { fontSize: 20, fontWeight: "bold", color: "white" },
-  addButton: { backgroundColor: "transparent", width: 40, height: 40, borderRadius: 30, justifyContent: "center", alignItems: "center", borderColor: "white", borderWidth: 1 },
-  memberCard: { backgroundColor: "#F5EFD3", flexDirection: "row", alignItems: "center", padding: 16, borderRadius: 16, marginBottom: 12, elevation: 2 },
-  memberAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#f0f8f4", justifyContent: "center", alignItems: "center", marginRight: 12, overflow: "hidden" },
-  avatarImage: { width: 50, height: 50, borderRadius: 25 },
-  memberInfo: { flex: 1, marginRight: 8 },
-  memberName: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 4 },
-  memberEmail: { fontSize: 13, color: "#777" },
-  removeButton: { padding: 4 },
-  emptyState: { alignItems: "center", justifyContent: "center", paddingVertical: 40, paddingHorizontal: 20, backgroundColor: "#F5EFD3", borderRadius: 16, marginBottom: 16 },
-  emptyText: { textAlign: "center", color: "#999", fontSize: 15, marginTop: 12 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginTop: 2,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  statsCard: {
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: "#10b981",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  statItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  statTextContainer: {
+    gap: 2,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#015023",
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: "#d1d5db",
+  },
+  tabContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+    gap: 6,
+  },
+  activeTab: {
+    backgroundColor: "#ecfdf5",
+    borderWidth: 2,
+    borderColor: "#10b981",
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  activeTabText: {
+    color: "#015023",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#f9fafb",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#1f2937",
+  },
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 100,
+  },
+  memberItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#f3f4f6",
+  },
+  memberContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  avatarContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#ecfdf5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#015023",
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1f2937",
+  },
+  memberEmail: {
+    fontSize: 12,
+    color: "#9ca3af",
+    marginTop: 2,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#9ca3af",
+    marginTop: 12,
+    textAlign: "center",
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: "#d1d5db",
+    marginTop: 6,
+    textAlign: "center",
+  },
+  actionBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#015023",
+    borderRadius: 10,
+    gap: 8,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
 });

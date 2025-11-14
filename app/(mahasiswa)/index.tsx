@@ -18,7 +18,7 @@ const DUMMY_CONTENT_DATA = [
     label: "Notification",
     title: "SVPL",
     contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: null,
+    route: "/grades",
   },
   {
     id: "2",

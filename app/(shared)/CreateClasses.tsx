@@ -2,16 +2,7 @@ import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
@@ -29,7 +20,7 @@ interface Class {
   id_class: number;
   code_class: string;
   member_class: number;
-  id_subject: number;
+  id_subject: Subject;
   id_academic_period: number;
   day_of_week: number;
   start_time: string;
@@ -47,7 +38,7 @@ const DAY_NAMES: { [key: number]: string } = {
 };
 
 export default function ClassListScreen() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const isMounted = useRef(true);
 
@@ -67,11 +58,7 @@ export default function ClassListScreen() {
 
   const fetchData = async () => {
     try {
-      const [subjectsRes, periodsRes, classesRes] = await Promise.all([
-        api.get("/manager/subjects"),
-        api.get("/manager/academic-periods"),
-        api.get("/manager/classes"),
-      ]);
+      const [subjectsRes, periodsRes, classesRes] = await Promise.all([api.get("/manager/subjects"), api.get("/manager/academic-periods"), api.get("/manager/classes")]);
       if (isMounted.current) {
         setSubjects(subjectsRes.data.data || []);
         setPeriods(periodsRes.data.data || []);
@@ -87,31 +74,30 @@ export default function ClassListScreen() {
   };
 
   const handleDeleteClass = async (classId: number) => {
-    Alert.alert(
-      "Konfirmasi Hapus",
-      "Apakah Anda yakin ingin menghapus kelas ini?",
-      [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.delete(`/manager/classes/${classId}`);
-              Alert.alert("Sukses", "Kelas berhasil dihapus.");
-              fetchData();
-            } catch (error) {
-              Alert.alert("Gagal", "Terjadi kesalahan saat menghapus kelas.");
-            }
-          },
+    Alert.alert("Konfirmasi Hapus", "Apakah Anda yakin ingin menghapus kelas ini?", [
+      { text: "Batal", style: "cancel" },
+      {
+        text: "Hapus",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.delete(`/manager/classes/${classId}`);
+            Alert.alert("Sukses", "Kelas berhasil dihapus.");
+            fetchData();
+          } catch (error) {
+            Alert.alert("Gagal", "Terjadi kesalahan saat menghapus kelas.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const getSubjectName = (id_subject: number) => {
-    const subject = subjects.find((s) => s.id_subject === id_subject);
-    return subject ? subject.name_subject : "Tidak diketahui";
+  const getSubjectName = (subject: Subject | number) => {
+    if (typeof subject === "object") {
+      return subject.name_subject;
+    }
+    const subj = subjects.find((s) => s.id_subject === subject);
+    return subj ? subj.name_subject : "Tidak diketahui";
   };
 
   const getPeriodName = (id_academic_period: number) => {
@@ -119,16 +105,23 @@ export default function ClassListScreen() {
     return period ? period.name : "Tidak diketahui";
   };
 
+  const handleAddClasses = () => {
+    // Routing dinamis berdasarkan role user
+    if (user?.role === "admin") {
+      router.push("/(admin)/AddClasses");
+    } else if (user?.role === "manager") {
+      router.push("/(manager)/AddClasses");
+    } else {
+      Alert.alert("Error", "Role Anda tidak diizinkan untuk menambah kelas.");
+    }
+  };
+
   const filteredClasses = classes.filter((cls) => {
     const subjectName = getSubjectName(cls.id_subject).toLowerCase();
     const periodName = getPeriodName(cls.id_academic_period).toLowerCase();
     const query = searchQuery.toLowerCase();
 
-    return (
-      cls.code_class.toLowerCase().includes(query) ||
-      subjectName.includes(query) ||
-      periodName.includes(query)
-    );
+    return cls.code_class.toLowerCase().includes(query) || subjectName.includes(query) || periodName.includes(query);
   });
 
   return (
@@ -145,13 +138,7 @@ export default function ClassListScreen() {
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari kelas (kode, mata kuliah)..."
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <TextInput style={styles.searchInput} placeholder="Cari kelas (kode, mata kuliah)..." placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} />
         </View>
 
         {/* Header */}
@@ -160,10 +147,7 @@ export default function ClassListScreen() {
             <Text style={styles.listTitle}>Daftar Kelas</Text>
             <Text style={styles.resultCount}>{filteredClasses.length} kelas ditemukan</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/(admin)/AddClasses")}
-            style={styles.addButton}
-          >
+          <TouchableOpacity onPress={handleAddClasses} style={styles.addButton}>
             <Ionicons name="add-circle" size={36} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -175,11 +159,7 @@ export default function ClassListScreen() {
           ) : filteredClasses.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="school-outline" size={64} color="#fff" />
-              <Text style={styles.emptyText}>
-                {searchQuery
-                  ? "Tidak ada kelas yang ditemukan"
-                  : "Belum ada kelas. Tekan + untuk menambah kelas baru"}
-              </Text>
+              <Text style={styles.emptyText}>{searchQuery ? "Tidak ada kelas yang ditemukan" : "Belum ada kelas. Tekan + untuk menambah kelas baru"}</Text>
             </View>
           ) : (
             filteredClasses.map((cls) => (
@@ -188,24 +168,17 @@ export default function ClassListScreen() {
                   <View style={styles.classInfo}>
                     <Text style={styles.className}>{getSubjectName(cls.id_subject)}</Text>
                     <Text style={styles.classDetail}>Kelas: {cls.code_class}</Text>
-                    <Text style={styles.classDetail}>
-                      Periode: {getPeriodName(cls.id_academic_period)}
-                    </Text>
+                    <Text style={styles.classDetail}>Periode: {getPeriodName(cls.id_academic_period)}</Text>
                     <Text style={styles.classDetail}>
                       {DAY_NAMES[cls.day_of_week]}, {cls.start_time} - {cls.end_time}
                     </Text>
-                    <Text style={styles.classDetail}>
-                      Kapasitas: {cls.member_class} mahasiswa
-                    </Text>
+                    <Text style={styles.classDetail}>Kapasitas: {cls.member_class} mahasiswa</Text>
                   </View>
                   <View style={styles.classActions}>
                     <TouchableOpacity style={styles.editButton}>
                       <Ionicons name="create-outline" size={24} color="#DABC4E" />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteClass(cls.id_class)}
-                    >
+                    <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteClass(cls.id_class)}>
                       <Ionicons name="trash-outline" size={24} color="#ff4444" />
                     </TouchableOpacity>
                   </View>

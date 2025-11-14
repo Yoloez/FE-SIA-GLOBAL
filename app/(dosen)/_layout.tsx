@@ -102,6 +102,18 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="_manualAttendace"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="_presencePage"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

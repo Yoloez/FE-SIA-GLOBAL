@@ -1,62 +1,92 @@
-import { StyleSheet, View } from "react-native";
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// Install: npm install lucide-react-native
+import { router } from 'expo-router';
+import { ChevronRight, QrCode, UserCheck } from 'lucide-react-native';
+export default function PresencePage() {
+  return (
+    <View style={styles.container}>
+      {/* Header Card */}
+      <View style={styles.headerCard}>
+        <Text style={styles.title}>Presence Page</Text>
+        <Text style={styles.subtitle}>Tomo, S.Kom</Text>
+      </View>
 
-export default function Presensi() {
-  return <View style={styles.container}></View>;
+      {/* Menu Options */}
+      <View style={styles.menuContainer}>
+        <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.iconContainer}>
+            <QrCode size={28} color="#000" strokeWidth={2} />
+          </View>
+          <Text style={styles.menuText}>Qr Attendance</Text>
+          <ChevronRight size={22} color="#fff" />
+        </TouchableOpacity>
+
+ <TouchableOpacity
+      style={styles.menuItem}
+      onPress={() => router.push('/_presencePage')} 
+    >
+      <View style={styles.iconContainer}>
+        <UserCheck size={28} color="#000" strokeWidth={2} />
+      </View>
+      <Text style={styles.menuText}>Manual Attendance</Text>
+      <ChevronRight size={22} color="#fff" />
+    </TouchableOpacity>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    backgroundColor: "#015023",
-  },
-  message: {
-    textAlign: "center",
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    position: "absolute",
-    bottom: 50,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    backgroundColor: "transparent",
+    backgroundColor: '#015023',
+    paddingTop: 64,
+    paddingBottom: 32,
     paddingHorizontal: 20,
   },
-  // Tombol Capture (Lingkaran di tengah)
-  captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "white",
-    borderWidth: 4,
-    bottom: 160,
-    borderColor: "#ccc",
-    marginHorizontal: 40, // Memberi jarak antara tombol flip dan capture
+  headerCard: {
+    backgroundColor: '#F5EFD3',
+    borderRadius: 24,
+    padding: 40,
+    marginBottom: 32,
+    minHeight: 200,
+    justifyContent: 'center',
   },
-  // Tombol Flip (Tombol teks)
-  flipButton: {
-    alignItems: "center",
-    justifyContent: "center",
+  title: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
   },
-  text: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
   },
-  // Style untuk halaman preview
-  previewImage: {
+  menuContainer: {
+    gap: 16,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  menuText: {
     flex: 1,
-  },
-  previewButtonContainer: {
-    position: "absolute",
-    bottom: 50,
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#fff',
   },
 });

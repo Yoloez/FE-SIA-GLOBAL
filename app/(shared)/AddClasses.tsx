@@ -35,7 +35,7 @@ export default function CreateClassScreen() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [subjectsResponse, periodsResponse] = await Promise.all([api.get("/manager/subjects"), api.get("/manager/academic-periods")]);
+        const [subjectsResponse, periodsResponse] = await Promise.all([api.get("/manager/subjects"), api.get("/academic-periods")]);
         setSubjects(subjectsResponse.data.data);
         setPeriods(periodsResponse.data.data);
       } catch (error) {

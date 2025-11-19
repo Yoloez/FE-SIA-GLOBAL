@@ -33,7 +33,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "../(manager)/CreateSubjects" },
-  { id: "2", title: "Buat Kelas", icon: "school-outline", route: "../(manager)/CreateClasses" },
+  { id: "2", title: "Buat Kelas", icon: "school-outline", route: "../(manager)/AddClasses" },
   { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "../(manager)/CreateLecturer" },
   { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "../(manager)/CreateStudent" },
 ];
@@ -334,7 +334,7 @@ export default function ManagerDashboardScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#015023" },
-  container: { flex: 1, backgroundColor: "#015023", paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: "#015023", paddingHorizontal: 20, paddingBottom: 60 },
   menuButton: { paddingLeft: 15, paddingRight: 10 },
   modalContainer: { flex: 1 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.5)" },

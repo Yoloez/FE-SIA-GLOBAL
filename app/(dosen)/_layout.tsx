@@ -114,6 +114,12 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="EditProfilDosen"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

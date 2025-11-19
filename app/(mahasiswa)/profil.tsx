@@ -15,11 +15,11 @@ interface ProfileData {
   registration_number: string | null;
   full_name: string;
   generation: string | null;
+  profile_image: string | null;
 }
 
 const Profil = () => {
   const { logout, user } = useAuth();
-
   // --- State untuk menyimpan data profil dan status loading ---
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +29,7 @@ const Profil = () => {
   const fetchProfile = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("/student/profile");
+      const response = await api.get("/student/profile/identity");
       setProfileData(response.data.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -74,7 +74,7 @@ const Profil = () => {
             <Text style={styles.profileTitle}>Profile</Text>
 
             <View style={styles.avatarContainer}>
-              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} />
             </View>
 
             {/* --- DATA SEKARANG DINAMIS --- */}

@@ -113,7 +113,7 @@ const ProfilDosen = () => {
   );
 };
 
-// --- STYLESHEET ANDA TIDAK SAYA UBAH SAMA SEKALI ---
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   LogoutButton: {
-    backgroundColor: "#F1E8C2",
+    backgroundColor: "#D4AF37",
     borderRadius: 25,
     padding: 15,
     alignItems: "center",
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   logoutButton: {
-    backgroundColor: "#e8d5b7",
+    backgroundColor: "#D4AF37",
     borderRadius: 25,
     padding: 15,
     marginTop: 15,

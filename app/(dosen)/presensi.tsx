@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 // Install: npm install lucide-react-native
 import { router } from 'expo-router';
-import { ChevronRight, QrCode, UserCheck } from 'lucide-react-native';
+import { ChevronRight, UserCheck } from 'lucide-react-native';
 export default function PresencePage() {
   return (
     <View style={styles.container}>
@@ -14,13 +14,6 @@ export default function PresencePage() {
 
       {/* Menu Options */}
       <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.iconContainer}>
-            <QrCode size={28} color="#000" strokeWidth={2} />
-          </View>
-          <Text style={styles.menuText}>Qr Attendance</Text>
-          <ChevronRight size={22} color="#fff" />
-        </TouchableOpacity>
 
  <TouchableOpacity
       style={styles.menuItem}

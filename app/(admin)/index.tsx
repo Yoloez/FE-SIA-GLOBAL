@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -274,7 +274,7 @@ export default function ManagerDashboardScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safeArea} edges={[ "left", "right"]}>
       <Stack.Screen
         options={{
           title: "Dashboard Manajer",
@@ -287,6 +287,20 @@ export default function ManagerDashboardScreen() {
           ),
         }}
       />
+      {/* Search Bar di bawah Header */}
+<View style={{ backgroundColor: "#015023", paddingHorizontal: 20, paddingBottom: 10,paddingTop:10 }}>
+  <View style={styles.searchWrapper}>
+    <TextInput
+      style={styles.searchInput}
+      placeholder="Cari mata kuliah..."
+      placeholderTextColor="#aaa"
+      value={search}
+      onChangeText={setSearch}
+    />
+    <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
+  </View>
+</View>
+
 
       {/* Hamburger Menu */}
       {menuVisible && (
@@ -339,12 +353,7 @@ export default function ManagerDashboardScreen() {
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             getItemLayout={getItemLayout}
-            ListHeaderComponent={
-              <View style={styles.searchWrapper}>
-                <TextInput style={styles.searchInput} placeholder="Cari mata kuliah..." placeholderTextColor="#aaa" value={search} onChangeText={setSearch} />
-                <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
-              </View>
-            }
+
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="school-outline" size={64} color="#ccc" />
@@ -466,7 +475,7 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 10, color: "#fff", fontSize: 14 },
   emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 60 },
   emptyText: { textAlign: "center", color: "#fff", marginTop: 16, fontSize: 16, fontWeight: "500" },
-  searchWrapper: { marginBottom: 12, position: "relative" },
+  searchWrapper: { marginBottom: 0, position: "relative" },
   searchInput: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -476,7 +485,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   searchIcon: { position: "absolute", left: 12, top: 11 },
-  listContent: { paddingTop: 20, paddingBottom: 2 },
+  listContent: { paddingTop: 0, paddingBottom: 2 },
   actionButtons: {
     flexDirection: "row",
     gap: 8,

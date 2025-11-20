@@ -144,9 +144,27 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="create-outline" size={22} color="#015023" />
-          </TouchableOpacity>
+<TouchableOpacity
+  style={styles.actionButton}
+  onPress={() =>
+    router.push({
+      pathname: "/(admin)/EditManager",
+      params: {
+        id_user_si: item.id_user_si,
+        name: item.name,
+        email: item.email,
+        employee_id_number: item.staff_profile?.employee_id_number ?? "",
+      },
+    })
+  }
+>
+  <Ionicons name="create-outline" size={22} color="#015023" />
+</TouchableOpacity>
+
+
+
+
+
           <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteManager(item.id_user_si, item.name)}>
             <Ionicons name="trash-outline" size={22} color="#B00020" />
           </TouchableOpacity>

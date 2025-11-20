@@ -1,27 +1,28 @@
 import api from "@/api/axios";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
-// Interface untuk mendefinisikan bentuk data profil yang kita harapkan dari API
 interface LecturerProfileData {
+  name: string;
   full_name: string;
   email: string;
   employee_id_number: string | null;
   position: string;
-  profile_image: string;
+  profile_image: string | null;
 }
 
 const ProfilDosen = () => {
-  const { logout, user, token } = useAuth();
+  const { logout, user } = useAuth();
 
   const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const handleLogoutConfirm = () => {
@@ -37,21 +38,42 @@ const ProfilDosen = () => {
 
   // --- Fungsi untuk mengambil data profil dari API ---
   const fetchProfile = useCallback(async () => {
-    if (!token) return;
     setIsLoading(true);
+    setError(null);
+
     try {
-      // --- PERBAIKAN: Panggil endpoint yang benar ---
       const response = await api.get("/lecturer/profile");
-      setProfileData(response.data.data);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Gagal memuat profil:", error.response?.data);
-        alert(`Gagal memuat data profil. Error: ${error.response?.status}`);
+
+      if (response.data.status === "success" && response.data.data) {
+        setProfileData(response.data.data);
+      } else {
+        throw new Error(response.data.message || "Gagal memuat profil");
       }
+    } catch (error) {
+      let errorMessage = "Gagal memuat data profil";
+
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.message;
+
+        if (status === 403) {
+          errorMessage = message || "Akses ditolak. Anda bukan dosen.";
+          Alert.alert("Akses Ditolak", errorMessage, [{ text: "OK", onPress: () => logout() }]);
+        } else if (status === 404) {
+          errorMessage = message || "Data profil tidak ditemukan";
+        } else {
+          errorMessage = message || errorMessage;
+        }
+
+        console.error("Gagal memuat profil:", error.response?.data);
+      }
+
+      setError(errorMessage);
+      Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useFocusEffect(
     useCallback(() => {
@@ -60,22 +82,56 @@ const ProfilDosen = () => {
   );
 
   const handleLogout = useCallback(() => {
-    Animated.sequence([Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }), Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })]).start(() => {
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       logout();
     });
   }, [logout, scaleAnim]);
 
-  // Tampilkan loading indicator saat data sedang diambil
-  if (isLoading || !profileData) {
+  const handleRetry = useCallback(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  // Loading state
+  if (isLoading) {
     return (
-      <View style={[styles.container]}>
-        <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={styles.container}>
+        <LinearGradient colors={["#015023", "#1C352D"]} style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Memuat profil...</Text>
         </LinearGradient>
       </View>
     );
   }
 
+  // Error state
+  if (error || !profileData) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient colors={["#015023", "#1C352D"]} style={styles.loadingContainer}>
+          <Text style={styles.errorText}>{error || "Data tidak tersedia"}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+            <Text style={styles.retryButtonText}>Coba Lagi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
+    );
+  }
+
+  // Success state
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
@@ -85,14 +141,20 @@ const ProfilDosen = () => {
             <Text style={styles.profileTitle}>Profile</Text>
 
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: profileData.profile_image }} style={styles.avatar} />
+              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} defaultSource={require("../../assets/images/kairi.png")} />
             </View>
 
-            {/* --- DATA SEKARANG DINAMIS --- */}
             <View style={styles.infoContainer}>
               <Text style={styles.label}>Name:</Text>
               <View style={styles.infoBox}>
                 <Text style={styles.infoText}>{profileData.full_name}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>Email:</Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{profileData.email}</Text>
               </View>
             </View>
 
@@ -102,6 +164,18 @@ const ProfilDosen = () => {
                 <Text style={styles.infoText}>{profileData.employee_id_number || "Belum diisi"}</Text>
               </View>
             </View>
+
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>Position:</Text>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>{profileData.position}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/EditProfilDosen")}>
+              <Text style={styles.settingButtonText}>Setting</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.9} onPress={handleLogoutConfirm} style={styles.logoutButton}>
               <Text style={styles.logoutButtonText}>Logout</Text>
@@ -121,6 +195,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingTop: 0,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    color: "#ffffff",
+    fontSize: 16,
+    marginTop: 12,
+  },
+  errorText: {
+    color: "#ffffff",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  retryButton: {
+    backgroundColor: "#DABC4E",
+    borderRadius: 25,
+    padding: 15,
+    paddingHorizontal: 40,
+    marginBottom: 12,
+  },
+  retryButtonText: {
+    color: "#1a1a1a",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 15,
@@ -132,12 +236,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // backgroundColor: "#015023",
     paddingHorizontal: 0,
     paddingTop: 0,
   },
   profileCard: {
-    // backgroundColor: "#015023",
     borderRadius: 0,
     padding: 30,
     paddingTop: 35,

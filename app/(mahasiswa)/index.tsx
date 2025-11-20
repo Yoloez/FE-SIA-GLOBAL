@@ -4,9 +4,10 @@ import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../../api/axios";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
@@ -51,6 +52,18 @@ interface ContentItem {
   route: string | null;
 }
 
+interface StudentIdentity {
+  name: string;
+  username: string;
+  profile_image: string | null;
+  full_name: string;
+  email: string;
+  program_name: string | null;
+  generation: string | null;
+  gender: string | null;
+  registration_number: string | null;
+}
+
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const isMounted = useRef(true);
@@ -64,17 +77,38 @@ export default function HomeScreen() {
   const [allContent, setAllContent] = useState<ContentItem[]>(DUMMY_CONTENT_DATA);
   const [filteredContent, setFilteredContent] = useState<ContentItem[]>(DUMMY_CONTENT_DATA);
   const [isLoading, setIsLoading] = useState(false);
+  const [studentIdentity, setStudentIdentity] = useState<StudentIdentity | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
-  // Cleanup on unmount
+  const fetchStudentIdentity = useCallback(async () => {
+    setIsLoadingProfile(true);
+    try {
+      const response = await api.get("/student/identity");
+      if (isMounted.current) {
+        setStudentIdentity(response.data.data);
+      }
+    } catch (error) {
+      console.error("Gagal memuat identitas mahasiswa:", error);
+    } finally {
+      if (isMounted.current) {
+        setIsLoadingProfile(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     isMounted.current = true;
-
     return () => {
       isMounted.current = false;
     };
   }, []);
 
-  // Filter logic setiap kali searchQuery berubah
+  useEffect(() => {
+    if (user) {
+      fetchStudentIdentity();
+    }
+  }, [user, fetchStudentIdentity]);
+
   useEffect(() => {
     if (searchQuery === "") {
       setFilteredContent(allContent);
@@ -87,15 +121,11 @@ export default function HomeScreen() {
     }
   }, [searchQuery, allContent]);
 
-  // Handler untuk navigasi ke chat
   const handleChatPress = () => {
     try {
-      // Coba beberapa kemungkinan route
-      router.push("../chat"); // Jika folder di app/(chat)/index.tsx
-      // atau router.push("/chat"); // Jika folder di app/chat/index.tsx
+      router.push("../chat");
     } catch (error) {
       console.error("Navigation error:", error);
-      // Fallback
       try {
         router.replace("../chat");
       } catch (fallbackError) {
@@ -104,16 +134,12 @@ export default function HomeScreen() {
     }
   };
 
-  // Handler untuk navigasi ke notifications (opsional)
   const handleNotificationPress = () => {
     console.log("Notification pressed");
-    // Implementasi navigasi ke halaman notifikasi jika ada
   };
 
-  // Handler untuk item content
   const handleContentPress = (item: ContentItem) => {
     if (!item.route) return;
-
     try {
       router.push(item.route as any);
     } catch (error) {
@@ -121,9 +147,34 @@ export default function HomeScreen() {
     }
   };
 
-  // Get user display name
-  const displayName = user?.name || "User";
-  const displayId = user?.email || "ID not available";
+  const displayName = studentIdentity?.full_name || studentIdentity?.name || user?.name || "User";
+  const displayId = studentIdentity?.username || studentIdentity?.registration_number || user?.email || "ID not available";
+  const profileImageUri = studentIdentity?.profile_image;
+
+  const renderProfileImage = () => {
+    if (isLoadingProfile) {
+      return (
+        <View style={[styles.avatar, styles.avatarLoading]}>
+          <ActivityIndicator size="small" color="#015023" />
+        </View>
+      );
+    }
+
+    if (profileImageUri) {
+      return (
+        <Image
+          source={{ uri: profileImageUri }}
+          style={styles.avatar}
+          defaultSource={require("../../assets/images/kairi.png")}
+          onError={(error) => {
+            console.log("Image load error:", error.nativeEvent.error);
+          }}
+        />
+      );
+    }
+
+    return <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />;
+  };
 
   return (
     <>
@@ -131,10 +182,9 @@ export default function HomeScreen() {
 
       <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
         <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
-          {/* Header Section - Fixed */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
-              <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+              {renderProfileImage()}
               <View style={styles.userInfo}>
                 <Text style={styles.userName} numberOfLines={1}>
                   {displayName}
@@ -150,10 +200,8 @@ export default function HomeScreen() {
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={logout} style={{ marginRight: 10 }}>
-                <View>
-                  <Ionicons name="log-out-outline" size={24} color="white" />
-                </View>
+              <TouchableOpacity onPress={logout} style={styles.iconButton}>
+                <Ionicons name="log-out-outline" size={24} color="white" />
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleNotificationPress} style={styles.iconButton} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -162,9 +210,7 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Main Content - Scrollable */}
           <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
-            {/* Achievement Cards */}
             <View style={styles.achievementContainer}>
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementLabel}>Achievement</Text>
@@ -182,13 +228,11 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Search Bar */}
             <View style={styles.searchContainer}>
               <TextInput placeholder="Search by title or label..." style={styles.searchInput} placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} />
               <Ionicons name="search-outline" size={20} color="#666" />
             </View>
 
-            {/* Content Sections */}
             {isLoading ? (
               <ActivityIndicator size="large" color="#ffffff" style={styles.loader} />
             ) : filteredContent.length > 0 ? (
@@ -219,7 +263,6 @@ const styles = StyleSheet.create({
     marginBottom: 100,
   },
   header: {
-    // backgroundColor: "#015023",
     paddingHorizontal: 20,
     paddingVertical: 15,
     flexDirection: "row",
@@ -272,6 +315,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+  },
+  avatarLoading: {
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollContent: {
     flex: 1,

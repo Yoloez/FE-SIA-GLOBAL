@@ -52,7 +52,7 @@ export default function CreateClassScreen() {
 
     const fetchInitialData = async () => {
       try {
-        const [subjectsResponse, periodsResponse] = await Promise.all([api.get("/manager/subjects"), api.get("/manager/academic-periods")]);
+        const [subjectsResponse, periodsResponse] = await Promise.all([api.get("/manager/subjects"), api.get("/academic-periods")]);
 
         if (isMounted.current) {
           setSubjects(subjectsResponse.data.data || []);

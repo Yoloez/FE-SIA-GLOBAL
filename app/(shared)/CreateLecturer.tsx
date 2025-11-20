@@ -18,12 +18,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
 interface Lecturer {
-  id: number;
+  id_user_si: number; // ← Sesuaikan dengan backend
   name: string;
   email: string;
-  nip?: string;
-  profile_image?: string;
   username?: string;
+  profile_image?: string;
+  employee_id_number?: string;
 }
 
 export default function ListLecturerScreen() {
@@ -66,24 +66,21 @@ export default function ListLecturerScreen() {
     fetchLecturers();
   };
 
-  const filterLecturers = () => {
-    if (!searchQuery.trim()) {
-      setFilteredLecturers(lecturers);
-      return;
-    }
+const filterLecturers = () => {
+  if (!searchQuery.trim()) {
+    setFilteredLecturers(lecturers);
+    return;
+  }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = lecturers.filter(
-      (lecturer) =>
-        lecturer.name.toLowerCase().includes(query) ||
-        lecturer.email.toLowerCase().includes(query) ||
-        (lecturer.nip && lecturer.nip.toLowerCase().includes(query))
-    );
-    setFilteredLecturers(filtered);
-  };
+  const query = searchQuery.toLowerCase();
+  const filtered = lecturers.filter(
+    (lecturer) => lecturer.name.toLowerCase().includes(query) || lecturer.email.toLowerCase().includes(query) || (lecturer.employee_id_number && lecturer.employee_id_number.toLowerCase().includes(query))
+  );
+  setFilteredLecturers(filtered);
+};
 
   const handleEditLecturer = (lecturerId: number) => {
-    router.push(`/(shared)/editDosen?id=${lecturerId}`);
+    router.push(`/(admin)/EditLecturer`);
   };
 
   const handleDeleteLecturer = (lecturer: Lecturer) => {
@@ -97,7 +94,7 @@ export default function ListLecturerScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await api.delete(`/manager/lecturers/${lecturer.id}`);
+              await api.delete(`/manager/lecturers/${lecturer.id_user_si}`);
               Alert.alert("Sukses", "Dosen berhasil dihapus.");
               fetchLecturers();
             } catch (error) {
@@ -131,21 +128,15 @@ export default function ListLecturerScreen() {
         <View style={styles.lecturerInfo}>
           <Text style={styles.lecturerName}>{item.name}</Text>
           <Text style={styles.lecturerEmail}>{item.email}</Text>
-          {item.nip && <Text style={styles.lecturerNip}>NIP: {item.nip}</Text>}
+          {item.employee_id_number && <Text style={styles.lecturerNip}>NIP: {item.employee_id_number}</Text>}
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => handleEditLecturer(item.id)}
-          >
+          <TouchableOpacity style={styles.iconButton} onPress={() => handleEditLecturer(item.id_user_si)}>
             <Ionicons name="create-outline" size={26} color="#015023" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => handleDeleteLecturer(item)}
-          >
+          <TouchableOpacity style={styles.iconButton} onPress={() => handleDeleteLecturer(item)}>
             <Ionicons name="trash-outline" size={26} color="#dc3545" />
           </TouchableOpacity>
         </View>
@@ -206,7 +197,7 @@ export default function ListLecturerScreen() {
           <FlatList
             data={filteredLecturers}
             renderItem={renderLecturerItem}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => item.id_user_si.toString()}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             refreshControl={

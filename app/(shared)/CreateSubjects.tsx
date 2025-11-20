@@ -103,9 +103,24 @@ export default function SubjectListScreen() {
           <Text style={styles.subjectSks}>SKS: {item.sks}</Text>
         </View>
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="create-outline" size={22} color="#015023" />
-          </TouchableOpacity>
+<TouchableOpacity
+  style={styles.editButton}
+  onPress={(e) => {
+    e.stopPropagation();
+    router.push({
+      pathname: "/(admin)/EditSubject",
+      params: {
+        id: item.id_subject,
+        name: item.name_subject,
+        code: item.code_subject,
+        sks: item.sks.toString(),
+      },
+    });
+  }}
+>
+  <Ionicons name="create-outline" size={24} color="#DABC4E" />
+</TouchableOpacity>
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleDeleteSubject(item.id_subject, item.name_subject)}
@@ -219,14 +234,17 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#015023",
+    paddingTop: 0 
   },
   container: {
     flex: 1,
     backgroundColor: "#015023",
     padding: 20,
+    marginTop: -50, // dorong naik
   },
   searchContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
+    paddingTop:0,
   },
   searchInputWrapper: {
     flexDirection: "row",
@@ -320,6 +338,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.5)",
     borderRadius: 18,
   },
+  editButton: { padding: 8 },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

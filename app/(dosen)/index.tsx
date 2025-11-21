@@ -3,7 +3,7 @@ import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -151,12 +151,20 @@ export default function HomeScreen() {
                 </View>
               </TouchableOpacity>
 
-              <Link href="../(chat)/index" asChild>
-                <TouchableOpacity style={styles.iconsSection} activeOpacity={0.7}>
-                  <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
-                  <Ionicons name="notifications-outline" size={24} color="white" />
-                </TouchableOpacity>
-              </Link>
+
+
+
+
+<TouchableOpacity
+  style={styles.iconsSection}
+  activeOpacity={0.7}
+  onPress={() => router.push("/(dosen)/Chat")}
+>
+  <Ionicons name="chatbox-ellipses-outline" size={24} color="white" style={styles.iconSpacing} />
+  <Ionicons name="notifications-outline" size={24} color="white" />
+</TouchableOpacity>
+
+
             </View>
 
             {/* Main Content - Scrollable */}

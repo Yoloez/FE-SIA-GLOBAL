@@ -75,9 +75,10 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="chat"
+        name="Chat"
         options={{
           href: null, // Ini adalah kuncinya!
+           tabBarStyle: { display: "none" },
         }}
       />
       <Tabs.Screen

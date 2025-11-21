@@ -12,6 +12,27 @@ export default function AdminLayout() {
       <Stack.Screen name="CreateSubjects" options={{ title: "Buat Mata Kuliah" }} />
       <Stack.Screen name="CreateLecturer" options={{ title: "Tambah Dosen" }} />
       <Stack.Screen name="CreateStudent" options={{ title: "Tambah Mahasiswa" }} />
+      <Stack.Screen name="EditClasses" options={{ title: "Edit kelas" }} />
+            <Stack.Screen 
+        name="EditSubject" 
+        options={{ 
+          title: "Edit Subject",
+          headerStyle: { backgroundColor: "#1a5c3a" },
+          headerTintColor: "#fff",
+          headerTitleAlign: "center"
+
+        }} 
+      />
+                  <Stack.Screen 
+        name="EditStudent" 
+        options={{ 
+          title: "Edit Mahasiswa",
+          headerStyle: { backgroundColor: "#1a5c3a" },
+          headerTintColor: "#fff",
+          headerTitleAlign: "center"
+
+        }} 
+      />
     </Stack>
   );
 }

@@ -77,12 +77,17 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="chat"
+        name="Chat"
         options={{
           href: null,
+           tabBarStyle: { display: "none" },
         }}
       />
-
+        {/* name="Chat"
+options={{
+    headerShown: false,
+    tabBarStyle: { display: "none" },
+  }} */}
       <Tabs.Screen
         name="jadwal"
         options={{
@@ -120,6 +125,7 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      
     </Tabs>
   );
 }

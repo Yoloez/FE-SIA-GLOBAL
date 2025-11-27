@@ -81,6 +81,13 @@ export default function TabLayout() {
            tabBarStyle: { display: "none" },
         }}
       />
+           <Tabs.Screen
+        name="ListChat"
+        options={{
+          href: null, // Ini adalah kuncinya!
+           tabBarStyle: { display: "none" },
+        }}
+      />
       <Tabs.Screen
         name="EditProfil"
         options={{

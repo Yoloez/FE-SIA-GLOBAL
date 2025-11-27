@@ -85,7 +85,6 @@ export default function EditProfilScreen() {
     setIsLoading(true);
     try {
       const formData = new FormData();
-
       formData.append("full_name", fullName);
       formData.append("email", email);
 

@@ -123,7 +123,7 @@ export default function HomeScreen() {
 
   const handleChatPress = () => {
     try {
-      router.push("/(mahasiswa)/Chat");
+      router.push("/(mahasiswa)/ListChat");
     } catch (error) {
       console.error("Navigation error:", error);
       try {

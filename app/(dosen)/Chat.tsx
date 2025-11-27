@@ -58,7 +58,7 @@ export default function ChatRoom() {
         }}>
           {/* Back Button */}
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.push("/(dosen)/ListChat")}
             style={{
               marginRight: 12,
               padding: 8,
@@ -97,7 +97,7 @@ export default function ChatRoom() {
           {/* CHAT LIST */}
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+            contentContainerStyle={{ padding: 16, paddingTop: 26, paddingBottom: 120 }}
             keyboardShouldPersistTaps="handled"
           >
             {chatData.map(chat => (

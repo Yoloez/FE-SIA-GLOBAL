@@ -119,6 +119,11 @@ export default function GradesScreen() {
     return period;
   };
 
+  // Determine label: IPK for "all", IPS for specific period
+  const getIndexLabel = () => {
+    return selectedPeriod === "all" ? "IPK" : "IPS";
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen
@@ -137,7 +142,7 @@ export default function GradesScreen() {
         </View>
         <View style={styles.divider} />
         <View style={styles.statItem}>
-          <Text style={styles.summaryLabel}>IPK</Text>
+          <Text style={styles.summaryLabel}>{getIndexLabel()}</Text>
           <Text style={styles.summaryValue}>{statistics.ipk}</Text>
         </View>
         <View style={styles.divider} />

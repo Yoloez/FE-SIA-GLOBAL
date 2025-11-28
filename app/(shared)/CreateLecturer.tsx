@@ -1,41 +1,31 @@
 import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Stack, useRouter, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
 interface Lecturer {
-  id_user_si: number; // ← Sesuaikan dengan backend
+  id_user_si: number;
   name: string;
   email: string;
   username?: string;
   profile_image?: string;
   employee_id_number?: string;
+  is_active: boolean;
 }
 
 export default function ListLecturerScreen() {
   const { token } = useAuth();
   const router = useRouter();
 
-  // State untuk list dosen
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [filteredLecturers, setFilteredLecturers] = useState<Lecturer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchLecturers();
@@ -45,12 +35,11 @@ export default function ListLecturerScreen() {
     filterLecturers();
   }, [searchQuery, lecturers]);
 
-  // Fetch daftar dosen
   const fetchLecturers = async () => {
     try {
       setIsLoading(true);
       const response = await api.get("/manager/lecturers");
-      console.log("Response lecturers:", response.data); // Debug log
+      console.log("Response lecturers:", response.data);
       setLecturers(response.data.data || []);
     } catch (error) {
       console.error("Error fetching lecturers:", error);
@@ -66,49 +55,59 @@ export default function ListLecturerScreen() {
     fetchLecturers();
   };
 
-const filterLecturers = () => {
-  if (!searchQuery.trim()) {
-    setFilteredLecturers(lecturers);
-    return;
-  }
+  const filterLecturers = () => {
+    if (!searchQuery.trim()) {
+      setFilteredLecturers(lecturers);
+      return;
+    }
 
-  const query = searchQuery.toLowerCase();
-  const filtered = lecturers.filter(
-    (lecturer) => lecturer.name.toLowerCase().includes(query) || lecturer.email.toLowerCase().includes(query) || (lecturer.employee_id_number && lecturer.employee_id_number.toLowerCase().includes(query))
-  );
-  setFilteredLecturers(filtered);
-};
+    const query = searchQuery.toLowerCase();
+    const filtered = lecturers.filter((lecturer) => lecturer.name.toLowerCase().includes(query) || lecturer.email.toLowerCase().includes(query) || (lecturer.employee_id_number && lecturer.employee_id_number.toLowerCase().includes(query)));
+    setFilteredLecturers(filtered);
+  };
 
+  
   const handleEditLecturer = (lecturerId: number) => {
     router.push(`/(admin)/EditLecturer`);
   };
 
-  const handleDeleteLecturer = (lecturer: Lecturer) => {
-    Alert.alert(
-      "Hapus Dosen",
-      `Apakah Anda yakin ingin menghapus "${lecturer.name}"?`,
-      [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.delete(`/manager/lecturers/${lecturer.id_user_si}`);
-              Alert.alert("Sukses", "Dosen berhasil dihapus.");
-              fetchLecturers();
-            } catch (error) {
-              console.error("Error deleting lecturer:", error);
-              Alert.alert("Error", "Gagal menghapus dosen.");
-            }
-          },
-        },
-      ]
-    );
-  };
+  const handleToggleStatus = useCallback((lecturer: Lecturer) => {
+    const newStatus = lecturer.is_active ? "nonaktif" : "aktif";
+    const statusMessage = lecturer.is_active ? `Nonaktifkan dosen "${lecturer.name}"?` : `Aktifkan dosen "${lecturer.name}"?`;
 
+    Alert.alert("Konfirmasi Ubah Status", statusMessage, [
+      { text: "Batal", style: "cancel" },
+      {
+        text: "Ubah",
+        style: "default",
+        onPress: async () => {
+          setTogglingId(lecturer.id_user_si);
+          try {
+            const response = await api.patch(`/admin/managers/${lecturer.id_user_si}/toggle-status`);
+
+            if (response.data.status === "success") {
+              setLecturers((prevLecturers) => prevLecturers.map((lect) => (lect.id_user_si === lecturer.id_user_si ? { ...lect, is_active: !lect.is_active } : lect)));
+              Alert.alert("Sukses", `Status dosen berhasil diubah menjadi ${newStatus}.`);
+            } else {
+              Alert.alert("Gagal", response.data.message || "Gagal mengubah status dosen.");
+            }
+          } catch (error) {
+            console.error("Error toggling lecturer status:", error);
+            Alert.alert("Gagal", "Gagal mengubah status dosen.");
+          } finally {
+            setTogglingId(null);
+          }
+        },
+      },
+    ]);
+  }, []);
+  
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     fetchLecturers();
+  //   }, [fetchLecturers])
+  // );
   const handleAddLecturer = () => {
-    // Arahkan ke halaman tambah dosen (dokumen kedua)
     router.push("/(admin)/AddLecturer");
   };
 
@@ -129,6 +128,12 @@ const filterLecturers = () => {
           <Text style={styles.lecturerName}>{item.name}</Text>
           <Text style={styles.lecturerEmail}>{item.email}</Text>
           {item.employee_id_number && <Text style={styles.lecturerNip}>NIP: {item.employee_id_number}</Text>}
+          <View style={styles.statusContainer}>
+            <View style={[styles.statusBadge, item.is_active ? styles.statusActive : styles.statusInactive]}>
+              <Ionicons name={item.is_active ? "checkmark-circle" : "close-circle"} size={12} color="#fff" style={styles.statusIcon} />
+              <Text style={styles.statusText}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.actionButtons}>
@@ -136,8 +141,8 @@ const filterLecturers = () => {
             <Ionicons name="create-outline" size={26} color="#015023" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.iconButton} onPress={() => handleDeleteLecturer(item)}>
-            <Ionicons name="trash-outline" size={26} color="#dc3545" />
+          <TouchableOpacity style={[styles.iconButton, togglingId === item.id_user_si && styles.iconButtonLoading]} onPress={() => handleToggleStatus(item)} disabled={togglingId === item.id_user_si}>
+            {togglingId === item.id_user_si ? <ActivityIndicator size="small" color="#015023" /> : <Ionicons name={item.is_active ? "power" : "power-outline"} size={26} color={item.is_active ? "#4CAF50" : "#F44336"} />}
           </TouchableOpacity>
         </View>
       </View>
@@ -164,22 +169,13 @@ const filterLecturers = () => {
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={22} color="#999" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari Dosen (nama, email, NIP)..."
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <TextInput style={styles.searchInput} placeholder="Cari Dosen (nama, email, NIP)..." placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} />
         </View>
 
         {/* Header list */}
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>Daftar Dosen</Text>
-          <TouchableOpacity
-            onPress={handleAddLecturer}
-            style={styles.addButton}
-          >
+          <TouchableOpacity onPress={handleAddLecturer} style={styles.addButton}>
             <Ionicons name="add-circle" size={40} color="#ffffffff" />
           </TouchableOpacity>
         </View>
@@ -200,21 +196,11 @@ const filterLecturers = () => {
             keyExtractor={(item) => item.id_user_si.toString()}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor="#ffffffff"
-              />
-            }
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ffffffff" />}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.4)" />
-                <Text style={styles.emptyText}>
-                  {searchQuery
-                    ? "Tidak ada dosen yang sesuai pencarian"
-                    : "Belum ada dosen. Tekan tombol + untuk menambahkan."}
-                </Text>
+                <Text style={styles.emptyText}>{searchQuery ? "Tidak ada dosen yang sesuai pencarian" : "Belum ada dosen. Tekan tombol + untuk menambahkan."}</Text>
               </View>
             }
           />
@@ -323,6 +309,33 @@ const styles = StyleSheet.create({
   lecturerNip: {
     fontSize: 14,
     color: "#666",
+    marginBottom: 4,
+  },
+  statusContainer: {
+    marginTop: 4,
+  },
+  statusBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statusActive: {
+    backgroundColor: "#4CAF50",
+  },
+  statusInactive: {
+    backgroundColor: "#F44336",
+  },
+  statusIcon: {
+    marginRight: 4,
+  },
+  statusText: {
+    fontSize: 11,
+    color: "#fff",
+    fontWeight: "600",
+    textTransform: "uppercase",
   },
   actionButtons: {
     flexDirection: "row",
@@ -335,6 +348,10 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: "center",
     alignItems: "center",
+  },
+  iconButtonLoading: {
+    backgroundColor: "rgba(200,200,200,0.3)",
+    borderRadius: 20,
   },
   loadingContainer: {
     flex: 1,

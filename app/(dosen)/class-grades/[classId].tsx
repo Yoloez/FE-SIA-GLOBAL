@@ -24,7 +24,6 @@ export default function GradeInputScreen() {
     setIsLoading(true);
     try {
       const [studentsResponse, subjectsResponse] = await Promise.all([api.get(`/lecturer/classes/${classId}/students`), api.get("/lecturer/classes")]);
-
       const studentsData = studentsResponse.data.data;
       const subjectsData = subjectsResponse.data.data;
 
@@ -129,7 +128,7 @@ export default function GradeInputScreen() {
         <View style={styles.gradeDisplayContainer}>
           {item.grade ? (
             <View style={styles.gradeDisplayContent}>
-              <Text style={styles.gradeDisplayNumber}>{item.grade.grade}</Text>
+              {/* <Text style={styles.gradeDisplayNumber}>{item.grade.grade}</Text> */}
               <Text style={styles.gradeDisplayLetter}>({item.grade.letter})</Text>
             </View>
           ) : (
@@ -232,10 +231,10 @@ const styles = StyleSheet.create({
   studentName: { fontSize: 15, fontWeight: "700", color: "#2d2d2d", marginBottom: 3 },
   studentId: { fontSize: 11, color: "#5a5a5a" },
   actionsContainer: { flexDirection: "row", alignItems: "center", gap: 6 },
-  gradeDisplayContainer: { width: 60, height: 44, borderRadius: 10, backgroundColor: "#ffffff", borderWidth: 2, borderColor: "#c9b872", justifyContent: "center", alignItems: "center" },
+  gradeDisplayContainer: { width: 35, height: 44, borderRadius: 10, backgroundColor: "#ffffff", borderWidth: 2, borderColor: "#c9b872", justifyContent: "center", alignItems: "center" },
   gradeDisplayContent: { alignItems: "center" },
   gradeDisplayNumber: { fontSize: 16, fontWeight: "700", color: "#2d5f3f" },
-  gradeDisplayLetter: { fontSize: 11, fontWeight: "600", color: "#c9b872", marginTop: -2 },
+  gradeDisplayLetter: { fontSize: 15, fontWeight: "600", color: "#c9b872", marginTop: -2, paddingHorizontal: 0 },
   gradeDisplayText: { fontSize: 16, fontWeight: "700", color: "#2d5f3f" },
   inputWrapper: { backgroundColor: "#ffffff", borderRadius: 10, borderWidth: 2, borderColor: "#2d5f3f", overflow: "hidden", height: 44, width: 70, justifyContent: "center" },
   gradeInput: { textAlign: "center", fontSize: 16, fontWeight: "600", color: "#2d5f3f", paddingHorizontal: 8, height: 44 },

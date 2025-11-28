@@ -15,6 +15,7 @@ interface Student {
   registration_status: string | null;
   program_name: string;
   profile_image: string | null;
+  is_active: boolean;
 }
 
 export default function StudentListScreen() {
@@ -23,6 +24,7 @@ export default function StudentListScreen() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   // Fetch students list
   const fetchStudents = useCallback(async () => {
@@ -48,28 +50,42 @@ export default function StudentListScreen() {
     }, [fetchStudents])
   );
 
-  const handleDeleteStudent = useCallback(
-    (studentId: number, studentName: string) => {
-      Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus mahasiswa "${studentName}"?`, [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.delete(`/manager/students/${studentId}`);
-              Alert.alert("Sukses", "Data mahasiswa berhasil dihapus.");
-              fetchStudents();
-            } catch (error) {
-              if (axios.isAxiosError(error)) console.error("Gagal menghapus mahasiswa:", error.response?.data);
-              Alert.alert("Gagal", "Gagal menghapus mahasiswa.");
+  const handleToggleStatus = useCallback((studentId: number, studentName: string, currentStatus: boolean) => {
+    const newStatus = currentStatus ? "nonaktif" : "aktif";
+    const statusMessage = currentStatus ? `Nonaktifkan mahasiswa "${studentName}"?` : `Aktifkan mahasiswa "${studentName}"?`;
+
+    Alert.alert("Konfirmasi Ubah Status", statusMessage, [
+      { text: "Batal", style: "cancel" },
+      {
+        text: "Ubah",
+        style: "default",
+        onPress: async () => {
+          setTogglingId(studentId);
+          try {
+            const response = await api.patch(`/admin/managers/${studentId}/toggle-status`);
+
+            if (response.data.status === "success") {
+              // Update local state
+              setStudents((prevStudents) => prevStudents.map((student) => (student.id_user_si === studentId ? { ...student, is_active: !student.is_active } : student)));
+              Alert.alert("Sukses", `Status mahasiswa berhasil diubah menjadi ${newStatus}.`);
+            } else {
+              Alert.alert("Gagal", response.data.message || "Gagal mengubah status mahasiswa.");
             }
-          },
+          } catch (error) {
+            console.error("Gagal mengubah status:", error);
+            if (axios.isAxiosError(error)) {
+              console.error("Error response:", error.response?.data);
+              Alert.alert("Gagal", error.response?.data?.message || "Gagal mengubah status mahasiswa.");
+            } else {
+              Alert.alert("Gagal", "Gagal mengubah status mahasiswa.");
+            }
+          } finally {
+            setTogglingId(null);
+          }
         },
-      ]);
-    },
-    [fetchStudents]
-  );
+      },
+    ]);
+  }, []);
 
   // Filter search
   const filteredStudents = useMemo(() => {
@@ -98,38 +114,45 @@ export default function StudentListScreen() {
           <Text style={styles.info}>Email: {item.email}</Text>
           {item.registration_number && <Text style={styles.info}>NIM: {item.registration_number}</Text>}
           <Text style={styles.info}>Program: {item.program_name}</Text>
-          {item.registration_status && (
-            <View style={[styles.statusBadge, item.registration_status === "active" && styles.statusActive, item.registration_status === "inactive" && styles.statusInactive]}>
-              <Text style={styles.statusText}>{item.registration_status}</Text>
+          <View style={styles.statusContainer}>
+            <View style={[styles.statusBadge, item.is_active ? styles.statusActive : styles.statusInactive]}>
+              <Ionicons name={item.is_active ? "checkmark-circle" : "close-circle"} size={14} color="#fff" style={styles.statusIcon} />
+              <Text style={styles.statusText}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
             </View>
-          )}
+          </View>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionButton} onPress={() =>
-  router.push({
-    pathname: "/(admin)/EditStudent",
-    params: {
-      id: item.id_user_si,
-      full_name: item.full_name,
-      nim: item.registration_number,
-      email: item.email,
-      program: item.program_name,
-      image: item.profile_image
-    }
-  })
-
-
-}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() =>
+              router.push({
+                pathname: "/(admin)/EditStudent",
+                params: {
+                  id: item.id_user_si,
+                  full_name: item.full_name,
+                  nim: item.registration_number,
+                  email: item.email,
+                  program: item.program_name,
+                  image: item.profile_image,
+                },
+              })
+            }
+          >
             <Ionicons name="create-outline" size={22} color="#015023" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteStudent(item.id_user_si, item.full_name)}>
-            <Ionicons name="trash-outline" size={22} color="#B00020" />
+
+          <TouchableOpacity
+            style={[styles.actionButton, togglingId === item.id_user_si && styles.actionButtonLoading]}
+            onPress={() => handleToggleStatus(item.id_user_si, item.full_name, item.is_active)}
+            disabled={togglingId === item.id_user_si}
+          >
+            {togglingId === item.id_user_si ? <ActivityIndicator size="small" color="#015023" /> : <Ionicons name={item.is_active ? "power" : "power-outline"} size={22} color={item.is_active ? "#4CAF50" : "#F44336"} />}
           </TouchableOpacity>
         </View>
       </View>
     ),
-    [handleDeleteStudent, router]
+    [handleToggleStatus, router, togglingId]
   );
 
   return (
@@ -256,16 +279,19 @@ const styles = StyleSheet.create({
   infoContainer: { flex: 1 },
   name: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 4 },
   info: { fontSize: 13, color: "#555", marginBottom: 2 },
+  statusContainer: { marginTop: 4 },
   statusBadge: {
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 8,
-    marginTop: 4,
   },
   statusActive: { backgroundColor: "#4CAF50" },
   statusInactive: { backgroundColor: "#F44336" },
-  statusText: { fontSize: 11, color: "#fff", fontWeight: "600", textTransform: "uppercase" },
+  statusIcon: { marginRight: 4 },
+  statusText: { fontSize: 12, color: "#fff", fontWeight: "600", textTransform: "uppercase" },
   actions: { flexDirection: "column", gap: 8, marginLeft: 8 },
   actionButton: {
     width: 36,
@@ -274,6 +300,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.5)",
     borderRadius: 18,
+  },
+  actionButtonLoading: {
+    backgroundColor: "rgba(200,200,200,0.5)",
   },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 60 },
   loadingText: { marginTop: 10, color: "#fff", fontSize: 14 },

@@ -24,25 +24,50 @@ export default function GradeInputScreen() {
     setIsLoading(true);
     try {
       const [studentsResponse, subjectsResponse] = await Promise.all([api.get(`/lecturer/classes/${classId}/students`), api.get("/lecturer/classes")]);
-      const studentsData = studentsResponse.data.data;
+      const responseData = studentsResponse.data.data;
       const subjectsData = subjectsResponse.data.data;
 
+      // Ambil students dari responseData.students
+      const studentsArray = responseData?.students || [];
+      const classInfo = responseData?.class_info;
+
+      // Validasi bahwa studentsArray adalah array
+      if (!Array.isArray(studentsArray)) {
+        console.error("students bukan array:", studentsArray);
+        Alert.alert("Error", "Format data mahasiswa tidak valid.");
+        setStudents([]);
+        setIsLoading(false);
+        return;
+      }
+
       setStudents(
-        studentsData.map((student: Student) => ({
+        studentsArray.map((student: any) => ({
           ...student,
+          email: student.nim || student.email || "",
           selectedGrade: student.grade ? student.grade.grade.toString() : "",
         }))
       );
 
-      const subject = subjectsData.find((s: any) => s.id_subject === Number(classId));
-      setClassInfo({
-        name: subject?.name || "Analisis dan Desain Perangkat Lunak",
-        code: subject?.code || "",
-        studentCount: studentsData.length,
-      });
+      // Gunakan informasi kelas dari class_info di response
+      if (classInfo && classInfo.subject) {
+        setClassInfo({
+          name: classInfo.subject.name || "Mata Kuliah",
+          code: classInfo.subject.code || classInfo.code_class || "",
+          studentCount: responseData.statistics?.total_students || studentsArray.length,
+        });
+      } else {
+        // Fallback ke cara lama jika class_info tidak ada
+        const subject = Array.isArray(subjectsData) ? subjectsData.find((s: any) => s.id_subject === Number(classId)) : null;
+        setClassInfo({
+          name: subject?.name || "Mata Kuliah",
+          code: subject?.code || "",
+          studentCount: studentsArray.length,
+        });
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching students:", error);
       Alert.alert("Gagal", "Gagal memuat data mahasiswa atau mata kuliah.");
+      setStudents([]);
     } finally {
       setIsLoading(false);
     }

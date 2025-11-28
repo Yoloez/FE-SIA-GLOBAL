@@ -138,7 +138,7 @@ export default function ChatRoom() {
           {/* INPUT AREA FIXED */}
           <View style={{
             position: "absolute",
-            bottom: 0,
+            bottom: 90,
             left: 0,
             right: 0,
             backgroundColor: "#015023",

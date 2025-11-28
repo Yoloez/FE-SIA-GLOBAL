@@ -58,7 +58,7 @@ export default function ChatRoom() {
         }}>
           {/* Back Button */}
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.push("/(mahasiswa)/ListChat")}
             style={{
               marginRight: 12,
               padding: 8,

@@ -83,6 +83,14 @@ export default function TabLayout() {
            tabBarStyle: { display: "none" },
         }}
       />
+
+            <Tabs.Screen
+        name="ListChat"
+        options={{
+          href: null,
+           tabBarStyle: { display: "none" },
+        }}
+      />
         {/* name="Chat"
 options={{
     headerShown: false,

@@ -33,10 +33,49 @@ export default function GradesScreen() {
     setIsLoading(true);
     try {
       const response = await api.get("/student/grades");
-      const data = response.data.data;
-      setSections(data);
+      const responseData = response.data.data;
+      const gradesData = responseData.grade || {};
+
+      console.log("Grades Response:", response.data);
+      console.log("Grades Data:", gradesData);
+
+      // Konversi object ke array (karena Laravel mengembalikan object dengan key numerik)
+      let gradesArray: any[] = [];
+      if (Array.isArray(gradesData)) {
+        gradesArray = gradesData;
+      } else if (typeof gradesData === "object" && gradesData !== null) {
+        // Konversi object dengan key numerik ke array
+        gradesArray = Object.values(gradesData);
+      }
+
+      console.log("Converted to Array:", gradesArray);
+
+      if (gradesArray.length === 0) {
+        setSections([]);
+        return;
+      }
+
+      // Kelompokkan data berdasarkan academic_period
+      const groupedByPeriod: { [key: string]: GradeItem[] } = {};
+
+      gradesArray.forEach((item: any) => {
+        const period = item.academic_period || "Lainnya";
+        if (!groupedByPeriod[period]) {
+          groupedByPeriod[period] = [];
+        }
+        groupedByPeriod[period].push(item);
+      });
+
+      // Ubah ke format sections
+      const sectionsData: GradeSection[] = Object.keys(groupedByPeriod).map((period) => ({
+        title: period,
+        data: groupedByPeriod[period],
+      }));
+
+      setSections(sectionsData);
     } catch (error) {
       console.error("Error fetching grades:", error);
+      setSections([]);
     } finally {
       setIsLoading(false);
     }
@@ -50,17 +89,20 @@ export default function GradesScreen() {
 
   // Get all period options
   const periodOptions = useMemo(() => {
+    if (!Array.isArray(sections)) return ["all"];
     const periods = sections.map((s) => s.title);
     return ["all", ...periods];
   }, [sections]);
 
   // Filter data based on selected period
   const filteredData = useMemo(() => {
+    if (!Array.isArray(sections)) return [];
+
     if (selectedPeriod === "all") {
-      return sections.flatMap((section) => section.data);
+      return sections.flatMap((section) => section.data || []);
     }
     const section = sections.find((s) => s.title === selectedPeriod);
-    return section ? section.data : [];
+    return section ? section.data || [] : [];
   }, [sections, selectedPeriod]);
 
   // Calculate statistics for filtered data

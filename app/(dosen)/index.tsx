@@ -5,18 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
@@ -26,24 +15,24 @@ const { width } = Dimensions.get("window");
 const CONTENT_DATA = [
   {
     id: "1",
-    label: "Grades",
-    title: "TRPL",
-    
-    route: "/grades",
+    label: "Notification",
+    title: "Pemrograman Mobile",
+    contents: ["Buat UI", "Implementasi API"],
+    route: "/(dosen)/notification",
   },
   {
     id: "2",
-    label: "Schedule",
-    title: "JADWAL",
-   
-    route: "/jadwal",
+    label: "Grades",
+    title: "TRPL",
+
+    route: "/grades",
   },
   {
     id: "3",
-    label: "Tugas",
-    title: "Pemrograman Mobile",
-    contents: ["Buat UI", "Implementasi API"],
-    route: null,
+    label: "Schedule",
+    title: "JADWAL",
+
+    route: "/jadwal",
   },
 ];
 
@@ -63,13 +52,7 @@ export default function HomeScreen() {
       setFiltered(CONTENT_DATA);
     } else {
       const q = searchQuery.toLowerCase();
-      setFiltered(
-        CONTENT_DATA.filter(
-          (item) =>
-            item.label.toLowerCase().includes(q) ||
-            item.title.toLowerCase().includes(q)
-        )
-      );
+      setFiltered(CONTENT_DATA.filter((item) => item.label.toLowerCase().includes(q) || item.title.toLowerCase().includes(q)));
     }
   }, [searchQuery]);
 
@@ -87,10 +70,7 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
-              <Image
-                source={require("../../assets/images/react-logo.png")}
-                style={styles.avatar}
-              />
+              <Image source={require("../../assets/images/react-logo.png")} style={styles.avatar} />
               <View>
                 <Text style={styles.userName}>Dosen 1</Text>
                 <Text style={styles.userId}>8888</Text>
@@ -98,10 +78,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.iconsSection}>
-              <TouchableOpacity
-                onPress={() => router.push("/(dosen)/ListChat")}
-                style={styles.iconButton}
-              >
+              <TouchableOpacity onPress={() => router.push("/(dosen)/ListChat")} style={styles.iconButton}>
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
               </TouchableOpacity>
 
@@ -116,20 +93,10 @@ export default function HomeScreen() {
           </View>
 
           {/* Scroll Content */}
-          <ScrollView
-            style={styles.scrollContent}
-            contentContainerStyle={styles.scrollContentContainer}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false}>
             {/* Search */}
             <View style={styles.searchContainer}>
-              <TextInput
-                placeholder="Search by title or label..."
-                placeholderTextColor="#666"
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+              <TextInput placeholder="Search by title or label..." placeholderTextColor="#666" style={styles.searchInput} value={searchQuery} onChangeText={setSearchQuery} />
               <Ionicons name="search-outline" size={18} color="#666" />
             </View>
 
@@ -138,11 +105,7 @@ export default function HomeScreen() {
               <ActivityIndicator size="large" color="#fff" style={{ marginTop: 20 }} />
             ) : filtered.length > 0 ? (
               filtered.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  onPress={() => handlePress(item)}
-                  disabled={!item.route}
-                >
+                <TouchableOpacity key={item.id} onPress={() => handlePress(item)} disabled={!item.route}>
                   <ContentCard label={item.label} title={item.title} contents={item.contents} />
                 </TouchableOpacity>
               ))
@@ -211,7 +174,6 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     flex: 1,
-    
   },
 
   scrollContentContainer: {

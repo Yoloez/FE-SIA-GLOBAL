@@ -80,18 +80,18 @@ export default function TabLayout() {
         name="Chat"
         options={{
           href: null,
-           tabBarStyle: { display: "none" },
+          tabBarStyle: { display: "none" },
         }}
       />
 
-            <Tabs.Screen
+      <Tabs.Screen
         name="ListChat"
         options={{
           href: null,
-           tabBarStyle: { display: "none" },
+          tabBarStyle: { display: "none" },
         }}
       />
-        {/* name="Chat"
+      {/* name="Chat"
 options={{
     headerShown: false,
     tabBarStyle: { display: "none" },
@@ -133,7 +133,12 @@ options={{
           href: null,
         }}
       />
-      
+      <Tabs.Screen
+        name="notification"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

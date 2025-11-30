@@ -1,98 +1,304 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React from "react";
-import {
-  FlatList,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from "react-native";
+import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
 
-interface Student {
-  id: string;
+interface Contact {
+  id_user_si: number;
   name: string;
-  studentId: string;
-  avatar: string;
+  username: string;
+  email: string;
+  profile_image: string | null;
+  role: string;
 }
 
-const students: Student[] = [
-  { id: "1", name: "Woody", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "2", name: "Buzz", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "3", name: "Jessie", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "4", name: "Lotso", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "5", name: "T-Rex", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "6", name: "Woody", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "7", name: "Buzz", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "8", name: "Jessie", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "9", name: "Lotso", studentId: "24/123456/SV/54321", avatar: "🐱" },
-  { id: "10", name: "T-Rex", studentId: "24/123456/SV/54321", avatar: "🐱" },
-];
+interface Section {
+  title: string;
+  data: Contact[];
+}
 
 const ChatListApp = () => {
-    const router = useRouter();
+  const router = useRouter();
+  const { token } = useAuth();
+  const [lecturers, setLecturers] = useState<Contact[]>([]);
+  const [classmates, setClassmates] = useState<Contact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const isMounted = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const renderChatItem = ({ item }: { item: Student }) => (
-    <TouchableOpacity style={styles.chatItem}>
-      
-      <View style={styles.avatarContainer}>
-        <Text style={styles.avatar}>{item.avatar}</Text>
-      </View>
+  // Cleanup on unmount
+  React.useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
-      <View style={styles.chatInfo}>
-        <Text style={styles.chatName}>{item.name}</Text>
-        <Text style={styles.studentId}>{item.studentId}</Text>
-      </View>
+  // Fungsi untuk mengambil daftar kontak dari API
+  const fetchContacts = useCallback(async () => {
+    if (!token) {
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
+      return;
+    }
 
-      <TouchableOpacity
-        style={styles.messageIcon}
-        onPress={() => router.push("/(mahasiswa)/Chat")}
-      >
-        <Ionicons name="chatbubble-ellipses" size={20} color="#5B4B2A" />
-      </TouchableOpacity>
+    // Cancel previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-    </TouchableOpacity>
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+
+    if (isMounted.current) {
+      setIsLoading(true);
+    }
+
+    try {
+      console.log("🔄 Fetching contacts from API...");
+      const response = await api.get("/chat/contacts", {
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!isMounted.current) return;
+
+      const { lecturers: lecturersData, classmates: classmatesData } = response.data.data;
+
+      console.log(`✅ Loaded ${(lecturersData?.length || 0) + (classmatesData?.length || 0)} contacts`);
+      setLecturers(lecturersData || []);
+      setClassmates(classmatesData || []);
+    } catch (error: any) {
+      // Ignore abort errors
+      if (error.name === "AbortError" || error.name === "CanceledError") {
+        console.log("❌ Request was cancelled");
+        return;
+      }
+
+      if (!isMounted.current) return;
+
+      console.error("================ GAGAL MEMUAT KONTAK ================");
+      let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
+
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          console.error("Status Kode:", error.response.status);
+          console.error("Pesan dari Server:", JSON.stringify(error.response.data, null, 2));
+          alertMessage = `Gagal memuat kontak. Server merespons dengan error ${error.response.status}.`;
+        } else if (error.request) {
+          console.error("Tidak ada respons dari server.");
+          alertMessage = "Tidak dapat terhubung ke server. Pastikan server berjalan.";
+        } else {
+          console.error("Error Axios:", error.message);
+          alertMessage = "Terjadi masalah saat menyiapkan permintaan.";
+        }
+      } else {
+        console.error("Error tidak terduga:", error);
+      }
+      console.error("====================================================");
+
+      Alert.alert("Error", alertMessage);
+    } finally {
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [token]);
+
+  // Fetch contacts when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchContacts();
+
+      return () => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      };
+    }, [fetchContacts])
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1B5E3F" />
+  // Fungsi untuk memulai percakapan privat
+  const handleStartPrivateChat = useCallback(
+    async (recipientId: number) => {
+      if (!token || !isMounted.current) return;
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            marginRight: 12,
-            padding: 8,
-            justifyContent: 'center',
-            alignItems: 'center'
+      try {
+        console.log(`📤 Starting private chat with user ${recipientId}...`);
+        const response = await api.post("/chat/conversations/private", {
+          recipient_id: recipientId,
+        });
+
+        if (!isMounted.current) return;
+
+        const conversation = response.data.data;
+        console.log(`✅ Conversation created: ${conversation.id_conversation}`);
+
+        // Navigate to chat screen
+        router.push(`/chat/${conversation.id_conversation}` as any);
+      } catch (error: any) {
+        if (!isMounted.current) return;
+
+        console.error("================ GAGAL MEMULAI CHAT PRIVAT ================");
+        let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
+
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            console.error("Status Kode:", error.response.status);
+            console.error("Pesan dari Server:", JSON.stringify(error.response.data, null, 2));
+            alertMessage = `Gagal memulai percakapan. Server merespons dengan error ${error.response.status}.`;
+          } else if (error.request) {
+            console.error("Tidak ada respons dari server.");
+            alertMessage = "Tidak dapat terhubung ke server. Pastikan server berjalan.";
+          } else {
+            console.error("Error Axios:", error.message);
+            alertMessage = "Terjadi masalah saat menyiapkan permintaan.";
+          }
+        } else {
+          console.error("Error tidak terduga:", error);
+        }
+        console.error("========================================================");
+
+        Alert.alert("Error", alertMessage);
+      }
+    },
+    [token]
+  );
+
+  const renderChatItem = ({ item }: { item: Contact }) => {
+    // Gunakan profile_image dari API jika tersedia, fallback ke pravatar
+    const avatarUri = item.profile_image ? `https://api-sia.ptialghifari.my.id/storage/${item.profile_image}` : `https://i.pravatar.cc/150?u=${item.email || `user${item.id_user_si}@default.com`}`;
+
+    return (
+      <View style={styles.contactCard}>
+        <Image
+          source={{ uri: avatarUri }}
+          style={styles.avatarImage}
+          onError={(error) => {
+            console.log("Avatar load error:", error.nativeEvent.error);
           }}
-        >
-          <Ionicons name="arrow-back" size={28} color="white" />
-        </TouchableOpacity>
+        />
 
-        <Text style={styles.headerTitle}>Chat List</Text>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={styles.badgeContainer}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Students</Text>
-          </View>
+        <View style={styles.contactInfo}>
+          <Text style={styles.contactName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.contactId} numberOfLines={1}>
+            @{item.username}
+          </Text>
         </View>
 
-        <FlatList
-          data={students}
-          renderItem={renderChatItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
+        <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="chatbubble-ellipses-outline" size={28} color="#015023" />
+        </TouchableOpacity>
       </View>
+    );
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <StatusBar barStyle="light-content" backgroundColor="#015023" />
+
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                marginRight: 12,
+                padding: 8,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="arrow-back" size={28} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Chat List</Text>
+          </View>
+
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FACC15" />
+            <Text style={styles.loadingTextWhite}>Memuat kontak...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#015023" />
+
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              marginRight: 12,
+              padding: 8,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={28} color="white" />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Chat List</Text>
+        </View>
+
+        {/* Content */}
+        <FlatList
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.emptyText}>Belum ada kontak tersedia</Text>
+            </View>
+          }
+          data={[{ key: "sections" }]}
+          renderItem={() => (
+            <>
+              {/* Lecturer Section */}
+              {lecturers.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <View style={styles.badgeContainer}>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>Lecturer</Text>
+                    </View>
+                  </View>
+                  {lecturers.map((item) => (
+                    <View key={item.id_user_si}>{renderChatItem({ item })}</View>
+                  ))}
+                </View>
+              )}
+
+              {/* Classmates Section */}
+              {classmates.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <View style={styles.badgeContainer}>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>Classmates</Text>
+                    </View>
+                  </View>
+                  {classmates.map((item) => (
+                    <View key={item.id_user_si}>{renderChatItem({ item })}</View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+        />
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -100,14 +306,13 @@ const ChatListApp = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1B5E3F",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 38, // PERBAIKAN: Padding atas lebih besar
-    paddingBottom: 10, // PERBAIKAN: Padding bawah lebih besar
+    paddingTop: 40,
+    paddingBottom: 15,
   },
   backButton: {
     marginRight: 12,
@@ -117,73 +322,100 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
   },
-  content: {
-    flex: 1,
-    backgroundColor: "#F5EFE0",
-    borderRadius: 24, // PERBAIKAN: Border radius di semua sisi
-    margin: 16, // TAMBAHAN: Margin di semua sisi agar terlihat seperti card
+  scrollContent: {
+    paddingHorizontal: 15,
     paddingTop: 16,
     paddingBottom: 20,
   },
-  badgeContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  badge: {
-    backgroundColor: "#D4AF6A",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+  sectionContainer: {
+    marginBottom: 16,
+    backgroundColor: "#F5EFD3",
+    borderColor: "black",
+    borderWidth: 1,
     borderRadius: 20,
+  },
+  badgeContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    marginTop: 20,
+    marginBottom: 10,
     alignSelf: "flex-start",
   },
+  badge: {
+    backgroundColor: "#DABC4E",
+    paddingVertical: 5,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
   badgeText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "white",
   },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40, // PERBAIKAN: Menambah padding bawah pada list agar item terakhir tidak terpotong
-  },
-  chatItem: {
+  contactCard: {
+    backgroundColor: "",
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5D9C3",
+    marginBottom: 0,
+    // elevation: 2,
   },
-  avatarContainer: {
+  avatarImage: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#D4C4A8",
+    borderWidth: 2,
+    borderColor: "#015023",
+    backgroundColor: "#f0f8f4",
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    paddingVertical: 40,
   },
-  avatar: {
-    fontSize: 24,
-  },
-  chatInfo: {
-    flex: 1,
-  },
-  chatName: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#2C2C2C",
+    color: "#666",
+  },
+  loadingTextWhite: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#fff",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "rgba(255,255,255,0.8)",
+    textAlign: "center",
+  },
+  contactInfo: {
+    flex: 1,
+    marginLeft: 15,
+    marginRight: 10,
+  },
+  contactName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 2,
   },
-  studentId: {
-    fontSize: 12,
-    color: "#666666",
-  },
-  messageIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: "#E5D9C3",
-    justifyContent: "center",
-    alignItems: "center",
+  contactId: {
+    fontSize: 14,
+    color: "#666",
   },
 });
 

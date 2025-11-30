@@ -83,13 +83,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="jadwal"
         options={{
-          href: null, // Ini adalah kuncinya!
+          href: null,
+          tabBarStyle: { display: "none" }, // Sembunyikan tab bar
         }}
       />
       <Tabs.Screen
         name="grades"
         options={{
-          href: null, // Ini adalah kuncinya!
+          href: null,
+          tabBarStyle: { display: "none" }, // Sembunyikan tab bar
         }}
       />
     </Tabs>

@@ -2,9 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, FlatList, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
+import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
@@ -49,6 +50,12 @@ export default function ManagerDashboardScreen() {
   const [search, setSearch] = useState("");
   const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
   const isMounted = useRef(true);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
+  });
 
   React.useEffect(() => {
     return () => {
@@ -71,7 +78,12 @@ export default function ManagerDashboardScreen() {
 
       const message = axios.isAxiosError(error) ? (error.response ? `Gagal memuat kelas. Error ${error.response.status}.` : "Tidak dapat terhubung ke server.") : "Terjadi kesalahan.";
 
-      Alert.alert("Error", message);
+      setAlertConfig({
+        visible: true,
+        title: "Error",
+        message: message,
+        buttons: [{ text: "OK", onPress: () => {} }],
+      });
     } finally {
       if (isMounted.current) setIsLoading(false);
     }
@@ -82,24 +94,39 @@ export default function ManagerDashboardScreen() {
       const newStatus = !currentStatus;
       const statusText = newStatus ? "aktif" : "nonaktif";
 
-      Alert.alert("Konfirmasi Status", `Ubah status kelas "${name}" menjadi ${statusText}?`, [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Ubah",
-          onPress: async () => {
-            try {
-              await api.patch(`/manager/classes/${id}/toggle-status`, {
-                is_active: newStatus,
-              });
-              Alert.alert("Sukses", `Status kelas berhasil diubah menjadi ${statusText}.`);
-              fetchClasses();
-            } catch (error) {
-              console.error("Toggle active error:", error);
-              Alert.alert("Gagal", "Gagal mengubah status kelas.");
-            }
+      setAlertConfig({
+        visible: true,
+        title: "Konfirmasi Status",
+        message: `Ubah status kelas "${name}" menjadi ${statusText}?`,
+        buttons: [
+          { text: "Batal", onPress: () => {}, style: "cancel" },
+          {
+            text: "Ubah",
+            onPress: async () => {
+              try {
+                await api.patch(`/manager/classes/${id}/toggle-status`, {
+                  is_active: newStatus,
+                });
+                setAlertConfig({
+                  visible: true,
+                  title: "Sukses",
+                  message: `Status kelas berhasil diubah menjadi ${statusText}.`,
+                  buttons: [{ text: "OK", onPress: () => {} }],
+                });
+                fetchClasses();
+              } catch (error) {
+                console.error("Toggle active error:", error);
+                setAlertConfig({
+                  visible: true,
+                  title: "Gagal",
+                  message: "Gagal mengubah status kelas.",
+                  buttons: [{ text: "OK", onPress: () => {} }],
+                });
+              }
+            },
           },
-        },
-      ]);
+        ],
+      });
     },
     [fetchClasses]
   );
@@ -131,37 +158,57 @@ export default function ManagerDashboardScreen() {
   );
 
   const handleLogout = useCallback(() => {
-    Alert.alert("Konfirmasi Logout", "Yakin ingin keluar?", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => {
-          toggleMenu(false);
-          setTimeout(logout, 300);
+    setAlertConfig({
+      visible: true,
+      title: "Konfirmasi Logout",
+      message: "Yakin ingin keluar?",
+      buttons: [
+        { text: "Batal", onPress: () => {}, style: "cancel" },
+        {
+          text: "Logout",
+          onPress: () => {
+            toggleMenu(false);
+            setTimeout(logout, 300);
+          },
+          style: "destructive",
         },
-      },
-    ]);
+      ],
+    });
   }, [logout, toggleMenu]);
 
   const handleDelete = useCallback(
     (id: number, name: string) => {
-      Alert.alert("Konfirmasi Hapus", `Hapus kelas "${name}"?`, [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.delete(`/manager/classes/${id}`);
-              Alert.alert("Sukses", "Kelas berhasil dihapus.");
-              fetchClasses();
-            } catch (error) {
-              Alert.alert("Gagal", "Gagal menghapus kelas.");
-            }
+      setAlertConfig({
+        visible: true,
+        title: "Konfirmasi Hapus",
+        message: `Hapus kelas "${name}"?`,
+        buttons: [
+          { text: "Batal", onPress: () => {}, style: "cancel" },
+          {
+            text: "Hapus",
+            onPress: async () => {
+              try {
+                await api.delete(`/manager/classes/${id}`);
+                setAlertConfig({
+                  visible: true,
+                  title: "Sukses",
+                  message: "Kelas berhasil dihapus.",
+                  buttons: [{ text: "OK", onPress: () => {} }],
+                });
+                fetchClasses();
+              } catch (error) {
+                setAlertConfig({
+                  visible: true,
+                  title: "Gagal",
+                  message: "Gagal menghapus kelas.",
+                  buttons: [{ text: "OK", onPress: () => {} }],
+                });
+              }
+            },
+            style: "destructive",
           },
-        },
-      ]);
+        ],
+      });
     },
     [fetchClasses]
   );
@@ -328,6 +375,7 @@ export default function ManagerDashboardScreen() {
           />
         )}
       </View>
+      <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} buttons={alertConfig.buttons} />
     </SafeAreaView>
   );
 }

@@ -4,6 +4,7 @@ import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import api from "../../api/axios";
+import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 
 // Interface disesuaikan dengan data dari API controller
@@ -32,6 +33,12 @@ export default function ScheduleScreen() {
   const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
   const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    buttons: [] as { text: string; onPress: () => void }[],
+  });
 
   // Helper function untuk mendapatkan awal minggu (Senin)
   function getWeekStart(date: Date): Date {
@@ -71,7 +78,12 @@ export default function ScheduleScreen() {
       setSchedules(response.data.data || []);
     } catch (error: any) {
       console.error("Gagal memuat jadwal:", error.response?.data);
-      alert("Gagal memuat jadwal Anda.");
+      setAlertConfig({
+        visible: true,
+        title: "Error",
+        message: "Gagal memuat jadwal Anda.",
+        buttons: [{ text: "OK", onPress: () => {} }],
+      });
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +186,7 @@ export default function ScheduleScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.push("/index")}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Your Schedule</Text>
@@ -268,6 +280,8 @@ export default function ScheduleScreen() {
           )}
         </ScrollView>
       </LinearGradient>
+
+      <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} buttons={alertConfig.buttons} />
     </SafeAreaView>
   );
 }

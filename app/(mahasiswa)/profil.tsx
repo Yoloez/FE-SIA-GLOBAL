@@ -2,10 +2,10 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import api from "../../api/axios";
+import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
-
 
 const { width } = Dimensions.get("window");
 
@@ -21,19 +21,26 @@ interface ProfileData {
 
 const Profil = () => {
   const { logout, user } = useAuth();
-    const handleLogoutConfirm = () => {
-  Alert.alert(
-    "Konfirmasi Logout",
-    "Apakah kamu yakin ingin keluar?",
-    [
-      { text: "Batal", style: "cancel" },
-      { text: "Keluar", style: "destructive", onPress: () => handleLogout() }
-    ]
-  );
-};
-  // --- State untuk menyimpan data profil dan status loading ---
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
+  });
+
+  const handleLogoutConfirm = () => {
+    setAlertConfig({
+      visible: true,
+      title: "Konfirmasi Logout",
+      message: "Apakah kamu yakin ingin keluar?",
+      buttons: [
+        { text: "Batal", onPress: () => {}, style: "cancel" },
+        { text: "Keluar", onPress: () => handleLogout(), style: "destructive" },
+      ],
+    });
+  };
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -45,7 +52,12 @@ const Profil = () => {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Gagal memuat profil:", error.response?.data);
-        alert("Gagal memuat data profil.");
+        setAlertConfig({
+          visible: true,
+          title: "Error",
+          message: "Gagal memuat data profil.",
+          buttons: [{ text: "OK", onPress: () => {} }],
+        });
       }
     } finally {
       setIsLoading(false);
@@ -123,12 +135,13 @@ const Profil = () => {
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.9} onPress={handleLogoutConfirm} style={styles.logoutButton}>
-
               <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
+
+      <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} buttons={alertConfig.buttons} />
     </View>
   );
 };

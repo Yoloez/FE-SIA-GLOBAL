@@ -3,7 +3,8 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
@@ -25,12 +26,23 @@ const ProfilDosen = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
+  });
 
   const handleLogoutConfirm = () => {
-    Alert.alert("Konfirmasi Logout", "Apakah kamu yakin ingin keluar?", [
-      { text: "Batal", style: "cancel" },
-      { text: "Keluar", style: "destructive", onPress: () => handleLogout() },
-    ]);
+    setAlertConfig({
+      visible: true,
+      title: "Konfirmasi Logout",
+      message: "Apakah kamu yakin ingin keluar?",
+      buttons: [
+        { text: "Batal", onPress: () => {}, style: "cancel" },
+        { text: "Keluar", onPress: () => handleLogout(), style: "destructive" },
+      ],
+    });
   };
 
   // --- Fungsi untuk mengambil data profil dari API ---
@@ -61,7 +73,12 @@ const ProfilDosen = () => {
 
         if (status === 403) {
           errorMessage = message || "Akses ditolak. Anda bukan dosen.";
-          Alert.alert("Akses Ditolak", errorMessage, [{ text: "OK", onPress: () => logout() }]);
+          setAlertConfig({
+            visible: true,
+            title: "Akses Ditolak",
+            message: errorMessage,
+            buttons: [{ text: "OK", onPress: () => logout() }],
+          });
         } else if (status === 404) {
           errorMessage = message || "Data profil tidak ditemukan";
         } else {
@@ -72,7 +89,12 @@ const ProfilDosen = () => {
       }
 
       setError(errorMessage);
-      Alert.alert("Error", errorMessage);
+      setAlertConfig({
+        visible: true,
+        title: "Error",
+        message: errorMessage,
+        buttons: [{ text: "OK", onPress: () => {} }],
+      });
     } finally {
       setIsLoading(false);
     }
@@ -188,6 +210,7 @@ const ProfilDosen = () => {
             </TouchableOpacity>
           </View>
         </View>
+        <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} buttons={alertConfig.buttons} />
       </LinearGradient>
     </View>
   );

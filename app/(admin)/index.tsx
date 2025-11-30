@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, FlatList, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
+import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 import { handleApiError, isAbortError } from "../../utils/errorHandler";
 
@@ -51,6 +52,12 @@ export default function ManagerDashboardScreen() {
   const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
+  });
 
   React.useEffect(() => {
     return () => {
@@ -89,7 +96,12 @@ export default function ManagerDashboardScreen() {
       if (!isMounted.current || isAbortError(error)) return;
 
       const apiError = handleApiError(error);
-      Alert.alert("Error", apiError.message);
+      setAlertConfig({
+        visible: true,
+        title: "Error",
+        message: apiError.message,
+        buttons: [{ text: "OK", onPress: () => {} }],
+      });
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
@@ -102,28 +114,43 @@ export default function ManagerDashboardScreen() {
       const newStatus = !currentStatus;
       const statusText = newStatus ? "aktif" : "nonaktif";
 
-      Alert.alert("Konfirmasi Status", `Ubah status kelas "${name}" menjadi ${statusText}?`, [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Ubah",
-          onPress: async () => {
-            try {
-              await api.patch(`/manager/classes/${id}/toggle-status`, {
-                is_active: newStatus,
-              });
-              if (isMounted.current) {
-                Alert.alert("Sukses", `Status kelas berhasil diubah menjadi ${statusText}.`);
-                fetchClasses();
+      setAlertConfig({
+        visible: true,
+        title: "Konfirmasi Status",
+        message: `Ubah status kelas "${name}" menjadi ${statusText}?`,
+        buttons: [
+          { text: "Batal", onPress: () => {}, style: "cancel" },
+          {
+            text: "Ubah",
+            onPress: async () => {
+              try {
+                await api.patch(`/manager/classes/${id}/toggle-status`, {
+                  is_active: newStatus,
+                });
+                if (isMounted.current) {
+                  setAlertConfig({
+                    visible: true,
+                    title: "Sukses",
+                    message: `Status kelas berhasil diubah menjadi ${statusText}.`,
+                    buttons: [{ text: "OK", onPress: () => {} }],
+                  });
+                  fetchClasses();
+                }
+              } catch (error) {
+                if (isMounted.current) {
+                  const apiError = handleApiError(error);
+                  setAlertConfig({
+                    visible: true,
+                    title: "Gagal",
+                    message: apiError.message,
+                    buttons: [{ text: "OK", onPress: () => {} }],
+                  });
+                }
               }
-            } catch (error) {
-              if (isMounted.current) {
-                const apiError = handleApiError(error);
-                Alert.alert("Gagal", apiError.message);
-              }
-            }
+            },
           },
-        },
-      ]);
+        ],
+      });
     },
     [fetchClasses]
   );
@@ -161,42 +188,62 @@ export default function ManagerDashboardScreen() {
   );
 
   const handleLogout = useCallback(() => {
-    Alert.alert("Konfirmasi Logout", "Yakin ingin keluar?", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => {
-          toggleMenu(false);
-          setTimeout(logout, 300);
+    setAlertConfig({
+      visible: true,
+      title: "Konfirmasi Logout",
+      message: "Yakin ingin keluar?",
+      buttons: [
+        { text: "Batal", onPress: () => {}, style: "cancel" },
+        {
+          text: "Logout",
+          onPress: () => {
+            toggleMenu(false);
+            setTimeout(logout, 300);
+          },
+          style: "destructive",
         },
-      },
-    ]);
+      ],
+    });
   }, [logout, toggleMenu]);
 
   const handleDelete = useCallback(
     (id: number, name: string) => {
-      Alert.alert("Konfirmasi Hapus", `Hapus kelas "${name}"?`, [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Hapus",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.delete(`/manager/classes/${id}`);
-              if (isMounted.current) {
-                Alert.alert("Sukses", "Kelas berhasil dihapus.");
-                fetchClasses();
+      setAlertConfig({
+        visible: true,
+        title: "Konfirmasi Hapus",
+        message: `Hapus kelas "${name}"?`,
+        buttons: [
+          { text: "Batal", onPress: () => {}, style: "cancel" },
+          {
+            text: "Hapus",
+            onPress: async () => {
+              try {
+                await api.delete(`/manager/classes/${id}`);
+                if (isMounted.current) {
+                  setAlertConfig({
+                    visible: true,
+                    title: "Sukses",
+                    message: "Kelas berhasil dihapus.",
+                    buttons: [{ text: "OK", onPress: () => {} }],
+                  });
+                  fetchClasses();
+                }
+              } catch (error) {
+                if (isMounted.current) {
+                  const apiError = handleApiError(error);
+                  setAlertConfig({
+                    visible: true,
+                    title: "Gagal",
+                    message: apiError.message,
+                    buttons: [{ text: "OK", onPress: () => {} }],
+                  });
+                }
               }
-            } catch (error) {
-              if (isMounted.current) {
-                const apiError = handleApiError(error);
-                Alert.alert("Gagal", apiError.message);
-              }
-            }
+            },
+            style: "destructive",
           },
-        },
-      ]);
+        ],
+      });
     },
     [fetchClasses]
   );
@@ -274,7 +321,7 @@ export default function ManagerDashboardScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[ "left", "right"]}>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
       <Stack.Screen
         options={{
           title: "Dashboard Manajer",
@@ -288,19 +335,12 @@ export default function ManagerDashboardScreen() {
         }}
       />
       {/* Search Bar di bawah Header */}
-<View style={{ backgroundColor: "#015023", paddingHorizontal: 20, paddingBottom: 10,paddingTop:10 }}>
-  <View style={styles.searchWrapper}>
-    <TextInput
-      style={styles.searchInput}
-      placeholder="Cari mata kuliah..."
-      placeholderTextColor="#aaa"
-      value={search}
-      onChangeText={setSearch}
-    />
-    <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
-  </View>
-</View>
-
+      <View style={{ backgroundColor: "#015023", paddingHorizontal: 20, paddingBottom: 10, paddingTop: 10 }}>
+        <View style={styles.searchWrapper}>
+          <TextInput style={styles.searchInput} placeholder="Cari mata kuliah..." placeholderTextColor="#aaa" value={search} onChangeText={setSearch} />
+          <Ionicons name="search" size={20} color="#015023" style={styles.searchIcon} />
+        </View>
+      </View>
 
       {/* Hamburger Menu */}
       {menuVisible && (
@@ -353,7 +393,6 @@ export default function ManagerDashboardScreen() {
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             getItemLayout={getItemLayout}
-
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="school-outline" size={64} color="#ccc" />
@@ -369,6 +408,7 @@ export default function ManagerDashboardScreen() {
           />
         )}
       </View>
+      <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} buttons={alertConfig.buttons} />
     </SafeAreaView>
   );
 }

@@ -13,43 +13,30 @@ import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
-const DUMMY_CONTENT_DATA = [
-  {
-    id: "1",
-    label: "Notification",
-    title: "SVPL",
-    contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "/grades",
-  },
-  {
-    id: "2",
-    label: "Your Schedule",
-    title: "HANDOKO",
-    contents: ["satu", "dua", "tiga", "GOKILLLL"],
-    route: "/jadwal",
-  },
-  {
-    id: "3",
-    label: "Tugas",
-    title: "Pemrograman Mobile",
-    contents: ["Buat UI Keren", "Implementasi API"],
-    route: null,
-  },
-  {
-    id: "4",
-    label: "Pengumuman",
-    title: "Perkuliahan",
-    contents: ["Libur tanggal merah", "Jadwal ujian"],
-    route: null,
-  },
-];
-
 interface ContentItem {
   id: string;
   label: string;
   title: string;
   contents: string[];
   route: string | null;
+}
+
+interface ClassScheduleItem {
+  id_class: number;
+  code_class: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  subject: {
+    id_subject: number;
+    name_subject: string;
+  };
+  academic_period?: {
+    id: number;
+    name: string;
+  };
+  lecturer_name?: string;
 }
 
 interface StudentIdentity {
@@ -64,6 +51,27 @@ interface StudentIdentity {
   registration_number: string | null;
 }
 
+interface GradeItem {
+  id_class: number;
+  code_class: string;
+  subject_name: string;
+  code_subject: string;
+  sks: number;
+  academic_period: string;
+  grade_details: {
+    score: number;
+    letter: string;
+    ip: number;
+  } | null;
+}
+
+interface AcademicStats {
+  totalSks: number;
+  ipk: string;
+  currentIps: string;
+  currentPeriod: string;
+}
+
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const isMounted = useRef(true);
@@ -74,10 +82,19 @@ export default function HomeScreen() {
   });
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [allContent, setAllContent] = useState<ContentItem[]>(DUMMY_CONTENT_DATA);
-  const [filteredContent, setFilteredContent] = useState<ContentItem[]>(DUMMY_CONTENT_DATA);
+  const [allContent, setAllContent] = useState<ContentItem[]>([]);
+  const [filteredContent, setFilteredContent] = useState<ContentItem[]>([]);
   const [studentIdentity, setStudentIdentity] = useState<StudentIdentity | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [academicStats, setAcademicStats] = useState<AcademicStats>({
+    totalSks: 0,
+    ipk: "0.00",
+    currentIps: "0.00",
+    currentPeriod: "-",
+  });
+  const [isLoadingGrades, setIsLoadingGrades] = useState(true);
+  const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
 
   const fetchStudentIdentity = useCallback(async () => {
     setIsLoadingProfile(true);
@@ -95,6 +112,151 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const fetchGrades = useCallback(async () => {
+    setIsLoadingGrades(true);
+    try {
+      const response = await api.get("/student/grades");
+      const responseData = response.data.data;
+      const gradesData = responseData.grade || {};
+
+      // Konversi object ke array
+      let gradesArray: GradeItem[] = [];
+      if (Array.isArray(gradesData)) {
+        gradesArray = gradesData;
+      } else if (typeof gradesData === "object" && gradesData !== null) {
+        gradesArray = Object.values(gradesData);
+      }
+
+      if (gradesArray.length === 0) {
+        if (isMounted.current) {
+          setAcademicStats({
+            totalSks: 0,
+            ipk: "0.00",
+            currentIps: "0.00",
+            currentPeriod: "-",
+          });
+        }
+        return;
+      }
+
+      // Hitung IPK (semua periode)
+      let totalSksAll = 0;
+      let totalBobotAll = 0;
+
+      gradesArray.forEach((item) => {
+        if (item.grade_details) {
+          const sks = item.sks;
+          const ip = item.grade_details.ip;
+          totalSksAll += sks;
+          totalBobotAll += sks * ip;
+        }
+      });
+
+      const ipk = totalSksAll > 0 ? (totalBobotAll / totalSksAll).toFixed(2) : "0.00";
+
+      // Cari periode terbaru (asumsi format periode seperti "2024/2025 Ganjil")
+      const periods = [...new Set(gradesArray.map((item) => item.academic_period))].filter(Boolean).sort().reverse();
+      const currentPeriod = periods[0] || "-";
+
+      // Hitung IPS (periode terbaru)
+      const currentPeriodGrades = gradesArray.filter((item) => item.academic_period === currentPeriod);
+      let totalSksCurrent = 0;
+      let totalBobotCurrent = 0;
+
+      currentPeriodGrades.forEach((item) => {
+        if (item.grade_details) {
+          const sks = item.sks;
+          const ip = item.grade_details.ip;
+          totalSksCurrent += sks;
+          totalBobotCurrent += sks * ip;
+        }
+      });
+
+      const currentIps = totalSksCurrent > 0 ? (totalBobotCurrent / totalSksCurrent).toFixed(2) : "0.00";
+
+      if (isMounted.current) {
+        setAcademicStats({
+          totalSks: totalSksAll,
+          ipk,
+          currentIps,
+          currentPeriod,
+        });
+      }
+    } catch (error) {
+      console.error("Gagal memuat data nilai:", error);
+    } finally {
+      if (isMounted.current) {
+        setIsLoadingGrades(false);
+      }
+    }
+  }, []);
+
+  const fetchSchedules = useCallback(async () => {
+    setIsLoadingSchedules(true);
+    try {
+      const response = await api.get("/student/schedules");
+      const schedulesData = response.data.data || [];
+
+      if (isMounted.current) {
+        setSchedules(schedulesData);
+
+        // Generate content card dari jadwal hari ini
+        const today = new Date();
+        const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // Convert Sunday=0 to 7
+
+        const todaySchedules = schedulesData.filter((schedule: ClassScheduleItem) => schedule.day_of_week === dayOfWeek);
+
+        if (todaySchedules.length > 0) {
+          const scheduleContents = todaySchedules.map((schedule: ClassScheduleItem) => {
+            const formatTime = (time: string) => time.substring(0, 5);
+            return `${schedule.subject?.name_subject} (${formatTime(schedule.start_time)} - ${formatTime(schedule.end_time)})`;
+          });
+
+          const contentItem: ContentItem = {
+            id: "schedule-today",
+            label: "Your Schedule Today",
+            title: `${todaySchedules.length} Class${todaySchedules.length > 1 ? "es" : ""} Today`,
+            contents: scheduleContents,
+            route: "/jadwal",
+          };
+
+          setAllContent([contentItem]);
+          setFilteredContent([contentItem]);
+        } else {
+          const contentItem: ContentItem = {
+            id: "schedule-empty",
+            label: "Your Schedule",
+            title: "No Classes Today",
+            contents: ["Tap to view full schedule"],
+            route: "/jadwal",
+          };
+
+          setAllContent([contentItem]);
+          setFilteredContent([contentItem]);
+        }
+      }
+    } catch (error) {
+      console.error("Gagal memuat jadwal:", error);
+      // Set empty content on error
+      const contentItem: ContentItem = {
+        id: "schedule-error",
+        label: "Your Schedule",
+        title: "Unable to load schedule",
+        contents: ["Tap to retry"],
+        route: "/jadwal",
+      };
+
+      if (isMounted.current) {
+        setAllContent([contentItem]);
+        setFilteredContent([contentItem]);
+      }
+    } finally {
+      if (isMounted.current) {
+        setIsLoadingSchedules(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     isMounted.current = true;
     return () => {
@@ -105,7 +267,9 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchStudentIdentity();
-    }, [fetchStudentIdentity])
+      fetchGrades();
+      fetchSchedules();
+    }, [fetchStudentIdentity, fetchGrades, fetchSchedules])
   );
 
   useEffect(() => {
@@ -122,7 +286,7 @@ export default function HomeScreen() {
 
   const handleChatPress = () => {
     try {
-      router.push("/chat");
+      router.push("/chat" as any);
     } catch (error) {
       console.error("Navigation error:", error);
     }
@@ -135,7 +299,7 @@ export default function HomeScreen() {
   const handleContentPress = (item: ContentItem) => {
     if (!item.route) return;
     try {
-      router.push(item.route as any);
+      router.push(`/(mahasiswa)${item.route}` as any);
     } catch (error) {
       console.error("Navigation error:", error);
     }
@@ -179,7 +343,7 @@ export default function HomeScreen() {
       <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
         <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.push("/profil")} style={styles.profileSection}>
+            <TouchableOpacity onPress={() => router.push("/(mahasiswa)/profil" as any)} style={styles.profileSection}>
               {renderProfileImage()}
               <View style={styles.userInfo}>
                 <Text style={styles.userName} numberOfLines={1}>
@@ -207,23 +371,24 @@ export default function HomeScreen() {
           </View>
 
           <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer} showsVerticalScrollIndicator={false} bounces={true}>
-            {/* ... konten lainnya tetap sama ... */}
-            <View style={styles.achievementContainer}>
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>Achievement</Text>
-                <Text style={styles.achievementValue}>38 SKS</Text>
-              </View>
+            <TouchableOpacity onPress={() => router.push("/(mahasiswa)/grades" as any)} activeOpacity={0.7}>
+              <View style={styles.achievementContainer}>
+                <View style={styles.achievementCard}>
+                  <Text style={styles.achievementLabel}>Total SKS</Text>
+                  {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats.totalSks}</Text>}
+                </View>
 
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPK</Text>
-                <Text style={styles.achievementValue}>3.89</Text>
-              </View>
+                <View style={styles.achievementCard}>
+                  <Text style={styles.achievementLabel}>IPK</Text>
+                  {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats.ipk}</Text>}
+                </View>
 
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementLabel}>IPS</Text>
-                <Text style={styles.achievementValue}>3.90</Text>
+                <View style={styles.achievementCard}>
+                  <Text style={styles.achievementLabel}>IPS</Text>
+                  {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats.currentIps}</Text>}
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.searchContainer}>
               <TextInput placeholder="Search by title or label..." style={styles.searchInput} placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} />

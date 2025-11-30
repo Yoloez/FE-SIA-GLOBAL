@@ -1,30 +1,31 @@
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { Stack, router, useFocusEffect } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Image, SectionList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 
-// Definisikan tipe data untuk objek Pengguna
-interface User {
-  id: number;
+interface Contact {
+  id_user_si: number;
   name: string;
   username: string;
   email: string;
+  profile_image: string | null;
+  role: string;
 }
 
-// Tipe untuk section
 interface Section {
   title: string;
-  data: User[];
+  data: Contact[];
 }
 
-export default function ChatListScreen() {
-  // Ambil SEMUA state dari AuthContext
-  const { token, user, isLoading: isAuthLoading } = useAuth();
-  const [sections, setSections] = useState<Section[]>([]);
+const ChatListApp = () => {
+  const router = useRouter();
+  const { token } = useAuth();
+  const [lecturers, setLecturers] = useState<Contact[]>([]);
+  const [classmates, setClassmates] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -32,7 +33,6 @@ export default function ChatListScreen() {
   // Cleanup on unmount
   React.useEffect(() => {
     isMounted.current = true;
-
     return () => {
       isMounted.current = false;
       if (abortControllerRef.current) {
@@ -43,14 +43,7 @@ export default function ChatListScreen() {
 
   // Fungsi untuk mengambil daftar kontak dari API
   const fetchContacts = useCallback(async () => {
-    console.log("========================================");
-    console.log("[DEBUG] Memulai fetchContacts...");
-    console.log("[DEBUG] Status AuthContext isLoading:", isAuthLoading);
-    console.log("[DEBUG] Nilai token:", token ? `DITEMUKAN (panjang: ${token.length})` : "NULL atau UNDEFINED");
-    console.log("========================================");
-
-    // Jangan lakukan apa-apa jika AuthContext masih loading atau jika token belum ada
-    if (isAuthLoading || !token) {
+    if (!token) {
       if (isMounted.current) {
         setIsLoading(false);
       }
@@ -70,24 +63,22 @@ export default function ChatListScreen() {
     }
 
     try {
+      console.log("🔄 Fetching contacts from API...");
       const response = await api.get("/chat/contacts", {
         signal: abortControllerRef.current.signal,
       });
-      if (!isMounted.current) return;
-      const { lecturers, classmates } = response.data.data;
-      const newSections: Section[] = [];
-      if (lecturers && lecturers.length > 0) {
-        newSections.push({ title: "Dosen Pengajar", data: lecturers });
-      }
-      if (classmates && classmates.length > 0) {
-        newSections.push({ title: "Teman Sekelas", data: classmates });
-      }
 
-      setSections(newSections);
+      if (!isMounted.current) return;
+
+      const { lecturers: lecturersData, classmates: classmatesData } = response.data.data;
+
+      console.log(`✅ Loaded ${(lecturersData?.length || 0) + (classmatesData?.length || 0)} contacts`);
+      setLecturers(lecturersData || []);
+      setClassmates(classmatesData || []);
     } catch (error: any) {
       // Ignore abort errors
       if (error.name === "AbortError" || error.name === "CanceledError") {
-        console.log("Request was cancelled");
+        console.log("❌ Request was cancelled");
         return;
       }
 
@@ -119,13 +110,13 @@ export default function ChatListScreen() {
         setIsLoading(false);
       }
     }
-  }, [token, isAuthLoading]);
+  }, [token]);
 
+  // Fetch contacts when screen is focused
   useFocusEffect(
     useCallback(() => {
       fetchContacts();
 
-      // Cleanup when screen loses focus
       return () => {
         if (abortControllerRef.current) {
           abortControllerRef.current.abort();
@@ -140,20 +131,21 @@ export default function ChatListScreen() {
       if (!token || !isMounted.current) return;
 
       try {
-        const response = await api.post("/chat/conversations/private", { recipient_id: recipientId });
-        if (!isMounted.current) return;
-        const conversation = response.data.data;
+        console.log(`📤 Starting private chat with user ${recipientId}...`);
+        const response = await api.post("/chat/conversations/private", {
+          recipient_id: recipientId,
+        });
 
-        // Tambahkan try-catch untuk navigation
-        try {
-          router.push(`/(chat)/${conversation.id_conversation}`);
-        } catch (navError) {
-          console.error("Navigation error:", navError);
-          // Fallback navigation
-          router.replace(`/(chat)/${conversation.id_conversation}`);
-        }
+        if (!isMounted.current) return;
+
+        const conversation = response.data.data;
+        console.log(`✅ Conversation created: ${conversation.id_conversation}`);
+
+        // Navigate to chat screen
+        router.push(`/chat/${conversation.id_conversation}` as any);
       } catch (error: any) {
         if (!isMounted.current) return;
+
         console.error("================ GAGAL MEMULAI CHAT PRIVAT ================");
         let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
 
@@ -180,131 +172,177 @@ export default function ChatListScreen() {
     [token]
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: User }) => {
-      // Safe email untuk avatar
-      const avatarEmail = item.email || `user${item.id}@default.com`;
+  const renderChatItem = ({ item }: { item: Contact }) => {
+    // Gunakan profile_image dari API jika tersedia, fallback ke pravatar
+    const avatarUri = item.profile_image ? `https://api-sia.ptialghifari.my.id/storage/${item.profile_image}` : `https://i.pravatar.cc/150?u=${item.email || `user${item.id_user_si}@default.com`}`;
 
-      return (
-        <View style={styles.contactCard}>
-          <Image
-            source={{ uri: `https://i.pravatar.cc/150?u=${avatarEmail}` }}
-            style={styles.avatar}
-            onError={(error) => {
-              console.log("Avatar load error:", error.nativeEvent.error);
-            }}
-          />
-          <View style={styles.contactInfo}>
-            <Text style={styles.contactName} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <Text style={styles.contactId} numberOfLines={1}>
-              @{item.username}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => handleStartPrivateChat(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="chatbubble-ellipses-outline" size={28} color="#015023" />
-          </TouchableOpacity>
-        </View>
-      );
-    },
-    [handleStartPrivateChat]
-  );
-
-  // Komponen untuk merender header setiap seksi
-  const renderSectionHeader = useCallback(
-    ({ section: { title } }: { section: { title: string } }) => (
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-    ),
-    []
-  );
-
-  // Loading state
-  if (isLoading || isAuthLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <Stack.Screen
-          options={{
-            title: "Daftar Chat",
-            headerStyle: { backgroundColor: "#015023" },
-            headerTintColor: "#fff",
+      <View style={styles.contactCard}>
+        <Image
+          source={{ uri: avatarUri }}
+          style={styles.avatarImage}
+          onError={(error) => {
+            console.log("Avatar load error:", error.nativeEvent.error);
           }}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FACC15" />
-          <Text style={styles.loadingText}>Memuat kontak...</Text>
+
+        <View style={styles.contactInfo}>
+          <Text style={styles.contactName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.contactId} numberOfLines={1}>
+            @{item.username}
+          </Text>
         </View>
-      </SafeAreaView>
+
+        <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="chatbubble-ellipses-outline" size={28} color="#015023" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <StatusBar barStyle="light-content" backgroundColor="#015023" />
+
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                marginRight: 12,
+                padding: 8,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="arrow-back" size={28} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Chat List</Text>
+          </View>
+
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FACC15" />
+            <Text style={styles.loadingTextWhite}>Memuat kontak...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          title: "Daftar Chat",
-          headerStyle: { backgroundColor: "#015023" },
-          headerTintColor: "#fff",
-        }}
-      />
-      <SectionList
-        sections={sections}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        renderItem={renderItem}
-        renderSectionHeader={renderSectionHeader}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>Anda belum memiliki kontak di kelas manapun.</Text>
-          </View>
-        }
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-        stickySectionHeadersEnabled={false}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={10}
-        windowSize={10}
-      />
+    <SafeAreaView style={{ flex: 1 }}>
+      <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#015023" />
+
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              marginRight: 12,
+              padding: 8,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={28} color="white" />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Chat List</Text>
+        </View>
+
+        {/* Content */}
+        <FlatList
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.emptyText}>Belum ada kontak tersedia</Text>
+            </View>
+          }
+          data={[{ key: "sections" }]}
+          renderItem={() => (
+            <>
+              {/* Lecturer Section */}
+              {lecturers.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <View style={styles.badgeContainer}>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>Lecturer</Text>
+                    </View>
+                  </View>
+                  {lecturers.map((item) => (
+                    <View key={item.id_user_si}>{renderChatItem({ item })}</View>
+                  ))}
+                </View>
+              )}
+
+              {/* Classmates Section */}
+              {classmates.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <View style={styles.badgeContainer}>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>Classmates</Text>
+                    </View>
+                  </View>
+                  {classmates.map((item) => (
+                    <View key={item.id_user_si}>{renderChatItem({ item })}</View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+        />
+      </LinearGradient>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#015023",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#fff",
-  },
   container: {
-    paddingHorizontal: 15,
-    paddingBottom: 20,
-    flexGrow: 1,
+    flex: 1,
   },
-  sectionHeader: {
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 40,
+    paddingBottom: 15,
+  },
+  backButton: {
+    marginRight: 12,
+  },
+  headerTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "600",
+  },
+  scrollContent: {
+    paddingHorizontal: 15,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  sectionContainer: {
+    marginBottom: 16,
+    backgroundColor: "#F5EFD3",
+    borderColor: "black",
+    borderWidth: 1,
+    borderRadius: 20,
+  },
+  badgeContainer: {
     paddingVertical: 10,
     paddingHorizontal: 10,
     marginTop: 20,
     marginBottom: 10,
     alignSelf: "flex-start",
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    backgroundColor: "#FACC15",
+  badge: {
+    backgroundColor: "#DABC4E",
     paddingVertical: 5,
     paddingHorizontal: 15,
     borderRadius: 20,
@@ -314,26 +352,55 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  badgeText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "white",
+  },
   contactCard: {
-    backgroundColor: "#FEFBEA",
-    padding: 15,
+    backgroundColor: "",
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginBottom: 0,
+    // elevation: 2,
   },
-  avatar: {
+  avatarImage: {
     width: 50,
     height: 50,
     borderRadius: 25,
     borderWidth: 2,
     borderColor: "#015023",
     backgroundColor: "#f0f8f4",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#666",
+  },
+  loadingTextWhite: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#fff",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "rgba(255,255,255,0.8)",
+    textAlign: "center",
   },
   contactInfo: {
     flex: 1,
@@ -350,16 +417,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: "40%",
-  },
-  emptyText: {
-    textAlign: "center",
-    color: "#fff",
-    marginTop: 20,
-    fontSize: 16,
-  },
 });
+
+export default ChatListApp;

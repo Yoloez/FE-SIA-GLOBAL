@@ -23,21 +23,21 @@ const ProfilDosen = () => {
   const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-    const handleLogoutConfirm = () => {
-    Alert.alert(
-      "Konfirmasi Logout",
-      "Apakah kamu yakin ingin keluar?",
-      [
-        { text: "Batal", style: "cancel" },
-        { text: "Keluar", style: "destructive", onPress: () => handleLogout() }
-      ]
-    );
+  const handleLogoutConfirm = () => {
+    Alert.alert("Konfirmasi Logout", "Apakah kamu yakin ingin keluar?", [
+      { text: "Batal", style: "cancel" },
+      { text: "Keluar", style: "destructive", onPress: () => handleLogout() },
+    ]);
   };
 
   // --- Fungsi untuk mengambil data profil dari API ---
   const fetchProfile = useCallback(async () => {
+    // Jangan fetch jika sedang logout
+    if (isLoggingOut) return;
+
     setIsLoading(true);
     setError(null);
 
@@ -50,6 +50,9 @@ const ProfilDosen = () => {
         throw new Error(response.data.message || "Gagal memuat profil");
       }
     } catch (error) {
+      // Jangan tampilkan error jika sedang logout
+      if (isLoggingOut) return;
+
       let errorMessage = "Gagal memuat data profil";
 
       if (axios.isAxiosError(error)) {
@@ -73,7 +76,7 @@ const ProfilDosen = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [logout]);
+  }, [logout, isLoggingOut]);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,6 +85,9 @@ const ProfilDosen = () => {
   );
 
   const handleLogout = useCallback(() => {
+    // Set flag bahwa sedang logout
+    setIsLoggingOut(true);
+
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.95,
@@ -94,6 +100,7 @@ const ProfilDosen = () => {
         useNativeDriver: true,
       }),
     ]).start(() => {
+      // Panggil logout tanpa menunggu response API
       logout();
     });
   }, [logout, scaleAnim]);
@@ -123,7 +130,7 @@ const ProfilDosen = () => {
           <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
             <Text style={styles.retryButtonText}>Coba Lagi</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutConfirm}>
             <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </LinearGradient>
@@ -165,7 +172,6 @@ const ProfilDosen = () => {
               </View>
             </View>
 
-
             <View style={styles.infoContainer}>
               <Text style={styles.label}>Position:</Text>
               <View style={styles.infoBox}>
@@ -186,7 +192,6 @@ const ProfilDosen = () => {
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {

@@ -3,14 +3,24 @@ import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../../api/axios";
 import ContentCard from "../../components/ContentCard";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
+
+interface LecturerProfileData {
+  name: string;
+  full_name: string;
+  email: string;
+  employee_id_number: string | null;
+  position: string;
+  profile_image: string | null;
+}
 
 const CONTENT_DATA = [
   {
@@ -38,6 +48,8 @@ const CONTENT_DATA = [
 
 export default function HomeScreen() {
   const { logout } = useAuth();
+  const isMounted = useRef(true);
+
   let [fontsLoaded] = useFonts({
     Urbanist_400Regular,
     Urbanist_600SemiBold,
@@ -46,6 +58,37 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtered, setFiltered] = useState(CONTENT_DATA);
   const [isLoading, setIsLoading] = useState(false);
+  const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  const fetchProfile = useCallback(async () => {
+    setIsLoadingProfile(true);
+    try {
+      const response = await api.get("/lecturer/profile");
+      if (isMounted.current && response.data.status === "success") {
+        setProfileData(response.data.data);
+      }
+    } catch (error) {
+      console.error("Gagal memuat profil dosen:", error);
+    } finally {
+      if (isMounted.current) {
+        setIsLoadingProfile(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile])
+  );
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -69,16 +112,34 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.safeContainer} edges={["top", "left", "right"]}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.profileSection}>
-              <Image source={require("../../assets/images/react-logo.png")} style={styles.avatar} />
-              <View>
-                <Text style={styles.userName}>Dosen 1</Text>
-                <Text style={styles.userId}>8888</Text>
-              </View>
-            </View>
+            <TouchableOpacity onPress={() => router.push("/ProfilDosen")} style={styles.profileSection}>
+              {isLoadingProfile ? (
+                <>
+                  <View style={[styles.avatar, styles.avatarLoading]}>
+                    <ActivityIndicator size="small" color="#015023" />
+                  </View>
+                  <View style={styles.profileInfo}>
+                    <Text style={styles.userName}>Loading...</Text>
+                    <Text style={styles.userId}>...</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} defaultSource={require("../../assets/images/kairi.png")} />
+                  <View style={styles.profileInfo}>
+                    <Text style={styles.userName} numberOfLines={1}>
+                      {profileData?.full_name || profileData?.name || "Dosen"}
+                    </Text>
+                    <Text style={styles.userId} numberOfLines={1}>
+                      {profileData?.employee_id_number || "NIP belum diisi"}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </TouchableOpacity>
 
             <View style={styles.iconsSection}>
-              <TouchableOpacity onPress={() => router.push("/(dosen)/ListChat")} style={styles.iconButton}>
+              <TouchableOpacity onPress={() => router.push("/chat")} style={styles.iconButton}>
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
               </TouchableOpacity>
 
@@ -140,6 +201,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginRight: 16,
+  },
+
+  profileInfo: {
+    flex: 1,
+    marginLeft: 12,
   },
 
   avatar: {
@@ -148,18 +215,31 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: "#fff",
-    marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  avatarLoading: {
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   userName: {
     fontSize: 18,
     color: "white",
     fontFamily: "Urbanist_600SemiBold",
+    fontWeight: "600",
+    marginBottom: 2,
   },
 
   userId: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "400",
   },
 
   iconsSection: {

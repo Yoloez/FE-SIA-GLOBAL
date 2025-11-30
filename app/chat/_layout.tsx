@@ -2,12 +2,31 @@ import { Stack } from "expo-router";
 import React from "react";
 
 export default function ChatLayout() {
-  // Navigator ini akan mengatur semua layar di dalam folder (chat),
-  // memberikan header dan tombol kembali secara otomatis.
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ title: "Daftar Pesan" }} />
-      <Stack.Screen name="[conversationId]" options={{ title: "Chat" }} />
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        headerStyle: {
+          backgroundColor: "#015023",
+        },
+        headerTintColor: "#fff",
+        headerTitleStyle: {
+          fontWeight: "600",
+        },
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "Chat List",
+        }}
+      />
+      <Stack.Screen
+        name="[conversationId]"
+        options={{
+          title: "Chat",
+        }}
+      />
     </Stack>
   );
 }

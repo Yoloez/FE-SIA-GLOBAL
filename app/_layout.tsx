@@ -20,6 +20,7 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = segments[0] === "(auth)";
+    const inSharedRoute = segments[0] === "chat" || segments[0] === "modal"; // Routes yang bisa diakses semua role
 
     if (isLoggedIn && user) {
       // PENGGUNA SUDAH LOGIN
@@ -42,12 +43,15 @@ function RootLayoutNav() {
           break;
       }
 
-      // 2. Cek apakah pengguna sudah berada di grup yang benar
-      if (segments[0] !== targetGroup) {
-        // Jika belum, pindahkan mereka.
+      // 2. Cek apakah pengguna sudah berada di grup yang benar ATAU di shared route
+      if (inSharedRoute) {
+        // Izinkan akses ke shared routes seperti /chat
+        setIsRouteChecked(true);
+      } else if (segments[0] !== targetGroup) {
+        // Jika belum di grup yang benar dan bukan shared route, pindahkan mereka
         router.replace(`/${targetGroup}/`);
       } else {
-        // Jika sudah, izinkan rendering
+        // Jika sudah di grup yang benar, izinkan rendering
         setIsRouteChecked(true);
       }
     } else if (!isLoggedIn) {

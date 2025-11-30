@@ -77,26 +77,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="Chat"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" },
-        }}
-      />
-
-      <Tabs.Screen
-        name="ListChat"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" },
-        }}
-      />
-      {/* name="Chat"
-options={{
-    headerShown: false,
-    tabBarStyle: { display: "none" },
-  }} */}
-      <Tabs.Screen
         name="jadwal"
         options={{
           href: null,

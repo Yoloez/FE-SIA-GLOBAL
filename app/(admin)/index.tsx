@@ -206,48 +206,6 @@ export default function ManagerDashboardScreen() {
     });
   }, [logout, toggleMenu]);
 
-  const handleDelete = useCallback(
-    (id: number, name: string) => {
-      setAlertConfig({
-        visible: true,
-        title: "Konfirmasi Hapus",
-        message: `Hapus kelas "${name}"?`,
-        buttons: [
-          { text: "Batal", onPress: () => {}, style: "cancel" },
-          {
-            text: "Hapus",
-            onPress: async () => {
-              try {
-                await api.delete(`/manager/classes/${id}`);
-                if (isMounted.current) {
-                  setAlertConfig({
-                    visible: true,
-                    title: "Sukses",
-                    message: "Kelas berhasil dihapus.",
-                    buttons: [{ text: "OK", onPress: () => {} }],
-                  });
-                  fetchClasses();
-                }
-              } catch (error) {
-                if (isMounted.current) {
-                  const apiError = handleApiError(error);
-                  setAlertConfig({
-                    visible: true,
-                    title: "Gagal",
-                    message: apiError.message,
-                    buttons: [{ text: "OK", onPress: () => {} }],
-                  });
-                }
-              }
-            },
-            style: "destructive",
-          },
-        ],
-      });
-    },
-    [fetchClasses]
-  );
-
   const filteredClasses = useMemo(() => {
     if (!search.trim()) return classes;
     const q = search.toLowerCase();
@@ -263,6 +221,10 @@ export default function ManagerDashboardScreen() {
               <Text style={styles.badgeText}>Kelas</Text>
             </View>
 
+            <View style={[styles.statusBadge, { backgroundColor: item.is_active ? "#d1fae5" : "#fee2e2", marginRight: 8 }]}>
+              <Text style={[styles.statusText, { color: item.is_active ? "#065f46" : "#991b1b" }]}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
+            </View>
+
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 onPress={(e) => {
@@ -274,25 +236,10 @@ export default function ManagerDashboardScreen() {
               >
                 <Ionicons name={item.is_active ? "checkmark-circle" : "close-circle"} size={20} color="white" />
               </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleDelete(item.id_class, `${item.name_subject} - ${item.code_class}`);
-                }}
-                style={styles.deleteBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="trash-bin-outline" size={20} color="red" />
-              </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.cardInfo}>
-            <View style={[styles.statusBadge, { backgroundColor: item.is_active ? "#d1fae5" : "#fee2e2" }]}>
-              <Text style={[styles.statusText, { color: item.is_active ? "#065f46" : "#991b1b" }]}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
-            </View>
-
             <Text style={styles.memberText}>
               Kapasitas: {item.total_students || 0}/{item.member_class} mahasiswa
             </Text>
@@ -306,7 +253,7 @@ export default function ManagerDashboardScreen() {
         </TouchableOpacity>
       </ImageBackground>
     ),
-    [handleDelete, handleToggleActive]
+    [handleToggleActive]
   );
 
   const keyExtractor = useCallback((item: ClassItem) => `class-${item.id_class}`, []);
@@ -324,7 +271,7 @@ export default function ManagerDashboardScreen() {
     <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
       <Stack.Screen
         options={{
-          title: "Dashboard Manajer",
+          title: "Dashboard Admin",
           headerStyle: { backgroundColor: "#015023" },
           headerTintColor: "#fff",
           headerLeft: () => (
@@ -497,7 +444,7 @@ const styles = StyleSheet.create({
   cardTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
   },
   badge: { backgroundColor: "#D4AF37", paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
   badgeText: { color: "#fff", fontSize: 14, fontWeight: "600" },

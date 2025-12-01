@@ -177,28 +177,28 @@ const ChatListApp = () => {
     const avatarUri = item.profile_image ? `https://api-sia.ptialghifari.my.id/storage/${item.profile_image}` : `https://i.pravatar.cc/150?u=${item.email || `user${item.id_user_si}@default.com`}`;
 
     return (
-      <View style={styles.contactCard}>
-        <Image
-          source={{ uri: avatarUri }}
-          style={styles.avatarImage}
-          onError={(error) => {
-            console.log("Avatar load error:", error.nativeEvent.error);
-          }}
-        />
+      <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <View style={styles.contactCard}>
+          <Image
+            source={{ uri: avatarUri }}
+            style={styles.avatarImage}
+            onError={(error) => {
+              console.log("Avatar load error:", error.nativeEvent.error);
+            }}
+          />
 
-        <View style={styles.contactInfo}>
-          <Text style={styles.contactName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.contactId} numberOfLines={1}>
-            @{item.username}
-          </Text>
-        </View>
+          <View style={styles.contactInfo}>
+            <Text style={styles.contactName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.contactId} numberOfLines={1}>
+              @{item.username}
+            </Text>
+          </View>
 
-        <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="chatbubble-ellipses-outline" size={28} color="#015023" />
-        </TouchableOpacity>
-      </View>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -237,23 +237,6 @@ const ChatListApp = () => {
     <SafeAreaView style={{ flex: 1 }}>
       <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#015023" />
-
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              marginRight: 12,
-              padding: 8,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Ionicons name="arrow-back" size={28} color="white" />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>Chat List</Text>
-        </View>
 
         {/* Content */}
         <FlatList

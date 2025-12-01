@@ -37,9 +37,6 @@ export default function GradesScreen() {
       const responseData = response.data.data;
       const gradesData = responseData.grade || {};
 
-      console.log("Grades Response:", response.data);
-      console.log("Grades Data:", gradesData);
-
       // Konversi object ke array (karena Laravel mengembalikan object dengan key numerik)
       let gradesArray: any[] = [];
       if (Array.isArray(gradesData)) {
@@ -48,8 +45,6 @@ export default function GradesScreen() {
         // Konversi object dengan key numerik ke array
         gradesArray = Object.values(gradesData);
       }
-
-      console.log("Converted to Array:", gradesArray);
 
       if (gradesArray.length === 0) {
         setSections([]);

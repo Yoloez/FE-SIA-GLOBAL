@@ -2,9 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
 
 interface GradeItem {
   id_class: number;
@@ -25,10 +26,11 @@ interface GradeSection {
 }
 
 export default function GradesScreen() {
+  const { user } = useAuth();
   const [sections, setSections] = useState<GradeSection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [activeTab, setActiveTab] = useState<"plan" | "results">("results");
 
   const fetchGrades = useCallback(async () => {
     setIsLoading(true);
@@ -37,12 +39,10 @@ export default function GradesScreen() {
       const responseData = response.data.data;
       const gradesData = responseData.grade || {};
 
-      // Konversi object ke array (karena Laravel mengembalikan object dengan key numerik)
       let gradesArray: any[] = [];
       if (Array.isArray(gradesData)) {
         gradesArray = gradesData;
       } else if (typeof gradesData === "object" && gradesData !== null) {
-        // Konversi object dengan key numerik ke array
         gradesArray = Object.values(gradesData);
       }
 
@@ -51,7 +51,6 @@ export default function GradesScreen() {
         return;
       }
 
-      // Kelompokkan data berdasarkan academic_period
       const groupedByPeriod: { [key: string]: GradeItem[] } = {};
 
       gradesArray.forEach((item: any) => {
@@ -62,13 +61,17 @@ export default function GradesScreen() {
         groupedByPeriod[period].push(item);
       });
 
-      // Ubah ke format sections
       const sectionsData: GradeSection[] = Object.keys(groupedByPeriod).map((period) => ({
         title: period,
         data: groupedByPeriod[period],
       }));
 
       setSections(sectionsData);
+
+      // Auto-select first period if available
+      if (sectionsData.length > 0 && selectedPeriod === "all") {
+        setSelectedPeriod(sectionsData[0].title);
+      }
     } catch (error) {
       console.error("Error fetching grades:", error);
       setSections([]);
@@ -83,14 +86,11 @@ export default function GradesScreen() {
     }, [fetchGrades])
   );
 
-  // Get all period options
   const periodOptions = useMemo(() => {
-    if (!Array.isArray(sections)) return ["all"];
-    const periods = sections.map((s) => s.title);
-    return ["all", ...periods];
+    if (!Array.isArray(sections)) return [];
+    return sections.map((s) => s.title);
   }, [sections]);
 
-  // Filter data based on selected period
   const filteredData = useMemo(() => {
     if (!Array.isArray(sections)) return [];
 
@@ -101,7 +101,6 @@ export default function GradesScreen() {
     return section ? section.data || [] : [];
   }, [sections, selectedPeriod]);
 
-  // Calculate statistics for filtered data
   const statistics = useMemo(() => {
     let totalSks = 0;
     let totalBobot = 0;
@@ -117,151 +116,179 @@ export default function GradesScreen() {
       }
     });
 
-    const ipk = totalSks > 0 ? (totalBobot / totalSks).toFixed(2) : "0.00";
+    const ips = totalSks > 0 ? (totalBobot / totalSks).toFixed(2) : "0.00";
+
+    // Calculate IPK (all periods)
+    let totalSksAll = 0;
+    let totalBobotAll = 0;
+
+    sections.forEach((section) => {
+      section.data.forEach((item) => {
+        if (item.grade_details) {
+          totalSksAll += item.sks;
+          totalBobotAll += item.sks * item.grade_details.ip;
+        }
+      });
+    });
+
+    const ipk = totalSksAll > 0 ? (totalBobotAll / totalSksAll).toFixed(2) : "0.00";
 
     return {
+      ips,
       ipk,
       totalSks,
       gradedCount,
       totalCount: filteredData.length,
     };
-  }, [filteredData]);
+  }, [filteredData, sections]);
 
-  const renderItem = ({ item, index }: { item: GradeItem; index: number }) => {
+  const renderGradeCard = ({ item, index }: { item: GradeItem; index: number }) => {
     return (
-      <View style={styles.row}>
-        <View style={styles.rowContent}>
-          <View style={styles.subjectInfo}>
-            <View style={styles.subjectIconWrapper}>
-              <Ionicons name="journal-outline" size={18} color="#015023" />
+      <View style={styles.gradeCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <View style={styles.codeChip}>
+              <Text style={styles.codeChipText}>{item.code_subject}</Text>
             </View>
-            <View style={styles.subjectTextContainer}>
-              <Text style={styles.subjectCode}>{item.code_subject}</Text>
-              <Text style={styles.subjectName} numberOfLines={2}>
-                {item.subject_name}
-              </Text>
+            <View style={styles.sksChipSmall}>
+              <Text style={styles.sksChipText}>SKS: {item.sks}</Text>
             </View>
           </View>
-          <View style={styles.gradeBox}>
-            <View style={styles.sksChip}>
-              <Ionicons name="bookmark-outline" size={12} color="#666" />
-              <Text style={styles.sksText}>{item.sks} SKS</Text>
-            </View>
-            {item.grade_details ? (
-              <View style={styles.scoreBadge}>
-                <Text style={styles.scoreNumber}>{item.grade_details.score}</Text>
-                <Text style={styles.scoreText}>{item.grade_details.letter}</Text>
-              </View>
-            ) : (
-              <View style={styles.emptyScoreBadge}>
-                <Ionicons name="remove-outline" size={20} color="#ccc" />
-              </View>
-            )}
+          <TouchableOpacity style={styles.menuIcon}>
+            <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.subjectTitle} numberOfLines={2}>
+          {item.subject_name}
+        </Text>
+        <Text style={styles.classCode}>Class: {item.code_class}</Text>
+
+        <View style={styles.gradeFooter}>
+          <View style={styles.gradeItem}>
+            <Text style={styles.gradeLabel}>Nilai</Text>
+            <Text style={styles.gradeValueLarge}>{item.grade_details ? item.grade_details.letter : "-"}</Text>
+          </View>
+
+          <View style={styles.gradeDivider} />
+
+          <View style={styles.gradeItem}>
+            <Text style={styles.gradeLabel}>Skor</Text>
+            <Text style={styles.gradeValue}>{item.grade_details ? item.grade_details.score.toFixed(2) : "-"}</Text>
+          </View>
+
+          <View style={styles.gradeDivider} />
+
+          <View style={styles.gradeItem}>
+            <Text style={styles.gradeLabel}>Credit Score</Text>
+            <Text style={styles.gradeValue}>{item.grade_details ? (item.grade_details.score * 0.01 * item.sks).toFixed(2) : "-"}</Text>
           </View>
         </View>
       </View>
     );
   };
 
-  const getPeriodLabel = (period: string) => {
-    if (period === "all") return "Semua Periode";
-    return period;
-  };
-
-  // Determine label: IPK for "all", IPS for specific period
-  const getIndexLabel = () => {
-    return selectedPeriod === "all" ? "IPK" : "IPS";
-  };
-
   return (
     <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-        {/* Header Summary Card */}
-        <View style={styles.headerSummary}>
-          <View style={styles.statItem}>
-            <View style={styles.statIconCircle}>
-              <Ionicons name="book-outline" size={20} color="#015023" />
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Study</Text>
+              <Text style={styles.headerSubtitle}>{selectedPeriod === "all" ? "All Periods" : selectedPeriod}</Text>
             </View>
-            <Text style={styles.summaryLabel}>Total SKS</Text>
-            <Text style={styles.summaryValue}>{statistics.totalSks}</Text>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.statItem}>
-            <View style={styles.statIconCircle}>
-              <Ionicons name="trophy-outline" size={20} color="#015023" />
-            </View>
-            <Text style={styles.summaryLabel}>{getIndexLabel()}</Text>
-            <Text style={styles.summaryValue}>{statistics.ipk}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.statItem}>
-            <View style={styles.statIconCircle}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#015023" />
-            </View>
-            <Text style={styles.summaryLabel}>Dinilai</Text>
-            <Text style={styles.summaryValue}>
-              {statistics.gradedCount}/{statistics.totalCount}
-            </Text>
-          </View>
-        </View>
-
-        {/* Period Filter Dropdown */}
-        <View style={styles.filterContainer}>
-          <View style={styles.filterHeader}>
-            <Ionicons name="funnel-outline" size={18} color="rgba(255,255,255,0.9)" />
-            <Text style={styles.filterLabel}>Filter Periode</Text>
-          </View>
-          <TouchableOpacity style={styles.dropdownButton} onPress={() => setShowDropdown(!showDropdown)} activeOpacity={0.8}>
-            <Text style={styles.dropdownButtonText}>{getPeriodLabel(selectedPeriod)}</Text>
-            <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={20} color="rgba(255,255,255,0.9)" />
+          <TouchableOpacity>
+            <Ionicons name="menu" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* Dropdown Options */}
-        {showDropdown && (
-          <View style={styles.dropdownList}>
-            {periodOptions.map((period, index) => (
-              <TouchableOpacity
-                key={period}
-                style={[styles.dropdownItem, selectedPeriod === period && styles.dropdownItemActive, index === periodOptions.length - 1 && styles.dropdownItemLast]}
-                onPress={() => {
-                  setSelectedPeriod(period);
-                  setShowDropdown(false);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.dropdownItemText, selectedPeriod === period && styles.dropdownItemTextActive]}>{getPeriodLabel(period)}</Text>
-                {selectedPeriod === period && <Ionicons name="checkmark-circle" size={22} color="#015023" />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity style={[styles.tab, activeTab === "plan" && styles.tabActive]} onPress={() => setActiveTab("plan")}>
+            <Text style={[styles.tabText, activeTab === "plan" && styles.tabTextActive]}>Study Plan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, activeTab === "results" && styles.tabActive]} onPress={() => setActiveTab("results")}>
+            <Text style={[styles.tabText, activeTab === "results" && styles.tabTextActive]}>Study Results</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* List */}
+        {/* User Info Card */}
+        <View style={styles.userCard}>
+          <View style={styles.userInfo}></View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <View style={styles.statIconWrapper}>
+                <Ionicons name="trophy" size={16} color="#015023" />
+              </View>
+              <View>
+                <Text style={styles.statLabel}>SKS</Text>
+                <View style={styles.statValueRow}>
+                  <Text style={styles.statValue}>{statistics.totalSks} SKS</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.statBox}>
+              <View style={styles.statIconWrapper}>
+                <Ionicons name="trophy" size={16} color="#015023" />
+              </View>
+              <View>
+                <Text style={styles.statLabel}>IPK</Text>
+                <View style={styles.statValueRow}>
+                  <Text style={styles.statValue}>{statistics.ipk}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.statBox}>
+              <View style={styles.statIconWrapper}>
+                <Ionicons name="trophy" size={16} color="#015023" />
+              </View>
+              <View>
+                <Text style={styles.statLabel}>IPS</Text>
+                <View style={styles.statValueRow}>
+                  <Text style={styles.statValue}>{statistics.ips}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* DPM & Tomo Section */}
+        </View>
+
+        {/* Period Chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScrollContainer} contentContainerStyle={styles.chipScrollContent}>
+          {periodOptions.map((period) => (
+            <TouchableOpacity key={period} style={[styles.periodChip, selectedPeriod === period && styles.periodChipActive]} onPress={() => setSelectedPeriod(period)}>
+              <Text style={[styles.periodChipText, selectedPeriod === period && styles.periodChipTextActive]}>{period}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Grade Cards List */}
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#fff" />
-            <Text style={styles.loadingText}>Memuat data nilai...</Text>
+            <ActivityIndicator size="large" color="#DABC4E" />
+            <Text style={styles.loadingText}>Loading grades...</Text>
           </View>
         ) : (
           <FlatList
             data={filteredData}
-            renderItem={renderItem}
+            renderItem={renderGradeCard}
             keyExtractor={(item, index) => `${item.id_class}-${index}`}
-            contentContainerStyle={styles.listContainer}
+            contentContainerStyle={styles.gradesList}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <View style={styles.emptyIconCircle}>
-                  <Ionicons name="document-text-outline" size={48} color="rgba(255,255,255,0.4)" />
-                </View>
-                <Text style={styles.emptyText}>{selectedPeriod === "all" ? "Belum ada data akademik" : `Tidak ada mata kuliah di periode ${selectedPeriod}`}</Text>
-                <Text style={styles.emptySubtext}>Data nilai akan muncul setelah dosen menginput nilai</Text>
+                <Ionicons name="document-text-outline" size={64} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.emptyText}>No grades available</Text>
+                <Text style={styles.emptySubtext}>Grades will appear here once your lecturers input them</Text>
               </View>
             }
           />
@@ -272,208 +299,359 @@ export default function GradesScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  headerSummary: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    padding: 20,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 16,
-    borderRadius: 20,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  statItem: { alignItems: "center", flex: 1, paddingVertical: 8 },
-  statIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(1, 80, 35, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
-    // paddingVertical: 15,
-    // paddingTop: 30,
-    marginTop: 20,
+    paddingVertical: 16,
   },
-  backButton: {
-    width: 35,
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
   },
-  summaryLabel: {
-    color: "#666",
-    fontSize: 11,
-    textTransform: "uppercase",
-    marginBottom: 6,
-    fontWeight: "600",
-    letterSpacing: 0.5,
+  headerTextContainer: {
+    gap: 2,
   },
-  summaryValue: { color: "#015023", fontSize: 24, fontWeight: "800" },
-  divider: { width: 1, height: 60, backgroundColor: "rgba(1, 80, 35, 0.15)" },
-  filterContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 16,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.1)",
     marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    zIndex: 10,
-  },
-  filterHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    gap: 8,
-  },
-  filterLabel: { fontSize: 14, color: "rgba(255,255,255,0.9)", fontWeight: "600", letterSpacing: 0.3 },
-  dropdownButton: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    padding: 14,
+    marginTop: 8,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    padding: 4,
   },
-  dropdownButtonText: { fontSize: 15, color: "rgba(255,255,255,0.95)", fontWeight: "600" },
-  dropdownList: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: "#DABC4E",
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+  },
+  tabTextActive: {
+    color: "#015023",
+  },
+  userCard: {
+    backgroundColor: "#F5EFD3",
     marginHorizontal: 20,
-    marginTop: -8,
-    marginBottom: 16,
-    borderRadius: 16,
+    marginTop: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "black",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 20,
-    maxHeight: 300,
-    overflow: "hidden",
-  },
-  dropdownItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
-  },
-  dropdownItemLast: { borderBottomWidth: 0 },
-  dropdownItemActive: { backgroundColor: "rgba(1, 80, 35, 0.08)" },
-  dropdownItemText: { fontSize: 15, color: "#333", fontWeight: "500" },
-  dropdownItemTextActive: { fontWeight: "700", color: "#015023" },
-  listContainer: { padding: 20, paddingTop: 0, paddingBottom: 40 },
-  row: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: 16,
-    marginBottom: 12,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  rowContent: {
-    padding: 16,
+  userInfo: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     gap: 12,
+    marginBottom: 16,
   },
-  subjectInfo: {
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "#DABC4E",
+  },
+  avatar: {
+    width: "100%",
+    height: "100%",
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 2,
+  },
+  userMeta: {
+    fontSize: 11,
+    color: "#666",
+    marginBottom: 4,
+  },
+  userCourse: {
+    fontSize: 10,
+    color: "#999",
+    lineHeight: 14,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  statBox: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
+    backgroundColor: "#f8f8f8",
+    padding: 10,
+    borderRadius: 12,
   },
-  subjectIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(1, 80, 35, 0.1)",
+  statIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#DABC4E",
     justifyContent: "center",
     alignItems: "center",
   },
-  subjectTextContainer: {
-    flex: 1,
+  statLabel: {
+    fontSize: 10,
+    color: "#999",
+    marginBottom: 2,
   },
-  subjectCode: { fontSize: 11, color: "#666", marginBottom: 4, fontWeight: "600", letterSpacing: 0.3 },
-  subjectName: { fontSize: 15, color: "#333", fontWeight: "600", lineHeight: 20 },
-  gradeBox: { alignItems: "flex-end", gap: 8 },
-  sksChip: {
+  statValueRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#f5f5f5",
+  },
+  statValue: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  dpmSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+  },
+  dpmChip: {
+    backgroundColor: "#DABC4E",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  dpmText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#015023",
+  },
+  dpmUser: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dpmAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  dpmName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#333",
+  },
+  chatButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 30,
+    gap: 12,
+  },
+  searchIcon: {},
+  searchPlaceholder: {
+    fontSize: 14,
+    color: "#999",
+  },
+  chipScrollContainer: {
+    marginTop: 16,
+    maxHeight: 50,
+  },
+  chipScrollContent: {
+    paddingHorizontal: 20,
+    gap: 2,
+    paddingBottom: 12,
+  },
+  periodChip: {
+    backgroundColor: "rgba(218, 188, 78, 0.2)",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "rgba(218, 188, 78, 0.3)",
+  },
+  periodChipActive: {
+    backgroundColor: "#DABC4E",
+    borderColor: "#DABC4E",
+  },
+  periodChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.7)",
+  },
+  periodChipTextActive: {
+    color: "#015023",
+  },
+  gradesList: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 30,
+  },
+  gradeCard: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: "black",
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  cardHeaderLeft: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  codeChip: {
+    backgroundColor: "#DABC4E",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  codeChipText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#015023",
+  },
+  sksChipSmall: {
+    backgroundColor: "#f0f0f0",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  sksText: { fontSize: 11, color: "#666", fontWeight: "600" },
-  scoreBadge: {
-    backgroundColor: "rgba(1, 80, 35, 0.1)",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    minWidth: 64,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(1, 80, 35, 0.2)",
+  sksChipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#666",
   },
-  scoreNumber: { fontSize: 20, fontWeight: "800", color: "#015023", marginBottom: 2 },
-  scoreText: { fontSize: 13, fontWeight: "700", color: "#2e7d32", letterSpacing: 0.5 },
-  emptyScoreBadge: {
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    minWidth: 64,
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderStyle: "dashed",
-  },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 60 },
-  loadingText: { marginTop: 16, fontSize: 15, color: "rgba(255,255,255,0.8)", fontWeight: "500" },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 80, paddingHorizontal: 40 },
-  emptyIconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  menuIcon: {
+    width: 32,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+  },
+  subjectTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  classCode: {
+    fontSize: 12,
+    color: "#999",
+    marginBottom: 16,
+  },
+  gradeFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  gradeItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  gradeLabel: {
+    fontSize: 11,
+    color: "#999",
+    marginBottom: 6,
+  },
+  gradeValueLarge: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#015023",
+  },
+  gradeValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  gradeDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: "#e0e0e0",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 80,
+    paddingHorizontal: 40,
   },
   emptyText: {
-    textAlign: "center",
-    color: "rgba(255,255,255,0.9)",
-    marginTop: 8,
     fontSize: 18,
     fontWeight: "600",
+    color: "rgba(255,255,255,0.9)",
+    marginTop: 20,
     marginBottom: 8,
   },
   emptySubtext: {
-    textAlign: "center",
-    color: "rgba(255,255,255,0.6)",
     fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
+    textAlign: "center",
     lineHeight: 20,
   },
 });

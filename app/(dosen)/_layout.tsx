@@ -80,12 +80,14 @@ export default function TabLayout() {
         name="jadwal"
         options={{
           href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
       <Tabs.Screen
         name="class-grades"
         options={{
           href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
 
@@ -93,6 +95,7 @@ export default function TabLayout() {
         name="grades"
         options={{
           href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
       <Tabs.Screen
@@ -111,6 +114,7 @@ export default function TabLayout() {
         name="EditProfilDosen"
         options={{
           href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
       <Tabs.Screen

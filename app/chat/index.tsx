@@ -209,21 +209,6 @@ const ChatListApp = () => {
         <SafeAreaView style={{ flex: 1 }}>
           <StatusBar barStyle="light-content" backgroundColor="#015023" />
 
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{
-                marginRight: 12,
-                padding: 8,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <Ionicons name="arrow-back" size={28} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Chat List</Text>
-          </View>
-
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#FACC15" />
             <Text style={styles.loadingTextWhite}>Memuat kontak...</Text>
@@ -237,6 +222,7 @@ const ChatListApp = () => {
     <SafeAreaView style={{ flex: 1 }}>
       <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#015023" />
+        
 
         {/* Content */}
         <FlatList

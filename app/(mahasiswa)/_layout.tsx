@@ -57,6 +57,7 @@ export default function TabLayout() {
               <Ionicons name="qr-code" size={30} />
             </TabBarButton>
           ),
+          tabBarStyle: { display: "none" },
         }}
       />
 
@@ -77,7 +78,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="EditProfil"
         options={{
-          href: null, // Ini adalah kuncinya!
+          href: null,
+          tabBarStyle: { display: "none" }, // Ini adalah kuncinya!
         }}
       />
       <Tabs.Screen

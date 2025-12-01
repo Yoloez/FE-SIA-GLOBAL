@@ -1,7 +1,7 @@
 import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -9,7 +9,7 @@ import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAr
 import { useAuth } from "../../context/AuthContext";
 
 export default function EditProfilScreen() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
   // State untuk form
@@ -186,13 +186,13 @@ export default function EditProfilScreen() {
       }
 
       // Refresh user context jika ada
-      if (refreshUser) {
-        try {
-          await refreshUser();
-        } catch (refreshError) {
-          console.log("Refresh user error:", refreshError);
-        }
-      }
+      // if (refreshUser) {
+      //   try {
+      //     await refreshUser();
+      //   } catch (refreshError) {
+      //     console.log("Refresh user error:", refreshError);
+      //   }
+      // }
 
       Alert.alert("Sukses", "Profil berhasil diperbarui.", [
         {
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 0,
     paddingTop: 0,
-    paddingBottom: 80,
+    paddingBottom: 50,
     backgroundColor: "transparent",
   },
   containerLoading: {

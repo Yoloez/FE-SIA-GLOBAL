@@ -1,7 +1,7 @@
 import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -192,6 +192,9 @@ export default function EditProfilScreen() {
                 <TouchableOpacity style={styles.settingButton} onPress={handleSave} disabled={isLoading}>
                   {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <Text style={styles.settingButtonText}>Save Changes</Text>}
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={isLoading}>
+                  <Text style={styles.cancelButtonText}>Batal</Text>
+                </TouchableOpacity>
               </ScrollView>
             </KeyboardAvoidingView>
           </View>
@@ -206,7 +209,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 0,
     paddingTop: 0,
-    paddingBottom: 80,
+    // paddingBottom: 10,
     backgroundColor: "transparent",
   },
   containerLoading: {
@@ -353,5 +356,19 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
+  },
+  cancelButton: {
+    backgroundColor: "transparent",
+    borderRadius: 25,
+    padding: 15,
+    alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  cancelButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

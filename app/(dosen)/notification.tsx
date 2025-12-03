@@ -57,6 +57,12 @@ export default function NotificationScreen() {
               <Text style={styles.notificationTime}>{notification.time}</Text>
             </View>
           ))}
+
+          <TouchableOpacity onPress={() => router.push("/buatNotif")}>
+            <View style={styles.notifButton}>
+              <Text>Buat Pengumuman</Text>
+            </View>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -136,5 +142,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#7a7a7a",
     fontStyle: "italic",
+  },
+  notifButton: {
+    backgroundColor: "#DABC4E",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 30,
   },
 });

@@ -121,6 +121,14 @@ export default function TabLayout() {
         name="notification"
         options={{
           href: null,
+          tabBarStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="buatNotif"
+        options={{
+          href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
     </Tabs>

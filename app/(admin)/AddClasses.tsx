@@ -33,6 +33,7 @@ export default function CreateClassScreen() {
   const { token } = useAuth();
   const router = useRouter();
   const isMounted = useRef(true);
+  const isSubmitting = useRef(false);
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
@@ -41,6 +42,7 @@ export default function CreateClassScreen() {
   const [codeClass, setCodeClass] = useState("");
   const [memberClass, setMemberClass] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
 
   // Ubah ke single schedule (bukan array)
   const [dayOfWeek, setDayOfWeek] = useState<number>(1);
@@ -58,10 +60,15 @@ export default function CreateClassScreen() {
           setSubjects(subjectsResponse.data.data || []);
           setPeriods(periodsResponse.data.data || []);
         }
-      } catch (error) {
+      } catch (error: any) {
         if (isMounted.current) {
           console.error("Error fetching initial data:", error);
-          Alert.alert("Error", "Gagal memuat data awal. Pastikan server berjalan.");
+          const message = error?.response?.data?.message || "Gagal memuat data awal";
+          Alert.alert("Error", message);
+        }
+      } finally {
+        if (isMounted.current) {
+          setIsLoadingInitial(false);
         }
       }
     };
@@ -70,6 +77,7 @@ export default function CreateClassScreen() {
 
     return () => {
       isMounted.current = false;
+      isSubmitting.current = false;
     };
   }, []);
 
@@ -102,6 +110,12 @@ export default function CreateClassScreen() {
   };
 
   const handleCreateClass = async () => {
+    // Prevent double submission
+    if (isSubmitting.current || isLoading) {
+      console.log("Already submitting, ignoring duplicate request");
+      return;
+    }
+
     // Validasi input dasar
     if (!selectedSubject || !selectedPeriod || !codeClass.trim() || !memberClass.trim()) {
       Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
@@ -142,10 +156,12 @@ export default function CreateClassScreen() {
       return;
     }
 
+    isSubmitting.current = true;
     setIsLoading(true);
+
     try {
       // Kirim data sesuai format backend yang baru
-      await api.post("/manager/classes", {
+      const response = await api.post("/manager/classes", {
         id_subject: selectedSubject,
         id_academic_period: selectedPeriod,
         code_class: codeClass,
@@ -155,30 +171,46 @@ export default function CreateClassScreen() {
         end_time: endTime,
       });
 
-      if (isMounted.current) {
-        Alert.alert("Sukses", "Kelas baru berhasil dibuat.", [
-          {
-            text: "OK",
-            onPress: () => {
-              if (isMounted.current) {
-                router.replace("/(manager)");
-              }
-            },
+      if (!isMounted.current) return;
+
+      console.log("Class created successfully:", response.data);
+
+      Alert.alert("Sukses", "Kelas baru berhasil dibuat.", [
+        {
+          text: "OK",
+          onPress: () => {
+            if (isMounted.current) {
+              router.replace("/(admin)");
+            }
           },
-        ]);
-      }
+        },
+      ]);
     } catch (error: any) {
-      if (isMounted.current) {
-        console.error("Error creating class:", error);
-        const message = error?.response?.data?.message || "Terjadi kesalahan saat membuat kelas.";
-        Alert.alert("Gagal", message);
-      }
+      if (!isMounted.current) return;
+
+      console.error("Error creating class:", error);
+      const message = error?.response?.data?.message || "Terjadi kesalahan saat membuat kelas.";
+      Alert.alert("Gagal", message);
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
       }
+      isSubmitting.current = false;
     }
   };
+
+  // Loading state untuk initial data
+  if (isLoadingInitial) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#DABC4E" />
+          <Text style={styles.loadingText}>Memuat data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -187,7 +219,7 @@ export default function CreateClassScreen() {
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Custom Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton} disabled={isLoading}>
               <Ionicons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Buat Kelas Baru</Text>
@@ -196,7 +228,7 @@ export default function CreateClassScreen() {
           {/* Form */}
           <Text style={styles.label}>Pilih Periode Akademik *</Text>
           <View style={styles.pickerContainer}>
-            <Picker selectedValue={selectedPeriod} onValueChange={(itemValue) => setSelectedPeriod(itemValue)} style={styles.picker}>
+            <Picker enabled={!isLoading} selectedValue={selectedPeriod} onValueChange={(itemValue) => setSelectedPeriod(itemValue)} style={styles.picker}>
               <Picker.Item label="-- Pilih Periode --" value={null} />
               {periods.map((period) => (
                 <Picker.Item key={period.id_academic_period} label={period.name} value={period.id_academic_period} />
@@ -206,7 +238,7 @@ export default function CreateClassScreen() {
 
           <Text style={styles.label}>Pilih Mata Kuliah *</Text>
           <View style={styles.pickerContainer}>
-            <Picker selectedValue={selectedSubject} onValueChange={(itemValue) => setSelectedSubject(itemValue)} style={styles.picker}>
+            <Picker enabled={!isLoading} selectedValue={selectedSubject} onValueChange={(itemValue) => setSelectedSubject(itemValue)} style={styles.picker}>
               <Picker.Item label="-- Pilih Mata Kuliah --" value={null} />
               {subjects.map((subject) => (
                 <Picker.Item key={subject.id_subject} label={subject.name_subject} value={subject.id_subject} />
@@ -215,15 +247,15 @@ export default function CreateClassScreen() {
           </View>
 
           <Text style={styles.label}>Kode Kelas *</Text>
-          <TextInput style={styles.input} value={codeClass} onChangeText={setCodeClass} placeholder="Contoh: A, B, Pagi" placeholderTextColor="#999" />
+          <TextInput style={styles.input} value={codeClass} onChangeText={setCodeClass} placeholder="Contoh: A, B, Pagi" placeholderTextColor="#999" editable={!isLoading} />
 
           <Text style={styles.label}>Kapasitas Kelas *</Text>
-          <TextInput style={styles.input} value={memberClass} onChangeText={setMemberClass} placeholder="Contoh: 40" placeholderTextColor="#999" keyboardType="numeric" maxLength={3} />
+          <TextInput style={styles.input} value={memberClass} onChangeText={setMemberClass} placeholder="Contoh: 40" placeholderTextColor="#999" keyboardType="numeric" maxLength={3} editable={!isLoading} />
 
           <Text style={styles.label}>Jadwal Kelas *</Text>
           <View style={styles.scheduleForm}>
             <View style={styles.pickerContainer}>
-              <Picker selectedValue={dayOfWeek} onValueChange={(itemValue) => setDayOfWeek(itemValue)}>
+              <Picker enabled={!isLoading} selectedValue={dayOfWeek} onValueChange={(itemValue) => setDayOfWeek(itemValue)}>
                 <Picker.Item label="Senin" value={1} />
                 <Picker.Item label="Selasa" value={2} />
                 <Picker.Item label="Rabu" value={3} />
@@ -234,16 +266,19 @@ export default function CreateClassScreen() {
               </Picker>
             </View>
             <View style={styles.timeRow}>
-              <TextInput style={[styles.input, styles.timeInput]} value={startTime} onChangeText={handleStartTimeChange} placeholder="Mulai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} />
-              <TextInput style={[styles.input, styles.timeInput]} value={endTime} onChangeText={handleEndTimeChange} placeholder="Selesai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} />
+              <TextInput style={[styles.input, styles.timeInput]} value={startTime} onChangeText={handleStartTimeChange} placeholder="Mulai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} editable={!isLoading} />
+              <TextInput style={[styles.input, styles.timeInput]} value={endTime} onChangeText={handleEndTimeChange} placeholder="Selesai (HH:MM)" placeholderTextColor="#999" keyboardType="numeric" maxLength={5} editable={!isLoading} />
             </View>
           </View>
 
           <View style={styles.buttonContainer}>
             {isLoading ? (
-              <ActivityIndicator size="large" color="#DABC4E" />
+              <View style={styles.loadingButtonContainer}>
+                <ActivityIndicator size="large" color="#DABC4E" />
+                <Text style={styles.loadingButtonText}>Membuat kelas...</Text>
+              </View>
             ) : (
-              <TouchableOpacity style={styles.button} onPress={handleCreateClass} activeOpacity={0.8}>
+              <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleCreateClass} activeOpacity={0.8} disabled={isLoading}>
                 <Text style={styles.buttonText}>Buat Kelas</Text>
               </TouchableOpacity>
             )}
@@ -322,6 +357,30 @@ const styles = StyleSheet.create({
     color: "#015023",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  buttonDisabled: {
+    backgroundColor: "#999",
+    opacity: 0.6,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    fontWeight: "500",
+  },
+  loadingButtonContainer: {
+    alignItems: "center",
+    gap: 8,
+  },
+  loadingButtonText: {
+    fontSize: 14,
+    color: "#DABC4E",
+    fontWeight: "600",
   },
   scheduleForm: {
     padding: 15,

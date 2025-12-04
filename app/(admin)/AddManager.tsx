@@ -8,6 +8,9 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function AddManagerScreen() {
   const { token } = useAuth();
+  const isMounted = React.useRef(true);
+  const isSubmitting = React.useRef(false);
+
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -15,7 +18,21 @@ export default function AddManagerScreen() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  React.useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      isSubmitting.current = false;
+    };
+  }, []);
+
   const handleAddManager = async () => {
+    // Prevent double submission
+    if (isSubmitting.current || isLoading) {
+      console.log("Already submitting, ignoring duplicate request");
+      return;
+    }
+
     if (!name || !username || !email || !password) {
       Alert.alert("Error", "Semua kolom wajib diisi.");
       return;
@@ -25,6 +42,7 @@ export default function AddManagerScreen() {
       return;
     }
 
+    isSubmitting.current = true;
     setIsLoading(true);
 
     try {
@@ -35,32 +53,37 @@ export default function AddManagerScreen() {
         password: password,
         password_confirmation: passwordConfirmation,
       });
+
+      if (!isMounted.current) return;
+
+      console.log("Manager created successfully:", response.data);
+
       Alert.alert("Sukses", `Manajer "${response.data.data.name}" berhasil ditambahkan.`, [
         {
           text: "OK",
-          onPress: () => router.push("/index"),
+          onPress: () => {
+            if (isMounted.current) {
+              router.push("/(admin)");
+            }
+          },
         },
       ]);
-
-      setName("");
-      setUsername("");
-      setEmail("");
-      setPassword("");
-      setPasswordConfirmation("");
     } catch (error) {
+      if (!isMounted.current) return;
+
       if (axios.isAxiosError(error) && error.response) {
         console.error("Status Kode:", error.response.status);
         console.error("Pesan dari Server:", JSON.stringify(error.response.data, null, 2));
-
-        if (error.response.status === 422) {
-          const errors = error.response.data.errors;
-          const firstErrorKey = Object.keys(errors)[0];
-        } else {
-          console.error("Error tidak terduga:", error.message);
-        }
+        const message = error.response.data?.message || "Terjadi kesalahan saat menambahkan manager.";
+        Alert.alert("Gagal", message);
+      } else {
+        Alert.alert("Gagal", "Terjadi kesalahan yang tidak terduga.");
       }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
+      isSubmitting.current = false;
     }
   };
 
@@ -90,22 +113,29 @@ export default function AddManagerScreen() {
 
         <View style={styles.form}>
           <Text style={styles.label}>Name:</Text>
-          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={name} onChangeText={setName} />
+          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={name} onChangeText={setName} editable={!isLoading} />
 
           <Text style={styles.label}>Username:</Text>
-          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={username} onChangeText={setUsername} autoCapitalize="none" />
+          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={username} onChangeText={setUsername} autoCapitalize="none" editable={!isLoading} />
 
           <Text style={styles.label}>Email:</Text>
-          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" editable={!isLoading} />
 
           <Text style={styles.label}>Password:</Text>
-          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={password} onChangeText={setPassword} secureTextEntry />
+          <TextInput style={styles.input} placeholder="" placeholderTextColor="#8aa899" value={password} onChangeText={setPassword} secureTextEntry editable={!isLoading} />
 
-          <TextInput style={[styles.input, styles.inputNoLabel]} placeholder="Confirm Password" placeholderTextColor="#8aa899" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry />
+          <TextInput style={[styles.input, styles.inputNoLabel]} placeholder="Confirm Password" placeholderTextColor="#8aa899" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry editable={!isLoading} />
 
-          <TouchableOpacity style={styles.button} onPress={handleAddManager} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#0a4d2e" /> : <Text style={styles.buttonText}>Save</Text>}
-          </TouchableOpacity>
+          {isLoading ? (
+            <View style={styles.loadingButton}>
+              <ActivityIndicator color="#0a4d2e" />
+              <Text style={styles.loadingButtonText}>Menyimpan...</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.button} onPress={handleAddManager} disabled={isLoading}>
+              <Text style={styles.buttonText}>Save</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -180,6 +210,22 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#0a4d2e",
     fontSize: 18,
+    fontWeight: "600",
+  },
+  loadingButton: {
+    backgroundColor: "#d4af6a",
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: "center",
+    marginTop: 30,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    opacity: 0.7,
+  },
+  loadingButtonText: {
+    color: "#0a4d2e",
+    fontSize: 16,
     fontWeight: "600",
   },
 });

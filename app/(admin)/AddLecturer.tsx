@@ -17,6 +17,8 @@ interface Program {
 export default function CreateLecturerScreen() {
   const { token } = useAuth();
   const router = useRouter();
+  const isMounted = React.useRef(true);
+  const isSubmitting = React.useRef(false);
 
   // State untuk setiap input form
   const [name, setName] = useState("");
@@ -26,19 +28,36 @@ export default function CreateLecturerScreen() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<number | null>(null);
 
   useEffect(() => {
+    isMounted.current = true;
+
     const fetchPrograms = async () => {
       try {
         const response = await api.get("/manager/programs");
-        setPrograms(response.data.data);
-      } catch (error) {
-        Alert.alert("Error", "Gagal memuat daftar program studi.");
+        if (isMounted.current) {
+          setPrograms(response.data.data || []);
+        }
+      } catch (error: any) {
+        if (isMounted.current) {
+          console.error("Error fetching programs:", error);
+          Alert.alert("Error", "Gagal memuat daftar program studi.");
+        }
+      } finally {
+        if (isMounted.current) {
+          setIsLoadingInitial(false);
+        }
       }
     };
     fetchPrograms();
+
+    return () => {
+      isMounted.current = false;
+      isSubmitting.current = false;
+    };
   }, []);
 
   // Fungsi untuk memilih gambar
@@ -113,6 +132,12 @@ export default function CreateLecturerScreen() {
   };
 
   const handleCreateLecturer = async () => {
+    // Prevent double submission
+    if (isSubmitting.current || isLoading) {
+      console.log("Already submitting, ignoring duplicate request");
+      return;
+    }
+
     if (!name || !username || !email || !password || !passwordConfirmation) {
       Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
       return;
@@ -122,6 +147,7 @@ export default function CreateLecturerScreen() {
       return;
     }
 
+    isSubmitting.current = true;
     setIsLoading(true);
     try {
       // Buat FormData untuk mengirim file
@@ -178,6 +204,19 @@ export default function CreateLecturerScreen() {
     }
   };
 
+  // Loading state untuk initial data
+  if (isLoadingInitial) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#DABC4E" />
+          <Text style={styles.loadingText}>Memuat data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -190,7 +229,7 @@ export default function CreateLecturerScreen() {
             headerTitleAlign: "left",
           }}
         />
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Icon Plus dengan Circle atau Preview Image */}
           <TouchableOpacity style={styles.iconContainer} onPress={showImageOptions} activeOpacity={0.8}>
             <View style={styles.iconCircle}>
@@ -212,22 +251,22 @@ export default function CreateLecturerScreen() {
           <View style={styles.form}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Name:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan nama lengkap" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} />
+              <TextInput style={styles.input} placeholder="Masukkan nama lengkap" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} editable={!isLoading} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Username:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan username" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" />
+              <TextInput style={styles.input} placeholder="Masukkan username" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" editable={!isLoading} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan email" placeholderTextColor="rgba(255,255,255,0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              <TextInput style={styles.input} placeholder="Masukkan email" placeholderTextColor="rgba(255,255,255,0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" editable={!isLoading} />
             </View>
 
             <Text style={styles.label}>Program Studi</Text>
             <View style={styles.pickerContainer}>
-              <Picker selectedValue={selectedProgram} onValueChange={(itemValue) => setSelectedProgram(itemValue)}>
+              <Picker enabled={!isLoading} selectedValue={selectedProgram} onValueChange={(itemValue) => setSelectedProgram(itemValue)}>
                 <Picker.Item label="-- Pilih Program Studi --" value={null} />
                 {programs.map((program) => (
                   <Picker.Item key={program.id_program} label={program.name} value={program.id_program} />
@@ -237,18 +276,25 @@ export default function CreateLecturerScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password:</Text>
-              <TextInput style={styles.input} placeholder="Masukkan password" placeholderTextColor="rgba(255,255,255,0.5)" value={password} onChangeText={setPassword} secureTextEntry />
+              <TextInput style={styles.input} placeholder="Masukkan password" placeholderTextColor="rgba(255,255,255,0.5)" value={password} onChangeText={setPassword} secureTextEntry editable={!isLoading} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Confirm Password:</Text>
-              <TextInput style={styles.input} placeholder="Konfirmasi password" placeholderTextColor="rgba(255,255,255,0.5)" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry />
+              <TextInput style={styles.input} placeholder="Konfirmasi password" placeholderTextColor="rgba(255,255,255,0.5)" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry editable={!isLoading} />
             </View>
 
             {/* Save Button */}
-            <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleCreateLecturer} disabled={isLoading} activeOpacity={0.8}>
-              {isLoading ? <ActivityIndicator color="#015023" /> : <Text style={styles.buttonText}>Save</Text>}
-            </TouchableOpacity>
+            {isLoading ? (
+              <View style={styles.loadingButtonContainer}>
+                <ActivityIndicator size="large" color="#DABC4E" />
+                <Text style={styles.loadingButtonText}>Menyimpan data...</Text>
+              </View>
+            ) : (
+              <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleCreateLecturer} disabled={isLoading} activeOpacity={0.8}>
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -355,6 +401,27 @@ const styles = StyleSheet.create({
     color: "#015023",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    fontWeight: "500",
+  },
+  loadingButtonContainer: {
+    alignItems: "center",
+    gap: 8,
+    marginTop: 30,
+  },
+  loadingButtonText: {
+    fontSize: 14,
+    color: "#DABC4E",
+    fontWeight: "600",
   },
   keyboardView: {
     flex: 1,

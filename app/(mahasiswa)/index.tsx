@@ -73,7 +73,7 @@ interface AcademicStats {
 }
 
 export default function HomeScreen() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const isMounted = useRef(true);
 
   let [fontsLoaded] = useFonts({
@@ -95,6 +95,7 @@ export default function HomeScreen() {
   const [isLoadingGrades, setIsLoadingGrades] = useState(true);
   const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchStudentIdentity = useCallback(async () => {
     setIsLoadingProfile(true);
@@ -191,6 +192,17 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await api.get("/notifications/unread-count");
+      if (isMounted.current && response.data.status === "success") {
+        setUnreadCount(response.data.data.unread_count || 0);
+      }
+    } catch (error) {
+      console.error("Gagal memuat jumlah notifikasi:", error);
+    }
+  }, []);
+
   const fetchSchedules = useCallback(async () => {
     setIsLoadingSchedules(true);
     try {
@@ -269,7 +281,8 @@ export default function HomeScreen() {
       fetchStudentIdentity();
       fetchGrades();
       fetchSchedules();
-    }, [fetchStudentIdentity, fetchGrades, fetchSchedules])
+      fetchUnreadCount();
+    }, [fetchStudentIdentity, fetchGrades, fetchSchedules, fetchUnreadCount])
   );
 
   useEffect(() => {
@@ -293,7 +306,7 @@ export default function HomeScreen() {
   };
 
   const handleNotificationPress = () => {
-    console.log("Notification pressed");
+    router.push("/notification" as any);
   };
 
   const handleContentPress = (item: ContentItem) => {
@@ -360,12 +373,15 @@ export default function HomeScreen() {
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={logout} style={styles.iconButton}>
-                <Ionicons name="log-out-outline" size={24} color="white" />
-              </TouchableOpacity>
-
               <TouchableOpacity onPress={handleNotificationPress} style={styles.iconButton} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="notifications-outline" size={24} color="white" />
+                <View>
+                  <Ionicons name="notifications-outline" size={24} color="white" />
+                  {unreadCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -558,5 +574,25 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 16,
     fontFamily: "Urbanist_400Regular",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#015023",
+  },
+  notificationBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });

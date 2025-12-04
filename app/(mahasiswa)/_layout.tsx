@@ -96,6 +96,13 @@ export default function TabLayout() {
           tabBarStyle: { display: "none" }, // Sembunyikan tab bar
         }}
       />
+      <Tabs.Screen
+        name="notification"
+        options={{
+          href: null,
+          tabBarStyle: { display: "none" }, // Sembunyikan tab bar
+        }}
+      />
     </Tabs>
   );
 }

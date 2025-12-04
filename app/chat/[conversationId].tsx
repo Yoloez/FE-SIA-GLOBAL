@@ -17,11 +17,29 @@ interface User {
 }
 
 interface Message {
-  id: number;
+  id_message?: number;
+  id?: number;
   message: string;
   sender: User;
   created_at: string;
+  sent_at?: string;
   conversation_id?: number;
+  id_conversation?: number;
+  isOptimistic?: boolean; // Flag untuk pesan yang belum terkirim
+  isSending?: boolean; // Flag untuk status pengiriman
+  sendFailed?: boolean; // Flag jika pengiriman gagal
+}
+
+interface OtherParticipant {
+  id_user_si: number;
+  name: string;
+  nim: string | null;
+}
+
+interface ConversationData {
+  id_conversation: number;
+  type: string;
+  other_participant: OtherParticipant | null;
 }
 
 export default function ChatScreen() {
@@ -30,8 +48,8 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false);
   const [conversationName, setConversationName] = useState("Chat");
+  const [conversationData, setConversationData] = useState<ConversationData | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -92,8 +110,27 @@ export default function ChatScreen() {
 
       if (!isMounted.current) return;
 
-      console.log(`✅ Loaded ${response.data.data.length} messages`);
-      setMessages(response.data.data);
+      const { messages: messagesData, conversation } = response.data.data;
+
+      console.log(`✅ Loaded ${messagesData?.length || 0} messages`);
+
+      // Set messages dengan mapping id yang benar
+      const formattedMessages = (messagesData || []).map((msg: any) => ({
+        id: msg.id_message,
+        id_message: msg.id_message,
+        message: msg.message,
+        sender: msg.sender,
+        created_at: msg.sent_at || msg.created_at,
+        conversation_id: msg.id_conversation,
+      }));
+
+      setMessages(formattedMessages);
+      setConversationData(conversation);
+
+      // Set conversation name dari other participant
+      if (conversation?.other_participant) {
+        setConversationName(conversation.other_participant.name);
+      }
     } catch (error: any) {
       // Ignore abort errors
       if (error.name === "AbortError" || error.name === "CanceledError") {
@@ -131,22 +168,6 @@ export default function ChatScreen() {
     }
   }, [token, conversationId]);
 
-  // Update conversation name based on messages
-  useEffect(() => {
-    if (messages.length > 0 && user) {
-      // Find the first message from someone other than current user
-      const currentUserId = user?.id_user_si || (user as any)?.id || (user as any)?.id_user;
-      const otherPersonMessage = messages.find((msg) => msg.sender.id_user_si !== currentUserId);
-
-      if (otherPersonMessage) {
-        setConversationName(otherPersonMessage.sender.name);
-      } else if (messages[0]) {
-        // If all messages are from current user, show the first sender name anyway
-        setConversationName(messages[0].sender.name);
-      }
-    }
-  }, [messages, user]);
-
   // Setup Echo listener untuk real-time messages
   useEffect(() => {
     if (!conversationId || !token) return;
@@ -159,18 +180,35 @@ export default function ChatScreen() {
       const channel = echo.private(`chat.${conversationId}`);
       echoChannelRef.current = channel;
 
-      channel.listen("NewChatMessage", (event: { message: Message }) => {
+      channel.listen("NewChatMessage", (event: { message: any }) => {
         console.log("📨 Pesan baru diterima via WebSocket:", event.message);
 
         if (isMounted.current) {
           setMessages((prevMessages) => {
-            // Cek duplikasi berdasarkan ID
-            const isDuplicate = prevMessages.some((msg) => msg.id === event.message.id);
+            const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
+
+            const newMsg = event.message;
+            const messageId = newMsg.id_message || newMsg.id;
+
+            // Cek duplikasi berdasarkan ID (baik real ID maupun temporary ID)
+            const isDuplicate = currentMessages.some((msg) => (msg.id_message || msg.id) === messageId || (msg.isOptimistic && msg.message === newMsg.message));
+
             if (isDuplicate) {
               console.log("⚠️ Duplicate message, skipping...");
-              return prevMessages;
+              return currentMessages;
             }
-            return [...prevMessages, event.message];
+
+            // Format message dari broadcast
+            const formattedMsg: Message = {
+              id: messageId,
+              id_message: messageId,
+              message: newMsg.message,
+              sender: newMsg.sender,
+              created_at: newMsg.created_at,
+              conversation_id: newMsg.id_conversation || newMsg.conversation_id,
+            };
+
+            return [...currentMessages, formattedMsg];
           });
 
           // Auto scroll to bottom saat ada pesan baru
@@ -190,17 +228,17 @@ export default function ChatScreen() {
     // Cleanup akan di-handle oleh useEffect pertama
   }, [conversationId, token, fetchMessages]);
 
-  // Fungsi untuk mengirim pesan baru
+  // Fungsi untuk mengirim pesan baru dengan optimistic update
   const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !token || !conversationId || isSending) {
+    if (!newMessage.trim() || !token || !conversationId) {
       return;
     }
 
     const tempMessage = newMessage.trim();
-    const tempId = Date.now(); // Temporary ID for optimistic update
-
-    // Optimistic update - langsung tampilkan pesan
+    const tempId = -Date.now(); // Negative ID untuk temporary message
     const currentUserId = user?.id_user_si || (user as any)?.id || (user as any)?.id_user || 0;
+
+    // Buat pesan optimistic
     const optimisticMessage: Message = {
       id: tempId,
       message: tempMessage,
@@ -211,42 +249,56 @@ export default function ChatScreen() {
       },
       created_at: new Date().toISOString(),
       conversation_id: parseInt(conversationId),
+      isOptimistic: true,
+      isSending: true,
+      sendFailed: false,
     };
 
-    if (isMounted.current) {
-      setMessages((prev) => [...prev, optimisticMessage]);
-      setNewMessage("");
-      setIsSending(true);
+    // LANGSUNG tampilkan pesan dan kosongkan input
+    setMessages((prev) => {
+      const currentMessages = Array.isArray(prev) ? prev : [];
+      return [...currentMessages, optimisticMessage];
+    });
+    setNewMessage("");
 
-      // Auto scroll to bottom
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
+    // Auto scroll ke bawah SEGERA
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 50);
 
     try {
       console.log(`📤 Sending message: "${tempMessage}"`);
 
-      const response = await api.post(`/chat/conversations/${conversationId}/messages`, { message: tempMessage });
+      const response = await api.post(`chat/conversations/${conversationId}/messages`, {
+        message: tempMessage,
+      });
 
       if (!isMounted.current) return;
 
-      console.log("✅ Message sent successfully");
+      console.log("✅ Message sent successfully:", response.data);
 
-      // Replace temporary message with real one from server
+      // Replace pesan optimistic dengan pesan real dari server
       setMessages((prevMessages) => {
-        const filtered = prevMessages.filter((msg) => msg.id !== tempId);
-        const isDuplicate = filtered.some((msg) => msg.id === response.data.data.id);
-        if (isDuplicate) {
-          return filtered;
-        }
-        return [...filtered, response.data.data];
+        const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
+        return currentMessages.map((msg) =>
+          msg.id === tempId
+            ? {
+                id: response.data.data.id_message || response.data.data.id,
+                message: response.data.data.message,
+                sender: response.data.data.sender,
+                created_at: response.data.data.created_at,
+                conversation_id: parseInt(conversationId),
+                isOptimistic: false,
+                isSending: false,
+              }
+            : msg
+        );
       });
     } catch (error: any) {
       if (!isMounted.current) return;
 
       console.error("================ GAGAL MENGIRIM PESAN ================");
-      let alertMessage = "Terjadi kesalahan yang tidak diketahui.";
+      let alertMessage = "Gagal mengirim pesan.";
 
       if (axios.isAxiosError(error)) {
         if (error.response) {
@@ -255,48 +307,88 @@ export default function ChatScreen() {
           alertMessage = `Gagal mengirim pesan. Server merespons dengan error ${error.response.status}.`;
         } else if (error.request) {
           console.error("Tidak ada respons dari server.");
-          alertMessage = "Tidak dapat terhubung ke server. Pastikan server berjalan.";
+          alertMessage = "Tidak dapat terhubung ke server.";
         } else {
           console.error("Error Axios:", error.message);
-          alertMessage = "Terjadi masalah saat menyiapkan permintaan.";
         }
       } else {
         console.error("Error tidak terduga:", error);
       }
       console.error("======================================================");
 
-      Alert.alert("Error", alertMessage);
+      // Update pesan sebagai gagal
+      setMessages((prevMessages) => {
+        const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
+        return currentMessages.map((msg) =>
+          msg.id === tempId
+            ? {
+                ...msg,
+                isSending: false,
+                sendFailed: true,
+              }
+            : msg
+        );
+      });
 
-      // Kembalikan teks jika pengiriman gagal
-      setNewMessage(tempMessage);
-    } finally {
-      if (isMounted.current) {
-        setIsSending(false);
-      }
+      // Show alert
+      Alert.alert(
+        "Pesan Gagal Terkirim",
+        alertMessage,
+        [
+          {
+            text: "Coba Lagi",
+            onPress: () => {
+              // Hapus pesan yang gagal
+              setMessages((prev) => {
+                const currentMessages = Array.isArray(prev) ? prev : [];
+                return currentMessages.filter((msg) => msg.id !== tempId);
+              });
+              // Kembalikan ke input
+              setNewMessage(tempMessage);
+            },
+          },
+          {
+            text: "Hapus",
+            style: "destructive",
+            onPress: () => {
+              // Hapus pesan yang gagal
+              setMessages((prev) => {
+                const currentMessages = Array.isArray(prev) ? prev : [];
+                return currentMessages.filter((msg) => msg.id !== tempId);
+              });
+            },
+          },
+        ],
+        { cancelable: false }
+      );
     }
-  }, [newMessage, token, conversationId, isSending]);
+  }, [newMessage, token, conversationId, user]);
 
   // Komponen untuk merender setiap gelembung pesan
   const renderItem = useCallback(
     ({ item }: { item: Message }) => {
-      // Check multiple possible user ID properties
       const currentUserId = user?.id_user_si || (user as any)?.id || (user as any)?.id_user;
-      const isMyMessage = item.sender.id_user_si === currentUserId;
+      const isMyMessage = item.sender?.id_user_si === currentUserId;
 
-      console.log("Rendering message:", {
-        messageId: item.id,
-        senderId: item.sender.id_user_si,
-        currentUserId: currentUserId,
-        userObject: user,
-        isMyMessage,
-        message: item.message.substring(0, 20),
-      });
+      // Determine message status icon
+      let statusIcon = null;
+      if (isMyMessage) {
+        if (item.sendFailed) {
+          statusIcon = <Ionicons name="alert-circle" size={14} color="#ff4444" style={{ marginLeft: 4 }} />;
+        } else if (item.isSending) {
+          statusIcon = <ActivityIndicator size={12} color="#667781" style={{ marginLeft: 4 }} />;
+        } else if (item.isOptimistic) {
+          statusIcon = <Ionicons name="checkmark" size={14} color="#667781" style={{ marginLeft: 4 }} />;
+        } else {
+          statusIcon = <Ionicons name="checkmark-done" size={14} color="#4FC3F7" style={{ marginLeft: 4 }} />;
+        }
+      }
 
       return (
         <View style={[styles.messageWrapper, isMyMessage ? styles.myMessageWrapper : styles.theirMessageWrapper]}>
-          <View style={[styles.messageContainer, isMyMessage ? styles.myMessage : styles.theirMessage]}>
+          <View style={[styles.messageContainer, isMyMessage ? styles.myMessage : styles.theirMessage, item.sendFailed && styles.failedMessage]}>
             {!isMyMessage && <Text style={styles.senderName}>{item.sender.name}</Text>}
-            <Text style={styles.messageText}>{item.message}</Text>
+            <Text style={[styles.messageText, item.sendFailed && styles.failedMessageText]}>{item.message}</Text>
             <View style={styles.messageFooter}>
               <Text style={styles.timestamp}>
                 {new Date(item.created_at).toLocaleTimeString([], {
@@ -304,7 +396,7 @@ export default function ChatScreen() {
                   minute: "2-digit",
                 })}
               </Text>
-              {isMyMessage && <Ionicons name="checkmark-done" size={14} color="#4FC3F7" style={{ marginLeft: 4 }} />}
+              {statusIcon}
             </View>
           </View>
         </View>
@@ -346,12 +438,12 @@ export default function ChatScreen() {
         }}
       />
       <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 30}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 120}>
           <FlatList
             ref={flatListRef}
             data={messages}
             renderItem={renderItem}
-            keyExtractor={(item, index) => item.id?.toString() || `msg-${index}`}
+            keyExtractor={(item, index) => (item.id_message || item.id)?.toString() || `msg-${index}`}
             style={styles.messageList}
             contentContainerStyle={{ padding: 10, paddingBottom: 20 }}
             onContentSizeChange={() => {
@@ -382,9 +474,9 @@ export default function ChatScreen() {
           />
 
           <View style={styles.inputContainer}>
-            <TextInput style={styles.textInput} value={newMessage} onChangeText={setNewMessage} placeholder="Ketik pesan..." placeholderTextColor="#999" multiline maxLength={1000} editable={!isSending} />
-            <TouchableOpacity style={[styles.sendButton, (isSending || !newMessage.trim()) && styles.sendButtonDisabled]} onPress={handleSendMessage} disabled={isSending || !newMessage.trim()}>
-              {isSending ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={20} color="#fff" />}
+            <TextInput style={styles.textInput} value={newMessage} onChangeText={setNewMessage} placeholder="Ketik pesan..." placeholderTextColor="#999" multiline maxLength={1000} />
+            <TouchableOpacity style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]} onPress={handleSendMessage} disabled={!newMessage.trim()}>
+              <Ionicons name="send" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -448,6 +540,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 8,
     borderBottomLeftRadius: 2,
   },
+  failedMessage: {
+    backgroundColor: "#ffdddd",
+    borderWidth: 1,
+    borderColor: "#ff4444",
+  },
   senderName: {
     fontWeight: "600",
     fontSize: 13,
@@ -458,6 +555,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#000",
     lineHeight: 20,
+  },
+  failedMessageText: {
+    color: "#666",
   },
   messageFooter: {
     flexDirection: "row",
@@ -506,6 +606,7 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: "#B0B0B0",
+    opacity: 0.6,
   },
   emptyContainer: {
     flex: 1,

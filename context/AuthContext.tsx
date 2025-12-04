@@ -16,6 +16,7 @@ interface AuthContextData {
   isLoading: boolean;
   login: (userData: User, authToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  forceLogout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -71,18 +72,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = async () => {
+    console.log("========================================");
+    console.log("[LOGOUT] Memulai proses logout...");
     try {
+      console.log("[LOGOUT] Menghapus state user dan token...");
       setUser(null);
       setToken(null);
+
+      console.log("[LOGOUT] Menghapus data dari AsyncStorage...");
       await AsyncStorage.removeItem("userToken");
       await AsyncStorage.removeItem("userData");
-      // Pengalihan sekarang ditangani oleh _layout.tsx
+
+      console.log("[LOGOUT] Logout berhasil! Pengalihan akan ditangani oleh _layout.tsx");
     } catch (e) {
-      console.error("Gagal menghapus data pengguna", e);
+      console.error("[LOGOUT] GAGAL menghapus data pengguna:", e);
     }
+    console.log("========================================");
   };
 
-  return <AuthContext.Provider value={{ user, token, isLoggedIn: !!user, isLoading, login, logout }}>{children}</AuthContext.Provider>;
+  const forceLogout = async () => {
+    console.log("========================================");
+    console.log("[FORCE LOGOUT] Memulai FORCE LOGOUT...");
+    try {
+      // Clear state immediately
+      setUser(null);
+      setToken(null);
+
+      // Clear ALL AsyncStorage
+      console.log("[FORCE LOGOUT] Menghapus SEMUA data dari AsyncStorage...");
+      const keys = await AsyncStorage.getAllKeys();
+      console.log("[FORCE LOGOUT] Keys ditemukan:", keys);
+      await AsyncStorage.multiRemove(keys);
+
+      console.log("[FORCE LOGOUT] FORCE LOGOUT berhasil! App akan redirect ke login...");
+    } catch (e) {
+      console.error("[FORCE LOGOUT] Error:", e);
+    }
+    console.log("========================================");
+  };
+
+  return <AuthContext.Provider value={{ user, token, isLoggedIn: !!user, isLoading, login, logout, forceLogout }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

@@ -47,8 +47,8 @@ const CONTENT_DATA = [
 ];
 
 export default function HomeScreen() {
-  const { logout } = useAuth();
   const isMounted = useRef(true);
+  const { forceLogout } = useAuth();
 
   let [fontsLoaded] = useFonts({
     Urbanist_400Regular,
@@ -68,14 +68,21 @@ export default function HomeScreen() {
       if (isMounted.current && response.data.status === "success") {
         setProfileData(response.data.data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gagal memuat profil dosen:", error);
+
+      // Auto logout jika Unauthenticated
+      if (error.response?.status === 401 || error.response?.data?.message === "Unauthenticated.") {
+        console.log("[INDEX] Token invalid/expired, auto force logout...");
+        await forceLogout();
+        return;
+      }
     } finally {
       if (isMounted.current) {
         setIsLoadingProfile(false);
       }
     }
-  }, []);
+  }, [forceLogout]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -141,10 +148,6 @@ export default function HomeScreen() {
             <View style={styles.iconsSection}>
               <TouchableOpacity onPress={() => router.push("/chat")} style={styles.iconButton}>
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={logout} style={styles.iconButton}>
-                <Ionicons name="log-out-outline" size={24} color="white" />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/notification")}>

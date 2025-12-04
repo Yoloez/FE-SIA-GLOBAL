@@ -2,9 +2,10 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import api from "../../api/axios";
 import CustomAlert from "../../components/CustomAlert";
+import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
@@ -94,7 +95,9 @@ const Profil = () => {
         <StatusBar barStyle="light-content" backgroundColor="#015023" />
         <View style={styles.content}>
           <View style={styles.profileCard}>
-            <Text style={styles.profileTitle}>Profile</Text>
+            <ThemedText variant="semibold" style={styles.profileTitle}>
+              Profile
+            </ThemedText>
 
             <View style={styles.avatarContainer}>
               <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} />
@@ -102,40 +105,44 @@ const Profil = () => {
 
             {/* --- DATA SEKARANG DINAMIS --- */}
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>Name:</Text>
+              <ThemedText style={styles.label}>Name:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.full_name}</Text>
+                <ThemedText style={styles.infoText}>{profileData.full_name}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>NIM:</Text>
+              <ThemedText style={styles.label}>NIM:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.registration_number || "Belum diisi"}</Text>
+                <ThemedText style={styles.infoText}>{profileData.registration_number || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>Major:</Text>
+              <ThemedText style={styles.label}>Major:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.program_name || "Belum diisi"}</Text>
+                <ThemedText style={styles.infoText}>{profileData.program_name || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>Generation:</Text>
+              <ThemedText style={styles.label}>Generation:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.generation || "Belum diisi"}</Text>
+                <ThemedText style={styles.infoText}>{profileData.generation || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             {/* Tombol-tombol tidak berubah */}
             <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/EditProfil")}>
-              <Text style={styles.settingButtonText}>Setting</Text>
+              <ThemedText variant="semibold" style={styles.settingButtonText}>
+                Setting
+              </ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.9} onPress={handleLogoutConfirm} style={styles.logoutButton}>
-              <Text style={styles.logoutButtonText}>Logout</Text>
+              <ThemedText variant="semibold" style={styles.logoutButtonText}>
+                Logout
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -179,7 +186,6 @@ const styles = StyleSheet.create({
   profileTitle: {
     color: "#ffffff",
     fontSize: 20,
-    fontWeight: "600",
     textAlign: "center",
     marginBottom: 20,
   },
@@ -237,7 +243,6 @@ const styles = StyleSheet.create({
   settingButtonText: {
     color: "#1a1a1a",
     fontSize: 16,
-    fontWeight: "600",
   },
   logoutButton: {
     backgroundColor: "#e8d5b7",
@@ -248,7 +253,6 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     color: "#1a1a1a",
     fontSize: 16,
-    fontWeight: "600",
   },
   bottomNav: {
     flexDirection: "row",

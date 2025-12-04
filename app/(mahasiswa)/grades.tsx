@@ -172,13 +172,6 @@ export default function GradesScreen() {
             <Text style={styles.gradeLabel}>Skor</Text>
             <Text style={styles.gradeValue}>{item.grade_details ? item.grade_details.score.toFixed(2) : "-"}</Text>
           </View>
-
-          <View style={styles.gradeDivider} />
-
-          <View style={styles.gradeItem}>
-            <Text style={styles.gradeLabel}>Credit Score</Text>
-            <Text style={styles.gradeValue}>{item.grade_details ? (item.grade_details.score * 0.01 * item.sks).toFixed(2) : "-"}</Text>
-          </View>
         </View>
       </View>
     );

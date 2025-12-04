@@ -19,7 +19,8 @@ export default function ChatLayout() {
         name="index"
         options={{
           title: "Chat List",
-          headerBackVisible: true,
+          // headerBackVisible: true,
+          headerShown: false,
         }}
       />
       <Stack.Screen

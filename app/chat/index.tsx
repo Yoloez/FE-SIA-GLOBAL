@@ -23,7 +23,7 @@ interface Section {
 
 const ChatListApp = () => {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [lecturers, setLecturers] = useState<Contact[]>([]);
   const [classmates, setClassmates] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -169,12 +169,12 @@ const ChatListApp = () => {
         Alert.alert("Error", alertMessage);
       }
     },
-    [token]
+    [token, router]
   );
 
   const renderChatItem = ({ item }: { item: Contact }) => {
-    // Gunakan profile_image dari API jika tersedia, fallback ke pravatar
-    const avatarUri = item.profile_image ? `https://api-sia.ptialghifari.my.id/storage/${item.profile_image}` : `https://i.pravatar.cc/150?u=${item.email || `user${item.id_user_si}@default.com`}`;
+    // Gunakan profile_image dari API jika tersedia, fallback ke ui-avatars
+    const avatarUri = item.profile_image ? `${process.env.EXPO_PUBLIC_BUAT_FOTO}/${item.profile_image}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=015023&color=fff&size=150`;
 
     return (
       <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -182,8 +182,12 @@ const ChatListApp = () => {
           <Image
             source={{ uri: avatarUri }}
             style={styles.avatarImage}
+            defaultSource={require("../../assets/images/react-logo.png")}
             onError={(error) => {
-              console.log("Avatar load error:", error.nativeEvent.error);
+              console.log("❌ Avatar load error for", item.name, ":", error.nativeEvent.error);
+            }}
+            onLoad={() => {
+              console.log("✅ Avatar loaded for", item.name);
             }}
           />
 
@@ -209,6 +213,15 @@ const ChatListApp = () => {
         <SafeAreaView style={{ flex: 1 }}>
           <StatusBar barStyle="light-content" backgroundColor="#015023" />
 
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Chat</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#FACC15" />
             <Text style={styles.loadingTextWhite}>Memuat kontak...</Text>
@@ -222,7 +235,15 @@ const ChatListApp = () => {
     <SafeAreaView style={{ flex: 1 }}>
       <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#015023" />
-        
+
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Chat</Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
         {/* Content */}
         <FlatList
@@ -237,32 +258,51 @@ const ChatListApp = () => {
           data={[{ key: "sections" }]}
           renderItem={() => (
             <>
-              {/* Lecturer Section */}
-              {lecturers.length > 0 && (
-                <View style={styles.sectionContainer}>
-                  <View style={styles.badgeContainer}>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>Lecturer</Text>
+              {/* Jika user adalah Dosen, tampilkan hanya Mahasiswa */}
+              {user?.role === "dosen" ? (
+                <>
+                  {classmates.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <View style={styles.badgeContainer}>
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>Mahasiswa</Text>
+                        </View>
+                      </View>
+                      {classmates.map((item) => (
+                        <View key={item.id_user_si}>{renderChatItem({ item })}</View>
+                      ))}
                     </View>
-                  </View>
-                  {lecturers.map((item) => (
-                    <View key={item.id_user_si}>{renderChatItem({ item })}</View>
-                  ))}
-                </View>
-              )}
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Jika user adalah Mahasiswa, tampilkan Lecturer dan Classmates */}
+                  {lecturers.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <View style={styles.badgeContainer}>
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>Dosen</Text>
+                        </View>
+                      </View>
+                      {lecturers.map((item) => (
+                        <View key={item.id_user_si}>{renderChatItem({ item })}</View>
+                      ))}
+                    </View>
+                  )}
 
-              {/* Classmates Section */}
-              {classmates.length > 0 && (
-                <View style={styles.sectionContainer}>
-                  <View style={styles.badgeContainer}>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>Classmates</Text>
+                  {classmates.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <View style={styles.badgeContainer}>
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>Teman Kelas</Text>
+                        </View>
+                      </View>
+                      {classmates.map((item) => (
+                        <View key={item.id_user_si}>{renderChatItem({ item })}</View>
+                      ))}
                     </View>
-                  </View>
-                  {classmates.map((item) => (
-                    <View key={item.id_user_si}>{renderChatItem({ item })}</View>
-                  ))}
-                </View>
+                  )}
+                </>
               )}
             </>
           )}
@@ -279,17 +319,26 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 40,
-    paddingBottom: 15,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingTop: 35,
   },
   backButton: {
-    marginRight: 12,
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "flex-start",
   },
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
+    flex: 1,
+    textAlign: "center",
+  },
+  headerSpacer: {
+    width: 40,
   },
   scrollContent: {
     paddingHorizontal: 15,
@@ -329,12 +378,11 @@ const styles = StyleSheet.create({
   contactCard: {
     backgroundColor: "",
     paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingBottom: 15,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 0,
-    // elevation: 2,
   },
   avatarImage: {
     width: 50,

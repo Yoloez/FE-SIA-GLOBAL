@@ -19,7 +19,7 @@ interface LecturerProfileData {
 }
 
 const ProfilDosen = () => {
-  const { logout, user } = useAuth();
+  const { logout, forceLogout, user } = useAuth();
 
   const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,13 +71,20 @@ const ProfilDosen = () => {
         const status = error.response?.status;
         const message = error.response?.data?.message;
 
+        // Auto logout jika Unauthenticated
+        if (status === 401 || message === "Unauthenticated.") {
+          console.log("[PROFILE] Token invalid/expired, auto logout...");
+          await forceLogout();
+          return; // Stop execution
+        }
+
         if (status === 403) {
           errorMessage = message || "Akses ditolak. Anda bukan dosen.";
           setAlertConfig({
             visible: true,
             title: "Akses Ditolak",
             message: errorMessage,
-            buttons: [{ text: "OK", onPress: () => logout() }],
+            buttons: [{ text: "OK", onPress: () => forceLogout() }],
           });
         } else if (status === 404) {
           errorMessage = message || "Data profil tidak ditemukan";
@@ -122,10 +129,10 @@ const ProfilDosen = () => {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Panggil logout tanpa menunggu response API
-      logout();
+      // Panggil forceLogout untuk memastikan benar-benar logout
+      forceLogout();
     });
-  }, [logout, scaleAnim]);
+  }, [forceLogout, scaleAnim]);
 
   const handleRetry = useCallback(() => {
     fetchProfile();
@@ -149,11 +156,12 @@ const ProfilDosen = () => {
       <View style={styles.container}>
         <LinearGradient colors={["#015023", "#1C352D"]} style={styles.loadingContainer}>
           <Text style={styles.errorText}>{error || "Data tidak tersedia"}</Text>
+          <Text style={styles.errorSubtext}>Token mungkin sudah tidak valid</Text>
           <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
             <Text style={styles.retryButtonText}>Coba Lagi</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutConfirm}>
-            <Text style={styles.logoutButtonText}>Logout</Text>
+          <TouchableOpacity style={styles.forceLogoutButton} onPress={() => forceLogout()}>
+            <Text style={styles.forceLogoutButtonText}>🔴 FORCE LOGOUT</Text>
           </TouchableOpacity>
         </LinearGradient>
       </View>
@@ -238,6 +246,13 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     textAlign: "center",
+    marginBottom: 8,
+    paddingHorizontal: 20,
+  },
+  errorSubtext: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+    textAlign: "center",
     marginBottom: 20,
     paddingHorizontal: 20,
   },
@@ -252,6 +267,19 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     fontSize: 16,
     fontWeight: "600",
+  },
+  forceLogoutButton: {
+    backgroundColor: "#DC2626",
+    borderRadius: 25,
+    padding: 15,
+    paddingHorizontal: 40,
+    marginTop: 8,
+  },
+  forceLogoutButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
   },
   header: {
     paddingHorizontal: 20,
@@ -338,10 +366,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   logoutButton: {
-    backgroundColor: "#D4AF37",
+    backgroundColor: "#e8d5b7",
     borderRadius: 25,
     padding: 15,
-    marginTop: 15,
     alignItems: "center",
   },
   logoutButtonText: {

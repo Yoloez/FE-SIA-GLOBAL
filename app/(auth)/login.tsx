@@ -114,10 +114,10 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-
+                {/* 
                 <TouchableOpacity onPress={() => router.push("/ForgotPassword")}>
                   <Text style={styles.forgotPassword}>Lupa Password?</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
                   {isLoading ? <ActivityIndicator size="small" color="#000000" /> : <Text style={styles.buttonText}>Login</Text>}

@@ -51,6 +51,7 @@ export default function ManagerDashboardScreen() {
   const [search, setSearch] = useState("");
   const slideAnim = useRef(new Animated.Value(-width * 0.75)).current;
   const isMounted = useRef(true);
+  const isNavigating = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
@@ -62,6 +63,7 @@ export default function ManagerDashboardScreen() {
   React.useEffect(() => {
     return () => {
       isMounted.current = false;
+      isNavigating.current = false;
       slideAnim.stopAnimation();
       // Batalkan request jika masih berlangsung
       if (abortControllerRef.current) {
@@ -177,15 +179,34 @@ export default function ManagerDashboardScreen() {
 
   const handleMenuNav = useCallback(
     (route: string) => {
+      if (isNavigating.current) return;
+      isNavigating.current = true;
+
       toggleMenu(false);
       setTimeout(() => {
         if (isMounted.current) {
           router.push(route as any);
         }
+        isNavigating.current = false;
       }, 300);
     },
     [toggleMenu]
   );
+
+  const handleCardPress = useCallback((classId: number) => {
+    if (isNavigating.current || !isMounted.current) return;
+    isNavigating.current = true;
+
+    try {
+      router.push(`/(admin)/${classId}`);
+    } catch (error) {
+      console.error("Navigation error:", error);
+    } finally {
+      setTimeout(() => {
+        isNavigating.current = false;
+      }, 500);
+    }
+  }, []);
 
   const handleLogout = useCallback(() => {
     setAlertConfig({
@@ -215,7 +236,7 @@ export default function ManagerDashboardScreen() {
   const renderItem = useCallback(
     ({ item }: { item: ClassItem }) => (
       <ImageBackground source={require("../../assets/images/batik.png")} style={[styles.card, CARD_STYLE]} imageStyle={styles.cardImage}>
-        <TouchableOpacity style={styles.cardContent} onPress={() => router.push(`/(admin)/${item.id_class}`)} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.cardContent} onPress={() => handleCardPress(item.id_class)} activeOpacity={0.9} disabled={isNavigating.current}>
           <View style={styles.cardTop}>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Kelas</Text>
@@ -253,7 +274,7 @@ export default function ManagerDashboardScreen() {
         </TouchableOpacity>
       </ImageBackground>
     ),
-    [handleToggleActive]
+    [handleToggleActive, handleCardPress]
   );
 
   const keyExtractor = useCallback((item: ClassItem) => `class-${item.id_class}`, []);

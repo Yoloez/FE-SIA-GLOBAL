@@ -2,22 +2,14 @@ import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 
 interface Subject {
   id_subject: number;
   name_subject: string;
+  sks: number;
 }
 
 interface AcademicPeriod {
@@ -28,12 +20,17 @@ interface AcademicPeriod {
 interface Class {
   id_class: number;
   code_class: string;
+  code_subject: string;
+  name_subject: string;
   member_class: number;
-  id_subject: Subject | number;
   id_academic_period: number;
+  academic_period_name: string;
   day_of_week: number;
   start_time: string;
   end_time: string;
+  schedule: string;
+  total_students: number;
+  is_active: number;
 }
 
 const DAY_NAMES: { [key: number]: string } = {
@@ -72,59 +69,36 @@ export default function ClassListScreen() {
       const periodsRes = await api.get("/academic-periods");
       const classesRes = await api.get("/manager/classes");
 
+      console.log("📚 Subjects Response:", JSON.stringify(subjectsRes.data, null, 2));
+      console.log("📅 Periods Response:", JSON.stringify(periodsRes.data, null, 2));
+      console.log("🏫 Classes Response:", JSON.stringify(classesRes.data, null, 2));
+
       if (isMounted.current) {
-        setSubjects(subjectsRes.data?.data || subjectsRes.data || []);
-        setPeriods(periodsRes.data?.data || periodsRes.data || []);
-        setClasses(classesRes.data?.data || classesRes.data || []);
+        const subjectsData = subjectsRes.data?.data || subjectsRes.data || [];
+        const periodsData = periodsRes.data?.data || periodsRes.data || [];
+        const classesData = classesRes.data?.data || classesRes.data || [];
+
+        console.log("✅ Subjects loaded:", subjectsData.length);
+        console.log("✅ Periods loaded:", periodsData.length);
+        console.log("✅ Classes loaded:", classesData.length);
+
+        if (classesData.length > 0) {
+          console.log("🔍 Sample class data:", JSON.stringify(classesData[0], null, 2));
+        }
+
+        setSubjects(subjectsData);
+        setPeriods(periodsData);
+        setClasses(classesData);
       }
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        `Gagal memuat data: ${error.response?.data?.message || error.message}`
-      );
+      console.error("❌ Fetch error:", error);
+      Alert.alert("Error", `Gagal memuat data: ${error.response?.data?.message || error.message}`);
     } finally {
       if (isMounted.current) setIsLoadingClasses(false);
     }
   };
 
-  const handleDeleteClass = async (classId: number) => {
-    Alert.alert("Konfirmasi Hapus", "Apakah Anda yakin ingin menghapus kelas ini?", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await api.delete(`/manager/classes/${classId}`);
-            Alert.alert("Sukses", "Kelas berhasil dihapus.");
-            fetchData();
-          } catch (error: any) {
-            Alert.alert(
-              "Gagal",
-              error.response?.data?.message ||
-                "Terjadi kesalahan saat menghapus kelas."
-            );
-          }
-        },
-      },
-    ]);
-  };
-
-  /*** FIX TERPENTING — agar nama matkul selalu muncul ***/
-  const getSubjectName = (subject: Subject | number | string) => {
-    try {
-      if (typeof subject === "object" && subject !== null) {
-        return subject.name_subject || "Tidak diketahui";
-      }
-
-      const id = Number(subject);
-      const found = subjects.find((s) => s.id_subject === id);
-
-      return found ? found.name_subject : "Tidak diketahui";
-    } catch (e) {
-      return "Tidak diketahui";
-    }
-  };
+  // Tidak perlu function getSubjectName karena name_subject sudah ada di class object
 
   const getPeriodName = (id_academic_period: number) => {
     const period = periods.find((p) => p.id_academic_period === id_academic_period);
@@ -141,11 +115,9 @@ export default function ClassListScreen() {
     const editParams = {
       id_class: String(cls.id_class || ""),
       code_class: cls.code_class || "",
+      code_subject: cls.code_subject || "",
+      name_subject: cls.name_subject || "",
       member_class: String(cls.member_class || ""),
-      id_subject:
-        typeof cls.id_subject === "object"
-          ? String(cls.id_subject.id_subject)
-          : String(cls.id_subject),
       id_academic_period: String(cls.id_academic_period || ""),
       day_of_week: String(cls.day_of_week || ""),
       start_time: cls.start_time || "",
@@ -153,7 +125,7 @@ export default function ClassListScreen() {
     };
 
     router.push({
-      pathname: user?.role === "admin" ? "/(admin)/EditClasses" : "/(admin)/EditClasses",
+      pathname: user?.role === "admin" ? "/(admin)/EditClasses" : "/(manager)/EditClasses",
       params: editParams,
     });
   };
@@ -161,11 +133,7 @@ export default function ClassListScreen() {
   const filteredClasses = classes.filter((cls) => {
     const q = searchQuery.toLowerCase();
 
-    return (
-      cls.code_class.toLowerCase().includes(q) ||
-      getSubjectName(cls.id_subject).toLowerCase().includes(q) ||
-      getPeriodName(cls.id_academic_period).toLowerCase().includes(q)
-    );
+    return cls.code_class.toLowerCase().includes(q) || cls.name_subject.toLowerCase().includes(q) || cls.code_subject.toLowerCase().includes(q) || cls.academic_period_name.toLowerCase().includes(q);
   });
 
   return (
@@ -183,13 +151,7 @@ export default function ClassListScreen() {
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari kelas (kode, mata kuliah)..."
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <TextInput style={styles.searchInput} placeholder="Cari kelas (kode, mata kuliah)..." placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
               <Ionicons name="close-circle" size={20} color="#999" />
@@ -201,9 +163,7 @@ export default function ClassListScreen() {
         <View style={styles.listHeader}>
           <View>
             <Text style={styles.listTitle}>Daftar Kelas</Text>
-            <Text style={styles.resultCount}>
-              {filteredClasses.length} kelas ditemukan
-            </Text>
+            <Text style={styles.resultCount}>{filteredClasses.length} kelas ditemukan</Text>
           </View>
           <TouchableOpacity onPress={handleAddClasses} style={styles.addButton}>
             <Ionicons name="add-circle" size={36} color="#fff" />
@@ -217,44 +177,27 @@ export default function ClassListScreen() {
           ) : filteredClasses.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="school-outline" size={64} color="#fff" />
-              <Text style={styles.emptyText}>
-                {searchQuery
-                  ? "Tidak ada kelas yang ditemukan"
-                  : "Belum ada kelas. Tekan + untuk menambah kelas baru"}
-              </Text>
+              <Text style={styles.emptyText}>{searchQuery ? "Tidak ada kelas yang ditemukan" : "Belum ada kelas. Tekan + untuk menambah kelas baru"}</Text>
             </View>
           ) : (
             filteredClasses.map((cls) => (
               <View key={cls.id_class} style={styles.classCard}>
                 <View style={styles.classCardContent}>
                   <View style={styles.classInfo}>
-                    <Text style={styles.className}>
-                      {getSubjectName(cls.id_subject)}
-                    </Text>
-                    <Text style={styles.classDetail}>Kelas: {cls.code_class}</Text>
+                    <Text style={styles.className}>{cls.name_subject}</Text>
                     <Text style={styles.classDetail}>
-                      Periode: {getPeriodName(cls.id_academic_period)}
+                      Kode: {cls.code_subject} - Kelas: {cls.code_class}
                     </Text>
+                    <Text style={styles.classDetail}>Periode: {cls.academic_period_name}</Text>
+                    <Text style={styles.classDetail}>{cls.schedule}</Text>
                     <Text style={styles.classDetail}>
-                      {DAY_NAMES[cls.day_of_week]}, {cls.start_time} - {cls.end_time}
-                    </Text>
-                    <Text style={styles.classDetail}>
-                      Kapasitas: {cls.member_class} mahasiswa
+                      Mahasiswa: {cls.total_students}/{cls.member_class}
                     </Text>
                   </View>
 
                   <View style={styles.classActions}>
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => handleEditClass(cls)}
-                    >
-                      <Ionicons name="create-outline" size={24} color="#DABC4E" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteClass(cls.id_class)}
-                    >
-                      <Ionicons name="trash-outline" size={24} color="#ff4444" />
+                    <TouchableOpacity style={styles.editButton} onPress={() => handleEditClass(cls)}>
+                      <Ionicons name="create-outline" size={24} color="black" />
                     </TouchableOpacity>
                   </View>
                 </View>

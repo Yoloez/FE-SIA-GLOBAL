@@ -2,6 +2,7 @@ import api from "@/api/axios";
 import { ClassDetails } from "@/types/class.types";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -149,149 +150,153 @@ export default function ClassDetailScreen() {
 
   if (isLoading) {
     return (
+      <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
+        <SafeAreaView style={styles.safeArea}>
+          <Stack.Screen
+            options={{
+              headerShown: false,
+            }}
+          />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#DABC4E" />
+            <Text style={styles.loadingText}>Memuat detail kelas...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea}>
         <Stack.Screen
           options={{
             headerShown: false,
           }}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#015023" />
-          <Text style={styles.loadingText}>Memuat detail kelas...</Text>
+
+        {/* Header Modern */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={28} color="#015023" />
+          </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {classDetails?.code_class || "Kelas"}
+            </Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              {classDetails?.subject?.name_subject || ""}
+            </Text>
+          </View>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {/* Class Stats Card */}
+        {classDetails && (
+          <View style={styles.statsCard}>
+            <View style={styles.statItem}>
+              <Ionicons name="school-outline" size={18} color="#015023" />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statLabel}>Kapasitas</Text>
+                <Text style={styles.statValue}>{classDetails.member_class}</Text>
+              </View>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Ionicons name="people-outline" size={18} color="#015023" />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statLabel}>Mahasiswa</Text>
+                <Text style={styles.statValue}>{classDetails.students?.length || 0}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            onPress={() => {
+              setActiveTab("lecturers");
+              setSearchQuery("");
+            }}
+            style={[styles.tab, activeTab === "lecturers" && styles.activeTab]}
+          >
+            <Ionicons name="person-circle-outline" size={20} color={activeTab === "lecturers" ? "#015023" : "#9ca3af"} />
+            <Text style={[styles.tabText, activeTab === "lecturers" && styles.activeTabText]}>Dosen ({classDetails?.lecturers?.length || 0})</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setActiveTab("students");
+              setSearchQuery("");
+            }}
+            style={[styles.tab, activeTab === "students" && styles.activeTab]}
+          >
+            <Ionicons name="people-outline" size={20} color={activeTab === "students" ? "#015023" : "#9ca3af"} />
+            <Text style={[styles.tabText, activeTab === "students" && styles.activeTabText]}>Mahasiswa ({classDetails?.students?.length || 0})</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Bar */}
+        {currentData.length > 0 && (
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+            <TextInput style={styles.searchInput} placeholder="Cari nama atau email..." placeholderTextColor="#d1d5db" value={searchQuery} onChangeText={setSearchQuery} />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <Ionicons name="close-circle" size={20} color="#9ca3af" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
+
+        {/* Members List */}
+        {currentData.length > 0 ? (
+          <FlatList
+            data={currentData}
+            renderItem={renderMemberItem}
+            keyExtractor={(item, index) => `${activeTab}-${item.id_user_si}-${index}`}
+            contentContainerStyle={styles.listContainer}
+            scrollEnabled={true}
+            showsVerticalScrollIndicator={false}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name={activeTab === "lecturers" ? "person-circle-outline" : "people-outline"} size={48} color="#d1d5db" />
+            <Text style={styles.emptyText}>{searchQuery ? "Tidak ditemukan" : `Belum ada ${activeTab === "lecturers" ? "dosen" : "mahasiswa"}`}</Text>
+            <Text style={styles.emptySubtext}>{!searchQuery && `Tambahkan ${activeTab === "lecturers" ? "dosen" : "mahasiswa"} untuk kelas ini`}</Text>
+          </View>
+        )}
+
+        {/* Action Button */}
+        <View style={styles.actionBar}>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "./AssignMember",
+                params: {
+                  classId,
+                  role: activeTab === "lecturers" ? "dosen" : "mahasiswa",
+                },
+              })
+            }
+            style={styles.addButton}
+          >
+            <Ionicons name="add-circle" size={24} color="white" />
+            <Text style={styles.addButtonText}>Tambah {activeTab === "lecturers" ? "Dosen" : "Mahasiswa"}</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
-
-      {/* Header Modern */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#015023" />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {classDetails?.code_class || "Kelas"}
-          </Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>
-            {classDetails?.subject?.name_subject || ""}
-          </Text>
-        </View>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {/* Class Stats Card */}
-      {classDetails && (
-        <View style={styles.statsCard}>
-          <View style={styles.statItem}>
-            <Ionicons name="school-outline" size={18} color="#015023" />
-            <View style={styles.statTextContainer}>
-              <Text style={styles.statLabel}>Kapasitas</Text>
-              <Text style={styles.statValue}>{classDetails.member_class}</Text>
-            </View>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Ionicons name="people-outline" size={18} color="#015023" />
-            <View style={styles.statTextContainer}>
-              <Text style={styles.statLabel}>Mahasiswa</Text>
-              <Text style={styles.statValue}>{classDetails.students?.length || 0}</Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          onPress={() => {
-            setActiveTab("lecturers");
-            setSearchQuery("");
-          }}
-          style={[styles.tab, activeTab === "lecturers" && styles.activeTab]}
-        >
-          <Ionicons name="person-circle-outline" size={20} color={activeTab === "lecturers" ? "#015023" : "#9ca3af"} />
-          <Text style={[styles.tabText, activeTab === "lecturers" && styles.activeTabText]}>Dosen ({classDetails?.lecturers?.length || 0})</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            setActiveTab("students");
-            setSearchQuery("");
-          }}
-          style={[styles.tab, activeTab === "students" && styles.activeTab]}
-        >
-          <Ionicons name="people-outline" size={20} color={activeTab === "students" ? "#015023" : "#9ca3af"} />
-          <Text style={[styles.tabText, activeTab === "students" && styles.activeTabText]}>Mahasiswa ({classDetails?.students?.length || 0})</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Search Bar */}
-      {currentData.length > 0 && (
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-          <TextInput style={styles.searchInput} placeholder="Cari nama atau email..." placeholderTextColor="#d1d5db" value={searchQuery} onChangeText={setSearchQuery} />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      )}
-
-      {/* Members List */}
-      {currentData.length > 0 ? (
-        <FlatList
-          data={currentData}
-          renderItem={renderMemberItem}
-          keyExtractor={(item, index) => `${activeTab}-${item.id_user_si}-${index}`}
-          contentContainerStyle={styles.listContainer}
-          scrollEnabled={true}
-          showsVerticalScrollIndicator={false}
-          maxToRenderPerBatch={10}
-          windowSize={10}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Ionicons name={activeTab === "lecturers" ? "person-circle-outline" : "people-outline"} size={48} color="#d1d5db" />
-          <Text style={styles.emptyText}>{searchQuery ? "Tidak ditemukan" : `Belum ada ${activeTab === "lecturers" ? "dosen" : "mahasiswa"}`}</Text>
-          <Text style={styles.emptySubtext}>{!searchQuery && `Tambahkan ${activeTab === "lecturers" ? "dosen" : "mahasiswa"} untuk kelas ini`}</Text>
-        </View>
-      )}
-
-      {/* Action Button */}
-      <View style={styles.actionBar}>
-        <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: "./AssignMember",
-              params: {
-                classId,
-                role: activeTab === "lecturers" ? "dosen" : "mahasiswa",
-              },
-            })
-          }
-          style={styles.addButton}
-        >
-          <Ionicons name="add-circle" size={24} color="white" />
-          <Text style={styles.addButtonText}>Tambah {activeTab === "lecturers" ? "Dosen" : "Mahasiswa"}</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "transparent",
   },
   header: {
     flexDirection: "row",
@@ -299,7 +304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
   backButton: {
     width: 40,
@@ -307,6 +312,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 20,
   },
   headerInfo: {
     flex: 1,
@@ -314,11 +321,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1f2937",
+    color: "#FFFFFF",
   },
   headerSubtitle: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "rgba(255, 255, 255, 0.8)",
     marginTop: 2,
   },
   headerSpacer: {
@@ -327,14 +334,19 @@ const styles = StyleSheet.create({
   statsCard: {
     marginHorizontal: 16,
     marginVertical: 12,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: "#f0fdf4",
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: "#10b981",
+    backgroundColor: "rgba(245, 239, 211, 0.95)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
     flexDirection: "row",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   statItem: {
     flex: 1,
@@ -364,31 +376,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    gap: 8,
+    gap: 12,
   },
   tab: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f6",
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     gap: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   activeTab: {
-    backgroundColor: "#ecfdf5",
+    backgroundColor: "#DABC4E",
     borderWidth: 2,
-    borderColor: "#10b981",
+    borderColor: "#DABC4E",
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#6b7280",
+    color: "rgba(255, 255, 255, 0.7)",
   },
   activeTabText: {
     color: "#015023",
+    fontWeight: "700",
   },
   searchContainer: {
     flexDirection: "row",
@@ -396,10 +411,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: "#f9fafb",
-    borderRadius: 10,
+    backgroundColor: "rgba(245, 239, 211, 0.9)",
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchIcon: {
     marginRight: 8,
@@ -419,13 +439,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    backgroundColor: "rgba(245, 239, 211, 0.95)",
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#f3f4f6",
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   memberContent: {
     flex: 1,
@@ -434,12 +459,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#ecfdf5",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#DABC4E",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.5)",
   },
   avatarText: {
     fontSize: 16,
@@ -471,13 +498,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#9ca3af",
+    color: "rgba(255, 255, 255, 0.8)",
     marginTop: 12,
     textAlign: "center",
   },
   emptySubtext: {
     fontSize: 13,
-    color: "#d1d5db",
+    color: "rgba(255, 255, 255, 0.6)",
     marginTop: 6,
     textAlign: "center",
   },
@@ -488,24 +515,29 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(1, 80, 35, 0.95)",
     borderTopWidth: 1,
-    borderTopColor: "#f3f4f6",
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
   },
   addButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: "#015023",
-    borderRadius: 10,
+    backgroundColor: "#DABC4E",
+    borderRadius: 12,
     gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#ffffff",
+    color: "#015023",
   },
   loadingContainer: {
     flex: 1,
@@ -515,6 +547,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "#FFFFFF",
+    fontWeight: "500",
   },
 });

@@ -5,8 +5,9 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 
 type TabType = "lecturers" | "students";
@@ -20,6 +21,20 @@ export default function ClassDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabType>("lecturers");
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Generate Schedule Modal States
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [jumlahPertemuan, setJumlahPertemuan] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // CustomAlert States
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as "success" | "error" | "info",
+  });
 
   useEffect(() => {
     isMounted.current = true;
@@ -84,6 +99,79 @@ export default function ClassDetailScreen() {
       students: (classDetails.students || []).filter(filterByQuery),
     };
   }, [classDetails, searchQuery]);
+
+  const handleGenerateSchedule = useCallback(async () => {
+    if (!startDate || !jumlahPertemuan) {
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Tanggal mulai dan jumlah pertemuan harus diisi.",
+        type: "error",
+      });
+      return;
+    }
+
+    const jumlah = parseInt(jumlahPertemuan);
+    if (isNaN(jumlah) || jumlah < 1 || jumlah > 20) {
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Jumlah pertemuan harus antara 1-20.",
+        type: "error",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await api.post(`/manager/classes/${classId}/generate-schedule`, {
+        start_date: startDate,
+        jumlah_pertemuan: jumlah,
+      });
+
+      if (response.data.status === "success") {
+        setShowGenerateModal(false);
+        setStartDate("");
+        setJumlahPertemuan("");
+        setAlertConfig({
+          visible: true,
+          title: "Berhasil",
+          message: `Berhasil men-generate ${jumlah} jadwal pertemuan.`,
+          type: "success",
+        });
+        fetchClassDetails();
+      }
+    } catch (error: any) {
+      console.error("Error generating schedule:", error);
+
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const errorData = error.response.data;
+        let errorMessage = errorData.message || "Gagal generate jadwal.";
+
+        // Handle validation errors
+        if (errorData.errors) {
+          const errors = Object.values(errorData.errors).flat();
+          errorMessage = errors.join("\n");
+        }
+
+        setAlertConfig({
+          visible: true,
+          title: "Gagal",
+          message: errorMessage,
+          type: "error",
+        });
+      } else {
+        setAlertConfig({
+          visible: true,
+          title: "Error",
+          message: "Terjadi kesalahan saat generate jadwal.",
+          type: "error",
+        });
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [classId, startDate, jumlahPertemuan, fetchClassDetails]);
 
   const handleRemoveMember = useCallback(
     (memberId: number, memberName: string, role: "dosen" | "mahasiswa") => {
@@ -212,6 +300,14 @@ export default function ClassDetailScreen() {
           </View>
         )}
 
+        {/* Generate Schedule Button */}
+        <View style={styles.generateButtonContainer}>
+          <TouchableOpacity onPress={() => setShowGenerateModal(true)} style={styles.generateButton}>
+            <Ionicons name="calendar-outline" size={20} color="#015023" />
+            <Text style={styles.generateButtonText}>Generate Jadwal</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -288,6 +384,62 @@ export default function ClassDetailScreen() {
             <Text style={styles.addButtonText}>Tambah {activeTab === "lecturers" ? "Dosen" : "Mahasiswa"}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Generate Schedule Modal */}
+        <Modal visible={showGenerateModal} transparent animationType="fade" onRequestClose={() => setShowGenerateModal(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Generate Jadwal Pertemuan</Text>
+                <TouchableOpacity onPress={() => setShowGenerateModal(false)} style={styles.modalCloseButton}>
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <Text style={styles.modalDescription}>Generate jadwal pertemuan otomatis berdasarkan hari dan jam kelas.</Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Tanggal Mulai</Text>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="calendar-outline" size={20} color="#666" />
+                    <TextInput style={styles.modalInput} placeholder="YYYY-MM-DD" placeholderTextColor="#9ca3af" value={startDate} onChangeText={setStartDate} />
+                  </View>
+                  <Text style={styles.inputHint}>Format: 2025-01-15 (harus sesuai hari kelas)</Text>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Jumlah Pertemuan</Text>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="repeat-outline" size={20} color="#666" />
+                    <TextInput style={styles.modalInput} placeholder="1-20" placeholderTextColor="#9ca3af" value={jumlahPertemuan} onChangeText={setJumlahPertemuan} keyboardType="number-pad" />
+                  </View>
+                  <Text style={styles.inputHint}>Minimal 1, maksimal 20 pertemuan</Text>
+                </View>
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity onPress={() => setShowGenerateModal(false)} style={styles.modalCancelButton} disabled={isGenerating}>
+                  <Text style={styles.modalCancelText}>Batal</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={handleGenerateSchedule} style={[styles.modalGenerateButton, isGenerating && styles.modalGenerateButtonDisabled]} disabled={isGenerating}>
+                  {isGenerating ? (
+                    <ActivityIndicator size="small" color="#015023" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={20} color="#015023" />
+                      <Text style={styles.modalGenerateText}>Generate</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* CustomAlert */}
+        <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -549,5 +701,153 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#FFFFFF",
     fontWeight: "500",
+  },
+  generateButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  generateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#DABC4E",
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  generateButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#015023",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#015023",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    flex: 1,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 16,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalDescription: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f9fafb",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  modalInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: "#1f2937",
+  },
+  inputHint: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginTop: 4,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#f9fafb",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#e5e7eb",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  modalGenerateButton: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#DABC4E",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  modalGenerateButtonDisabled: {
+    opacity: 0.6,
+  },
+  modalGenerateText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#015023",
   },
 });

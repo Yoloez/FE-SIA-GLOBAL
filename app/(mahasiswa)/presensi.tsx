@@ -1,21 +1,44 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import { router } from "expo-router";
-import { useRef, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import api from "../../api/axios";
+import CustomAlert from "../../components/CustomAlert";
+import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Presensi() {
-  const { user } = useAuth(); // Ambil data user dari AuthContext
+  const { user, isLoading: authLoading } = useAuth(); // Ambil data user dari AuthContext
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(0);
   const cameraRef = useRef<CameraView>(null);
+
+  // CustomAlert states
+  const [isAlertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertButtons, setAlertButtons] = useState<any[]>([]);
+
+  // Debug: Log user data saat komponen mount
+  useEffect(() => {
+    console.log("========================================");
+    console.log("[PRESENSI] User data dari AuthContext:", user);
+    console.log("[PRESENSI] Auth loading status:", authLoading);
+    if (user) {
+      console.log("[PRESENSI] User ID:", user.id_user_si);
+      console.log("[PRESENSI] User Name:", user.name);
+      console.log("[PRESENSI] User Role:", user.role);
+    } else {
+      console.log("[PRESENSI] WARNING: User data tidak ditemukan!");
+    }
+    console.log("========================================");
+  }, [user, authLoading]);
 
   // Shared values untuk slider zoom
   const translateX = useSharedValue(0);
@@ -56,36 +79,57 @@ export default function Presensi() {
 
   // Fungsi untuk submit presensi ke backend
   const submitAttendance = async (qrKey: string) => {
-    if (!user?.id_user_si) {
-      Alert.alert("Error", "Data user tidak ditemukan. Silakan login kembali.");
+    console.log("========================================");
+    console.log("[SUBMIT PRESENSI] Memulai submit presensi...");
+    console.log("[SUBMIT PRESENSI] QR Key:", qrKey);
+    console.log("[SUBMIT PRESENSI] User object:", user);
+    console.log("[SUBMIT PRESENSI] User ID:", user?.id_user_si);
+
+    if (!user || !user.id_user_si) {
+      console.log("[SUBMIT PRESENSI] ERROR: User data tidak valid!");
+      console.log("[SUBMIT PRESENSI] User:", user);
+      console.log("[SUBMIT PRESENSI] User ID:", user?.id_user_si);
+      setAlertTitle("Error");
+      setAlertMessage(`Data user tidak ditemukan.\n\nUser: ${user ? "Ada" : "Null"}\nUser ID: ${user?.id_user_si || "Tidak ada"}\n\nSilakan login kembali.`);
+      setAlertButtons([{ text: "OK", onPress: () => setAlertVisible(false) }]);
+      setAlertVisible(true);
       return;
     }
 
+    console.log("[SUBMIT PRESENSI] User valid, melanjutkan ke API...");
     setIsProcessing(true);
 
     try {
+      console.log("[SUBMIT PRESENSI] Mengirim request ke /student/attendances/scan");
+      console.log("[SUBMIT PRESENSI] Payload:", { key: qrKey, id_student: user.id_user_si });
+
       const response = await api.post("/student/attendances/scan", {
         key: qrKey,
         id_student: user.id_user_si,
       });
 
+      console.log("[SUBMIT PRESENSI] Response status:", response.status);
+      console.log("[SUBMIT PRESENSI] Response data:", response.data);
+
       if (response.data.status === "success") {
-        Alert.alert(
-          "Presensi Berhasil! ✓",
-          response.data.message,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                // Kembali ke halaman sebelumnya atau dashboard
-                router.back();
-              },
+        console.log("[SUBMIT PRESENSI] Presensi berhasil!");
+        setAlertTitle("Presensi Berhasil!");
+        setAlertMessage(response.data.message);
+        setAlertButtons([
+          {
+            text: "OK",
+            onPress: () => {
+              setAlertVisible(false);
+              // Kembali ke halaman sebelumnya atau dashboard
+              router.back();
             },
-          ],
-          { cancelable: false }
-        );
+          },
+        ]);
+        setAlertVisible(true);
       }
     } catch (error: any) {
+      console.log("[SUBMIT PRESENSI] Error occurred:", error);
+      console.log("[SUBMIT PRESENSI] Error response:", error.response?.data);
       let errorMessage = "Gagal melakukan presensi. Silakan coba lagi.";
 
       if (error.response) {
@@ -110,24 +154,30 @@ export default function Presensi() {
         errorMessage = "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.";
       }
 
-      Alert.alert("Presensi Gagal", errorMessage, [
-        {
-          text: "Scan Ulang",
-          onPress: () => {
-            setScannedData(null);
-            setIsProcessing(false);
-          },
-        },
+      setAlertTitle("Presensi Gagal");
+      setAlertMessage(errorMessage);
+      setAlertButtons([
         {
           text: "Batal",
           style: "cancel",
           onPress: () => {
+            setAlertVisible(false);
             router.back();
           },
         },
+        {
+          text: "Scan Ulang",
+          onPress: () => {
+            setAlertVisible(false);
+            setScannedData(null);
+            setIsProcessing(false);
+          },
+        },
       ]);
+      setAlertVisible(true);
     } finally {
       setIsProcessing(false);
+      console.log("========================================");
     }
   };
 
@@ -139,20 +189,58 @@ export default function Presensi() {
 
     // Validasi format QR code (opsional, sesuaikan dengan format key Anda)
     if (!data || data.trim() === "") {
-      Alert.alert("QR Code Invalid", "QR Code tidak dapat dibaca. Silakan coba lagi.", [
+      setAlertTitle("QR Code Invalid");
+      setAlertMessage("QR Code tidak dapat dibaca. Silakan coba lagi.");
+      setAlertButtons([
         {
           text: "OK",
           onPress: () => {
+            setAlertVisible(false);
             setScannedData(null);
           },
         },
       ]);
+      setAlertVisible(true);
       return;
     }
 
     // Submit attendance dengan key dari QR code
     submitAttendance(data);
   };
+
+  // Loading state untuk auth
+  if (authLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <ActivityIndicator size="large" color="#015023" />
+          <ThemedText variant="semibold" style={styles.loadingAuthText}>
+            Memuat data pengguna...
+          </ThemedText>
+        </View>
+      </View>
+    );
+  }
+
+  // Cek jika user tidak ada setelah auth selesai loading
+  if (!authLoading && !user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Ionicons name="alert-circle-outline" size={80} color="#dc2626" />
+          <ThemedText variant="bold" style={[styles.permissionTitle, { color: "#dc2626" }]}>
+            Sesi Tidak Valid
+          </ThemedText>
+          <ThemedText style={styles.permissionMessage}>Data pengguna tidak ditemukan. Silakan login kembali.</ThemedText>
+          <TouchableOpacity style={[styles.permissionButton, { backgroundColor: "#dc2626" }]} onPress={() => router.replace("/(auth)/login")}>
+            <ThemedText variant="semibold" style={styles.permissionButtonText}>
+              Kembali ke Login
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (!permission) {
     return (
@@ -167,10 +255,14 @@ export default function Presensi() {
       <View style={styles.container}>
         <View style={styles.permissionContainer}>
           <Ionicons name="camera-outline" size={80} color="#015023" />
-          <Text style={styles.permissionTitle}>Izin Kamera Diperlukan</Text>
-          <Text style={styles.permissionMessage}>Aplikasi ini memerlukan akses kamera untuk melakukan presensi dengan QR Code</Text>
+          <ThemedText variant="bold" style={styles.permissionTitle}>
+            Izin Kamera Diperlukan
+          </ThemedText>
+          <ThemedText style={styles.permissionMessage}>Aplikasi ini memerlukan akses kamera untuk melakukan presensi dengan QR Code</ThemedText>
           <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-            <Text style={styles.permissionButtonText}>Berikan Izin Kamera</Text>
+            <ThemedText variant="semibold" style={styles.permissionButtonText}>
+              Berikan Izin Kamera
+            </ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -196,7 +288,9 @@ export default function Presensi() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={28} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Scan QR Presensi</Text>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Scan QR Presensi
+          </ThemedText>
           <View style={{ width: 40 }} />
         </View>
 
@@ -225,12 +319,16 @@ export default function Presensi() {
             {isProcessing ? (
               <View style={styles.processingContainer}>
                 <ActivityIndicator size="large" color="#DABC4E" />
-                <Text style={styles.processingText}>Memproses presensi...</Text>
+                <ThemedText variant="semibold" style={styles.processingText}>
+                  Memproses presensi...
+                </ThemedText>
               </View>
             ) : (
               <>
-                <Text style={styles.scanText}>Arahkan kamera ke QR Code</Text>
-                <Text style={styles.scanSubtext}>QR Code akan otomatis terdeteksi</Text>
+                <ThemedText variant="semibold" style={styles.scanText}>
+                  Arahkan kamera ke QR Code
+                </ThemedText>
+                <ThemedText style={styles.scanSubtext}>QR Code akan otomatis terdeteksi</ThemedText>
               </>
             )}
           </View>
@@ -239,13 +337,17 @@ export default function Presensi() {
         {/* Zoom Slider */}
         {!isProcessing && (
           <View style={styles.zoomContainer}>
-            <Text style={styles.zoomLabel}>-</Text>
+            <ThemedText variant="bold" style={styles.zoomLabel}>
+              -
+            </ThemedText>
             <View style={styles.sliderTrack}>
               <GestureDetector gesture={panGesture}>
                 <Animated.View style={[styles.sliderThumb, animatedStyle]} />
               </GestureDetector>
             </View>
-            <Text style={styles.zoomLabel}>+</Text>
+            <ThemedText variant="bold" style={styles.zoomLabel}>
+              +
+            </ThemedText>
           </View>
         )}
 
@@ -256,6 +358,9 @@ export default function Presensi() {
         >
           <Ionicons name="flash-outline" size={28} color="#fff" />
         </TouchableOpacity> */}
+
+        {/* Custom Alert */}
+        <CustomAlert visible={isAlertVisible} title={alertTitle} message={alertMessage} onClose={() => setAlertVisible(false)} buttons={alertButtons} />
       </View>
     </GestureHandlerRootView>
   );
@@ -292,7 +397,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "bold",
   },
   overlay: {
     position: "absolute",
@@ -370,7 +474,6 @@ const styles = StyleSheet.create({
   scanText: {
     color: "white",
     fontSize: 18,
-    fontWeight: "600",
     textAlign: "center",
   },
   scanSubtext: {
@@ -385,7 +488,6 @@ const styles = StyleSheet.create({
   processingText: {
     color: "#DABC4E",
     fontSize: 16,
-    fontWeight: "600",
     marginTop: 15,
   },
   userInfoContainer: {
@@ -398,7 +500,6 @@ const styles = StyleSheet.create({
   userInfoText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
     textAlign: "center",
   },
   userInfoSubtext: {
@@ -419,7 +520,6 @@ const styles = StyleSheet.create({
   zoomLabel: {
     color: "#DABC4E",
     fontSize: 24,
-    fontWeight: "bold",
     marginHorizontal: 10,
   },
   sliderTrack: {
@@ -465,7 +565,6 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 22,
-    fontWeight: "bold",
     color: "#015023",
     marginTop: 20,
     marginBottom: 10,
@@ -487,6 +586,10 @@ const styles = StyleSheet.create({
   permissionButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+  },
+  loadingAuthText: {
+    fontSize: 16,
+    color: "#015023",
+    marginTop: 16,
   },
 });

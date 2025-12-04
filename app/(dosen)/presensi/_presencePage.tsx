@@ -4,8 +4,8 @@ import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { ThemedText } from "../../components/ThemedText";
+import api from "../../../api/axios";
+import { ThemedText } from "../../../components/ThemedText";
 
 interface ClassItem {
   no: number;
@@ -99,10 +99,14 @@ export default function PresencePage() {
       {/* Header Card */}
       <View style={styles.cardHeader}>
         <View style={styles.codeChip}>
-          <ThemedText variant="bold" style={styles.codeChipText}>{item.kode_matkul}</ThemedText>
+          <ThemedText variant="bold" style={styles.codeChipText}>
+            {item.kode_matkul}
+          </ThemedText>
         </View>
         <View style={styles.sksChip}>
-          <ThemedText variant="bold" style={styles.sksChipText}>{item.sks} SKS</ThemedText>
+          <ThemedText variant="bold" style={styles.sksChipText}>
+            {item.sks} SKS
+          </ThemedText>
         </View>
       </View>
 
@@ -135,7 +139,9 @@ export default function PresencePage() {
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPeriodModal(false)}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <ThemedText variant="bold" style={styles.modalTitle}>Pilih Periode Akademik</ThemedText>
+            <ThemedText variant="bold" style={styles.modalTitle}>
+              Pilih Periode Akademik
+            </ThemedText>
             <TouchableOpacity onPress={() => setShowPeriodModal(false)}>
               <Ionicons name="close" size={24} color="#015023" />
             </TouchableOpacity>
@@ -144,7 +150,9 @@ export default function PresencePage() {
           <ScrollView style={styles.periodList}>
             {academicPeriods.map((period) => (
               <TouchableOpacity key={period.id} style={[styles.periodItem, selectedPeriod === period.id && styles.periodItemSelected]} onPress={() => handlePeriodSelect(period.id)}>
-                <ThemedText variant={selectedPeriod === period.id ? "bold" : "regular"} style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>{period.name}</ThemedText>
+                <ThemedText variant={selectedPeriod === period.id ? "bold" : "regular"} style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>
+                  {period.name}
+                </ThemedText>
                 {selectedPeriod === period.id && <Ionicons name="checkmark-circle" size={20} color="#015023" />}
               </TouchableOpacity>
             ))}
@@ -162,7 +170,9 @@ export default function PresencePage() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <ThemedText variant="bold" style={styles.headerTitle}>Presensi Kelas</ThemedText>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Presensi Kelas
+          </ThemedText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -185,7 +195,9 @@ export default function PresencePage() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#F5EFD3" />
-            <ThemedText variant="semibold" style={styles.loadingText}>Memuat data kelas...</ThemedText>
+            <ThemedText variant="semibold" style={styles.loadingText}>
+              Memuat data kelas...
+            </ThemedText>
           </View>
         ) : (
           <>
@@ -195,7 +207,9 @@ export default function PresencePage() {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="folder-open-outline" size={64} color="rgba(255,255,255,0.5)" />
-                <ThemedText variant="semibold" style={styles.emptyText}>Tidak ada kelas</ThemedText>
+                <ThemedText variant="semibold" style={styles.emptyText}>
+                  Tidak ada kelas
+                </ThemedText>
                 <ThemedText style={styles.emptySubtext}>{selectedPeriod ? "Tidak ada kelas pada periode ini" : "Belum ada kelas yang tersedia"}</ThemedText>
               </View>
             )}
@@ -336,7 +350,7 @@ const styles = StyleSheet.create({
   arrowIcon: {
     position: "absolute",
     right: 18,
-    top: "50%",
+    top: "65%",
     marginTop: -12,
   },
   emptyContainer: {

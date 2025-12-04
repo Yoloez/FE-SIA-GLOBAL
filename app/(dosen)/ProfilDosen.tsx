@@ -1,9 +1,10 @@
 import api from "@/api/axios";
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Image, Modal, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 
@@ -32,6 +33,7 @@ const ProfilDosen = () => {
     message: "",
     buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
   });
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const handleLogoutConfirm = () => {
     setAlertConfig({
@@ -177,9 +179,12 @@ const ProfilDosen = () => {
           <View style={styles.profileCard}>
             <Text style={styles.profileTitle}>Profile</Text>
 
-            <View style={styles.avatarContainer}>
+            <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
               <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} defaultSource={require("../../assets/images/kairi.png")} />
-            </View>
+              <View style={styles.avatarOverlay}>
+                <Ionicons name="expand-outline" size={24} color="#fff" />
+              </View>
+            </TouchableOpacity>
 
             <View style={styles.infoContainer}>
               <Text style={styles.label}>Name:</Text>
@@ -219,6 +224,21 @@ const ProfilDosen = () => {
           </View>
         </View>
         <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} buttons={alertConfig.buttons} />
+
+        {/* Image Modal */}
+        <Modal visible={showImageModal} transparent animationType="fade" onRequestClose={() => setShowImageModal(false)}>
+          <View style={styles.imageModalOverlay}>
+            <TouchableOpacity style={styles.imageModalClose} onPress={() => setShowImageModal(false)} activeOpacity={1}>
+              <View style={styles.imageModalContent}>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setShowImageModal(false)}>
+                  <Ionicons name="close-circle" size={36} color="#fff" />
+                </TouchableOpacity>
+                <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.fullImage} resizeMode="contain" />
+                <Text style={styles.imageModalName}>{profileData?.full_name}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </Modal>
       </LinearGradient>
     </View>
   );
@@ -312,12 +332,21 @@ const styles = StyleSheet.create({
   avatarContainer: {
     alignItems: "center",
     marginBottom: 25,
+    position: "relative",
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
     backgroundColor: "white",
+  },
+  avatarOverlay: {
+    position: "absolute",
+    bottom: 0,
+    right: "35%",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 12,
+    padding: 4,
   },
   infoContainer: {
     marginBottom: 15,
@@ -400,6 +429,41 @@ const styles = StyleSheet.create({
   },
   navButtonActive: {
     transform: [{ scale: 1.1 }],
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imageModalClose: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imageModalContent: {
+    width: "90%",
+    alignItems: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    top: -50,
+    right: 0,
+    zIndex: 10,
+  },
+  fullImage: {
+    width: width * 0.9,
+    height: width * 0.9,
+    borderRadius: 20,
+    backgroundColor: "white",
+  },
+  imageModalName: {
+    color: "#fff",
+    fontSize: 18,
+    marginTop: 20,
+    textAlign: "center",
+    fontWeight: "600",
   },
 });
 

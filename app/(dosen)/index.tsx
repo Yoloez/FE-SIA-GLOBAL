@@ -150,7 +150,7 @@ export default function HomeScreen() {
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/notification")}>
+              <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/getNotification")}>
                 <Ionicons name="notifications-outline" size={24} color="white" />
               </TouchableOpacity>
             </View>

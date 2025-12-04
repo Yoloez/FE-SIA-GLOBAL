@@ -1,85 +1,265 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-// Install: npm install lucide-react-native
-import { router } from 'expo-router';
-import { ChevronRight, UserCheck } from 'lucide-react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import React from "react";
+import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ThemedText } from "../../components/ThemedText";
+
 export default function PresencePage() {
   return (
-    <View style={styles.container}>
-      {/* Header Card */}
-      <View style={styles.headerCard}>
-        <Text style={styles.title}>Presence Page</Text>
-        <Text style={styles.subtitle}>Tomo, S.Kom</Text>
-      </View>
+    <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="light-content" backgroundColor="#015023" />
 
-      {/* Menu Options */}
-      <View style={styles.menuContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Presensi
+          </ThemedText>
+          <ThemedText style={styles.headerSubtitle}>Kelola kehadiran mahasiswa</ThemedText>
+        </View>
 
- <TouchableOpacity
-      style={styles.menuItem}
-      onPress={() => router.push('/_presencePage')} 
-    >
-      <View style={styles.iconContainer}>
-        <UserCheck size={28} color="#000" strokeWidth={2} />
-      </View>
-      <Text style={styles.menuText}>Manual Attendance</Text>
-      <ChevronRight size={22} color="#fff" />
-    </TouchableOpacity>
-      </View>
-    </View>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Stats Cards */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <View style={styles.statIconContainer}>
+                <Ionicons name="calendar-outline" size={24} color="#015023" />
+              </View>
+              <ThemedText variant="bold" style={styles.statValue}>
+                8
+              </ThemedText>
+              <ThemedText style={styles.statLabel}>Kelas Aktif</ThemedText>
+            </View>
+
+            <View style={styles.statCard}>
+              <View style={styles.statIconContainer}>
+                <Ionicons name="people-outline" size={24} color="#015023" />
+              </View>
+              <ThemedText variant="bold" style={styles.statValue}>
+                240
+              </ThemedText>
+              <ThemedText style={styles.statLabel}>Total Mahasiswa</ThemedText>
+            </View>
+          </View>
+
+          {/* Quick Actions Section */}
+          <View style={styles.section}>
+            <ThemedText variant="semibold" style={styles.sectionTitle}>
+              Aksi Cepat
+            </ThemedText>
+
+            {/* Manual Attendance Card */}
+            <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/presensi/_presencePage")} activeOpacity={0.7}>
+              <View style={styles.actionIconContainer}>
+                <LinearGradient colors={["#DABC4E", "#C4A83E"]} style={styles.actionIconGradient}>
+                  <Ionicons name="checkmark-done" size={28} color="#015023" />
+                </LinearGradient>
+              </View>
+
+              <View style={styles.actionContent}>
+                <ThemedText variant="bold" style={styles.actionTitle}>
+                  Presensi Manual
+                </ThemedText>
+                <ThemedText style={styles.actionDescription}>Kelola kehadiran mahasiswa secara manual</ThemedText>
+              </View>
+
+              <View style={styles.actionArrow}>
+                <Ionicons name="chevron-forward" size={24} color="#015023" />
+              </View>
+            </TouchableOpacity>
+
+            {/* History Card */}
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => {
+                // TODO: Navigate to history page when implemented
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.actionIconContainer}>
+                <LinearGradient colors={["#DABC4E", "#C4A83E"]} style={styles.actionIconGradient}>
+                  <Ionicons name="time-outline" size={28} color="#015023" />
+                </LinearGradient>
+              </View>
+
+              <View style={styles.actionContent}>
+                <ThemedText variant="bold" style={styles.actionTitle}>
+                  Riwayat Presensi
+                </ThemedText>
+                <ThemedText style={styles.actionDescription}>Lihat riwayat kehadiran mahasiswa</ThemedText>
+              </View>
+
+              <View style={styles.actionArrow}>
+                <Ionicons name="chevron-forward" size={24} color="#015023" />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Info Section */}
+          <View style={styles.section}>
+            <ThemedText variant="semibold" style={styles.sectionTitle}>
+              Informasi
+            </ThemedText>
+
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <Ionicons name="information-circle" size={20} color="#3b82f6" />
+                </View>
+                <ThemedText style={styles.infoText}>Pastikan mahasiswa scan QR pada waktu yang tepat</ThemedText>
+              </View>
+
+              <View style={[styles.infoRow, { marginTop: 12 }]}>
+                <View style={styles.infoIconContainer}>
+                  <Ionicons name="time" size={20} color="#3b82f6" />
+                </View>
+                <ThemedText style={styles.infoText}>Presensi manual dapat dilakukan kapan saja</ThemedText>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#015023',
-    paddingTop: 64,
-    paddingBottom: 32,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
     paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
   },
-  headerCard: {
-    backgroundColor: '#F5EFD3',
-    borderRadius: 24,
-    padding: 40,
-    marginBottom: 32,
-    minHeight: 200,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
+  headerTitle: {
+    fontSize: 28,
+    color: "#F5EFD3",
     marginBottom: 4,
   },
-  subtitle: {
+  headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "rgba(245, 239, 211, 0.7)",
   },
-  menuContainer: {
-    gap: 16,
+  scrollView: {
+    flex: 1,
   },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#F5EFD3",
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  iconContainer: {
+  statIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(1, 80, 35, 0.1)",
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 24,
+    color: "#015023",
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    color: "#F5EFD3",
+    marginBottom: 12,
+  },
+  actionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5EFD3",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionIconContainer: {
     marginRight: 16,
   },
-  menuText: {
+  actionIconGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  actionContent: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#fff',
+  },
+  actionTitle: {
+    fontSize: 16,
+    color: "#015023",
+    marginBottom: 4,
+  },
+  actionDescription: {
+    fontSize: 12,
+    color: "#666",
+    lineHeight: 16,
+  },
+  actionArrow: {
+    width: 32,
+    height: 32,
+    backgroundColor: "rgba(1, 80, 35, 0.1)",
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  infoCard: {
+    backgroundColor: "rgba(245, 239, 211, 0.95)",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  infoIconContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#015023",
+    lineHeight: 18,
   },
 });

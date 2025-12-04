@@ -59,12 +59,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (userData: User, authToken: string) => {
     console.log("========================================");
     console.log("[INVESTIGASI] Login: Mencoba menyimpan data sesi...");
+    console.log("[INVESTIGASI] User Data yang akan disimpan:", userData);
+    console.log("[INVESTIGASI] User ID:", userData.id_user_si);
+    console.log("[INVESTIGASI] User Name:", userData.name);
+    console.log("[INVESTIGASI] User Role:", userData.role);
+    console.log("[INVESTIGASI] Token:", authToken ? "Ada" : "Tidak ada");
     try {
       setUser(userData);
       setToken(authToken);
       await AsyncStorage.setItem("userToken", authToken);
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
       console.log("[INVESTIGASI] Data sesi untuk", userData.name, "berhasil disimpan.");
+
+      // Verifikasi data tersimpan
+      const savedData = await AsyncStorage.getItem("userData");
+      console.log("[INVESTIGASI] Verifikasi data tersimpan:", savedData);
     } catch (e) {
       console.error("[INVESTIGASI] GAGAL menyimpan data ke storage", e);
     }

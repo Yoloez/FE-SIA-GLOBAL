@@ -103,6 +103,13 @@ export default function TabLayout() {
           tabBarStyle: { display: "none" }, // Sembunyikan tab bar
         }}
       />
+      <Tabs.Screen
+        name="attendance-detail"
+        options={{
+          href: null,
+          tabBarStyle: { display: "none" }, // Sembunyikan tab bar
+        }}
+      />
     </Tabs>
   );
 }

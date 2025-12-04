@@ -2,10 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../../api/axios";
-import { ThemedText } from "../../../components/ThemedText";
+import api from "../../api/axios";
+import { ThemedText } from "../../components/ThemedText";
 
 interface ClassInfo {
   id_class: number;
@@ -27,90 +27,91 @@ interface Schedule {
   jam_mulai: string;
   jam_selesai: string;
   code_class: string;
+  jam_presensi: string | null;
+  status: string | null;
   is_active: boolean;
-  total_present: number;
-  total_students: number;
-  attendance_percentage: number;
 }
 
-interface ApiResponse {
-  status: string;
-  message: string;
-  data: {
-    class_info: ClassInfo;
-    schedules: Schedule[];
-  };
+interface Statistics {
+  total_pertemuan: number;
+  sudah_presensi: number;
+  persentase_kehadiran: number;
 }
 
-export default function ClassDetailPage() {
+export default function AttendanceDetailScreen() {
   const { id_class } = useLocalSearchParams<{ id_class: string }>();
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchClassDetail = useCallback(async () => {
+  const fetchAttendanceHistory = useCallback(async () => {
     if (!id_class) return;
 
     setIsLoading(true);
     try {
-      const response = await api.get<ApiResponse>(`/lecturer/attendance/classes/${id_class}/schedules`);
+      const response = await api.get(`/student/attendance/classes/${id_class}/history`);
+      const data = response.data.data;
 
-      if (response.data.status === "success") {
-        setClassInfo(response.data.data.class_info);
-        setSchedules(response.data.data.schedules);
-      }
+      setClassInfo(data.class_info);
+      setSchedules(data.schedules);
+      setStatistics(data.statistics);
     } catch (error: any) {
-      console.error("Error fetching class detail:", error);
-      Alert.alert("Error", error.response?.data?.message || "Gagal memuat data kelas");
+      console.error("Error fetching attendance history:", error);
     } finally {
       setIsLoading(false);
     }
   }, [id_class]);
 
   useEffect(() => {
-    fetchClassDetail();
-  }, [fetchClassDetail]);
-
-  const handleManualPresence = (schedule: Schedule) => {
-    if (!classInfo) return;
-
-    router.push({
-      pathname: "./_manualAttendance",
-      params: {
-        id_class: classInfo.id_class,
-        id_schedule: schedule.id_schedule,
-        pertemuan: schedule.pertemuan,
-      },
-    });
-  };
+    fetchAttendanceHistory();
+  }, [fetchAttendanceHistory]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Oct", "Nov", "Des"];
+    const days = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
     return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   };
 
+  const getStatusColor = (status: string | null) => {
+    if (!status) return "#9ca3af";
+    if (status === "Scan QR") return "#22c55e";
+    return "#3b82f6";
+  };
+
+  const getStatusIcon = (status: string | null) => {
+    if (!status) return "close-circle";
+    if (status === "Scan QR") return "qr-code";
+    return "checkmark-circle";
+  };
+
   const renderScheduleCard = ({ item }: { item: Schedule }) => (
     <View style={styles.scheduleCard}>
-      {/* Schedule Header */}
       <View style={styles.scheduleHeader}>
         <View style={styles.scheduleHeaderLeft}>
-          <ThemedText variant="bold" style={styles.scheduleNumber}>
-            Pertemuan {item.pertemuan}
-          </ThemedText>
+          <View style={styles.pertemuanBadge}>
+            <ThemedText variant="bold" style={styles.pertemuanText}>
+              #{item.pertemuan}
+            </ThemedText>
+          </View>
           {item.is_active && (
             <View style={styles.activeBadge}>
               <ThemedText variant="semibold" style={styles.activeBadgeText}>
-                Aktif
+                Active
               </ThemedText>
             </View>
           )}
         </View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <Ionicons name={getStatusIcon(item.status)} size={14} color="#fff" />
+          <ThemedText variant="semibold" style={styles.statusText}>
+            {item.status || "Belum"}
+          </ThemedText>
+        </View>
       </View>
 
-      {/* Date & Time */}
       <View style={styles.scheduleInfo}>
         <Ionicons name="calendar-outline" size={16} color="#666" />
         <ThemedText style={styles.scheduleInfoText}>{formatDate(item.tanggal)}</ThemedText>
@@ -123,30 +124,12 @@ export default function ClassDetailPage() {
         </ThemedText>
       </View>
 
-      {/* Attendance Stats */}
-      <View style={styles.attendanceStats}>
-        <View style={styles.statItem}>
-          <ThemedText variant="semibold" style={styles.statValue}>
-            {item.total_present}/{item.total_students}
-          </ThemedText>
-          <ThemedText style={styles.statLabel}>Mahasiswa Hadir</ThemedText>
+      {item.jam_presensi && (
+        <View style={styles.scheduleInfo}>
+          <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+          <ThemedText style={[styles.scheduleInfoText, { color: "#22c55e" }]}>Presensi: {item.jam_presensi}</ThemedText>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <ThemedText variant="semibold" style={styles.statValue}>
-            {item.attendance_percentage.toFixed(0)}%
-          </ThemedText>
-          <ThemedText style={styles.statLabel}>Kehadiran</ThemedText>
-        </View>
-      </View>
-
-      {/* Manual Presence Button */}
-      <TouchableOpacity style={styles.manualButton} onPress={() => handleManualPresence(item)} activeOpacity={0.7}>
-        <Ionicons name="checkbox-outline" size={20} color="#015023" />
-        <ThemedText variant="semibold" style={styles.manualButtonText}>
-          Presensi Manual
-        </ThemedText>
-      </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -157,7 +140,7 @@ export default function ClassDetailPage() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#F5EFD3" />
             <ThemedText variant="semibold" style={styles.loadingText}>
-              Memuat detail kelas...
+              Loading attendance history...
             </ThemedText>
           </View>
         </SafeAreaView>
@@ -165,20 +148,22 @@ export default function ClassDetailPage() {
     );
   }
 
-  if (!classInfo) {
+  if (!classInfo || !statistics) {
     return (
       <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
           <View style={styles.emptyContainer}>
             <Ionicons name="alert-circle-outline" size={64} color="rgba(255,255,255,0.5)" />
             <ThemedText variant="semibold" style={styles.emptyText}>
-              Data kelas tidak ditemukan
+              Class data not found
             </ThemedText>
           </View>
         </SafeAreaView>
       </LinearGradient>
     );
   }
+
+  const percentageColor = statistics.persentase_kehadiran >= 80 ? "#22c55e" : statistics.persentase_kehadiran >= 60 ? "#eab308" : "#ef4444";
 
   return (
     <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
@@ -189,7 +174,7 @@ export default function ClassDetailPage() {
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <ThemedText variant="bold" style={styles.headerTitle}>
-            Detail Kelas
+            Attendance History
           </ThemedText>
           <View style={styles.headerSpacer} />
         </View>
@@ -225,11 +210,6 @@ export default function ClassDetailPage() {
             </View>
 
             <View style={styles.classInfoRow}>
-              <Ionicons name="calendar-outline" size={16} color="#666" />
-              <ThemedText style={styles.classInfoText}>{classInfo.academic_period}</ThemedText>
-            </View>
-
-            <View style={styles.classInfoRow}>
               <Ionicons name="time-outline" size={16} color="#666" />
               <ThemedText style={styles.classInfoText}>
                 {classInfo.start_time} - {classInfo.end_time}
@@ -238,10 +218,40 @@ export default function ClassDetailPage() {
           </View>
         </View>
 
+        {/* Statistics Card */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsCard}>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statLabel}>Total Pertemuan</ThemedText>
+              <ThemedText variant="bold" style={styles.statValue}>
+                {statistics.total_pertemuan}
+              </ThemedText>
+            </View>
+
+            <View style={styles.statDivider} />
+
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statLabel}>Sudah Presensi</ThemedText>
+              <ThemedText variant="bold" style={styles.statValue}>
+                {statistics.sudah_presensi}
+              </ThemedText>
+            </View>
+
+            <View style={styles.statDivider} />
+
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statLabel}>Kehadiran</ThemedText>
+              <ThemedText variant="bold" style={[styles.statValue, { color: percentageColor }]}>
+                {statistics.persentase_kehadiran.toFixed(0)}%
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+
         {/* Schedules List */}
         <View style={styles.schedulesSection}>
           <ThemedText variant="semibold" style={styles.sectionTitle}>
-            Daftar Pertemuan
+            Riwayat Pertemuan
           </ThemedText>
           {schedules.length > 0 ? (
             <FlatList data={schedules} renderItem={renderScheduleCard} keyExtractor={(item) => item.id_schedule.toString()} contentContainerStyle={styles.schedulesList} showsVerticalScrollIndicator={false} />
@@ -337,6 +347,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
   },
+  statsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  statsCard: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: "rgba(1, 80, 35, 0.2)",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "#666",
+    marginBottom: 6,
+  },
+  statValue: {
+    fontSize: 20,
+    color: "#015023",
+  },
   schedulesSection: {
     flex: 1,
     paddingTop: 8,
@@ -366,19 +405,37 @@ const styles = StyleSheet.create({
   scheduleHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
-  scheduleNumber: {
-    fontSize: 16,
-    color: "#015023",
-  },
-  activeBadge: {
-    backgroundColor: "#22c55e",
+  pertemuanBadge: {
+    backgroundColor: "#015023",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
+  pertemuanText: {
+    fontSize: 12,
+    color: "#F5EFD3",
+  },
+  activeBadge: {
+    backgroundColor: "#22c55e",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
   activeBadgeText: {
+    fontSize: 10,
+    color: "#ffffff",
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusText: {
     fontSize: 11,
     color: "#ffffff",
   },
@@ -391,46 +448,6 @@ const styles = StyleSheet.create({
   scheduleInfoText: {
     fontSize: 13,
     color: "#666",
-  },
-  attendanceStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(1, 80, 35, 0.05)",
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: "rgba(1, 80, 35, 0.2)",
-  },
-  statValue: {
-    fontSize: 18,
-    color: "#015023",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: "#666",
-  },
-  manualButton: {
-    backgroundColor: "#DABC4E",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
-  manualButtonText: {
-    fontSize: 14,
-    color: "#015023",
   },
   loadingContainer: {
     flex: 1,

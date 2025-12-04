@@ -1,3 +1,4 @@
+import { ThemedText } from "@/components/ThemedText";
 import { Urbanist_400Regular, Urbanist_600SemiBold, useFonts } from "@expo-google-fonts/urbanist";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -49,11 +50,17 @@ export default function LoginScreen() {
       const accessToken = responseData.access_token;
 
       console.log("AUTH TOKEN DITERIMA:", accessToken);
+      console.log("USER DATA DARI API:", userFromApi);
 
+      // Transform user data: map 'id' to 'id_user_si' for consistency
       const transformedUser = {
-        ...userFromApi,
+        id_user_si: userFromApi.id, // Backend mengirim 'id', kita mapping ke 'id_user_si'
+        name: userFromApi.name,
+        email: userFromApi.email,
         role: userFromApi.roles && userFromApi.roles.length > 0 ? userFromApi.roles[0] : "mahasiswa",
       };
+
+      console.log("USER DATA TRANSFORMED:", transformedUser);
 
       await login(transformedUser, accessToken);
     } catch (error) {
@@ -120,7 +127,7 @@ export default function LoginScreen() {
                 </TouchableOpacity> */}
 
                 <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-                  {isLoading ? <ActivityIndicator size="small" color="#000000" /> : <Text style={styles.buttonText}>Login</Text>}
+                  {isLoading ? <ActivityIndicator size="small" color="#000000" /> : <ThemedText style={styles.buttonText}>Login</ThemedText>}
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -212,7 +219,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    fontFamily: "Urbanist_600Regular",
     color: "black",
     fontSize: 18,
     fontWeight: "bold",

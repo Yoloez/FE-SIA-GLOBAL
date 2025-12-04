@@ -34,6 +34,8 @@ export default function GradesScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"plan" | "results">("results");
+  const [attendanceClasses, setAttendanceClasses] = useState<any[]>([]);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
 
   const fetchGrades = useCallback(async () => {
     setIsLoading(true);
@@ -64,10 +66,52 @@ export default function GradesScreen() {
     }
   }, [selectedPeriod]);
 
+  const fetchAttendanceClasses = useCallback(async () => {
+    setIsLoadingAttendance(true);
+    try {
+      const response = await api.get("/student/attendance/classes");
+      const classesData = response.data.data || [];
+
+      // Fetch attendance stats for each class
+      const classesWithStats = await Promise.all(
+        classesData.map(async (classItem: any) => {
+          try {
+            const historyResponse = await api.get(`/student/attendance/classes/${classItem.id_class}/history`);
+            const stats = historyResponse.data.data.statistics;
+            return {
+              ...classItem,
+              attendance_stats: stats,
+            };
+          } catch (error) {
+            console.error(`Error fetching attendance for class ${classItem.id_class}:`, error);
+            return {
+              ...classItem,
+              attendance_stats: {
+                total_pertemuan: 0,
+                sudah_presensi: 0,
+                persentase_kehadiran: 0,
+              },
+            };
+          }
+        })
+      );
+
+      setAttendanceClasses(classesWithStats);
+    } catch (error) {
+      console.error("Error fetching attendance classes:", error);
+      setAttendanceClasses([]);
+    } finally {
+      setIsLoadingAttendance(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchGrades();
-    }, [fetchGrades])
+      if (activeTab === "plan") {
+        fetchAttendanceClasses();
+      }
+    }, [fetchGrades, fetchAttendanceClasses, activeTab])
   );
 
   // Get unique academic periods
@@ -138,6 +182,64 @@ export default function GradesScreen() {
       totalCount: filteredData.length,
     };
   }, [filteredData, grades]);
+
+  const handleClassPress = (classId: number) => {
+    router.push({
+      pathname: "/(mahasiswa)/attendance-detail",
+      params: { id_class: classId },
+    });
+  };
+
+  const renderAttendanceCard = ({ item }: { item: any }) => {
+    const stats = item.attendance_stats || {};
+    const percentage = stats.persentase_kehadiran || 0;
+    const getPercentageColor = (pct: number) => {
+      if (pct >= 80) return "#22c55e";
+      if (pct >= 60) return "#eab308";
+      return "#ef4444";
+    };
+
+    return (
+      <TouchableOpacity style={styles.gradeCard} onPress={() => handleClassPress(item.id_class)} activeOpacity={0.7}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <View style={styles.codeChip}>
+              <ThemedText variant="bold" style={styles.codeChipText}>
+                {item.kode_matkul}
+              </ThemedText>
+            </View>
+            <View style={styles.sksChipSmall}>
+              <ThemedText variant="semibold" style={styles.sksChipText}>
+                {item.sks} SKS
+              </ThemedText>
+            </View>
+          </View>
+          <View style={[styles.percentageChip, { backgroundColor: getPercentageColor(percentage) }]}>
+            <ThemedText variant="bold" style={styles.percentageText}>
+              {percentage.toFixed(0)}%
+            </ThemedText>
+          </View>
+        </View>
+
+        <ThemedText variant="bold" style={styles.subjectTitle} numberOfLines={2}>
+          {item.nama_matkul}
+        </ThemedText>
+        <ThemedText style={styles.classCode}>
+          Kelas {item.kelas} • {item.dosen}
+        </ThemedText>
+
+        <View style={styles.attendanceFooter}>
+          <View style={styles.attendanceItem}>
+            <Ionicons name="calendar-outline" size={16} color="#666" />
+            <ThemedText style={styles.attendanceLabel}>
+              {stats.sudah_presensi || 0}/{stats.total_pertemuan || 0} Pertemuan
+            </ThemedText>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#015023" />
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderGradeCard = ({ item, index }: { item: GradeItem; index: number }) => {
     return (
@@ -237,7 +339,13 @@ export default function GradesScreen() {
 
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
-          <TouchableOpacity style={[styles.tab, activeTab === "plan" && styles.tabActive]} onPress={() => setActiveTab("plan")}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === "plan" && styles.tabActive]}
+            onPress={() => {
+              setActiveTab("plan");
+              fetchAttendanceClasses();
+            }}
+          >
             <ThemedText variant="semibold" style={[styles.tabText, activeTab === "plan" && styles.tabTextActive]}>
               Study Plan
             </ThemedText>
@@ -311,26 +419,50 @@ export default function GradesScreen() {
           </View>
         )}
 
-        {/* Grade Cards List */}
-        {isLoading ? (
+        {/* Content Based on Active Tab */}
+        {activeTab === "results" ? (
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#DABC4E" />
+              <ThemedText style={styles.loadingText}>Loading grades...</ThemedText>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredData}
+              renderItem={renderGradeCard}
+              keyExtractor={(item, index) => `${item.id_class}-${index}`}
+              contentContainerStyle={styles.gradesList}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="document-text-outline" size={64} color="rgba(255,255,255,0.3)" />
+                  <ThemedText variant="semibold" style={styles.emptyText}>
+                    No grades available
+                  </ThemedText>
+                  <ThemedText style={styles.emptySubtext}>{selectedPeriod ? "No grades available for this period" : "Grades will appear here once your lecturers input them"}</ThemedText>
+                </View>
+              }
+            />
+          )
+        ) : isLoadingAttendance ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#DABC4E" />
-            <ThemedText style={styles.loadingText}>Loading grades...</ThemedText>
+            <ThemedText style={styles.loadingText}>Loading attendance data...</ThemedText>
           </View>
         ) : (
           <FlatList
-            data={filteredData}
-            renderItem={renderGradeCard}
-            keyExtractor={(item, index) => `${item.id_class}-${index}`}
+            data={attendanceClasses}
+            renderItem={renderAttendanceCard}
+            keyExtractor={(item) => item.id_class.toString()}
             contentContainerStyle={styles.gradesList}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="document-text-outline" size={64} color="rgba(255,255,255,0.3)" />
+                <Ionicons name="calendar-outline" size={64} color="rgba(255,255,255,0.3)" />
                 <ThemedText variant="semibold" style={styles.emptyText}>
-                  No grades available
+                  No classes available
                 </ThemedText>
-                <ThemedText style={styles.emptySubtext}>{selectedPeriod ? "No grades available for this period" : "Grades will appear here once your lecturers input them"}</ThemedText>
+                <ThemedText style={styles.emptySubtext}>You are not enrolled in any classes yet</ThemedText>
               </View>
             }
           />
@@ -395,11 +527,11 @@ const styles = StyleSheet.create({
     color: "#015023",
   },
   userCard: {
-    backgroundColor: "#F5EFD3",
+    backgroundColor: "transparent",
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 20,
-    padding: 16,
+    padding: 16,  
     borderWidth: 1,
     borderColor: "black",
     shadowColor: "#000",
@@ -639,5 +771,34 @@ const styles = StyleSheet.create({
   },
   periodItemTextSelected: {
     color: "#015023",
+  },
+  percentageChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 50,
+    alignItems: "center",
+  },
+  percentageText: {
+    fontSize: 12,
+    color: "#fff",
+  },
+  attendanceFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+  },
+  attendanceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  attendanceLabel: {
+    fontSize: 13,
+    color: "#666",
   },
 });

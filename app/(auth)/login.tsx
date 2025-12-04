@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    fontFamily: "Urbanist_400Regular",
+    fontFamily: "Urbanist_600Regular",
     color: "black",
     fontSize: 18,
     fontWeight: "bold",

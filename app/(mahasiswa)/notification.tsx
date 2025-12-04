@@ -3,8 +3,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ThemedText } from "../../components/ThemedText";
 
 const { width } = Dimensions.get("window");
 
@@ -121,11 +122,13 @@ const CustomModal: React.FC<CustomModalProps> = ({ visible, onClose, title, mess
             </View>
 
             {/* Title */}
-            <Text style={styles.modalTitle}>{title}</Text>
+            <ThemedText variant="bold" style={styles.modalTitle}>
+              {title}
+            </ThemedText>
 
             {/* Message */}
             <ScrollView style={styles.messageScrollView} showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalMessage}>{message}</Text>
+              <ThemedText style={styles.modalMessage}>{message}</ThemedText>
 
               {/* Metadata Info */}
               {metadata && (
@@ -133,19 +136,25 @@ const CustomModal: React.FC<CustomModalProps> = ({ visible, onClose, title, mess
                   {metadata.class_code && (
                     <View style={styles.metadataRow}>
                       <Ionicons name="school-outline" size={16} color="#6B7280" />
-                      <Text style={styles.metadataText}>Kelas: {metadata.class_code}</Text>
+                      <ThemedText variant="semibold" style={styles.metadataText}>
+                        Kelas: {metadata.class_code}
+                      </ThemedText>
                     </View>
                   )}
                   {metadata.subject_name && (
                     <View style={styles.metadataRow}>
                       <Ionicons name="book-outline" size={16} color="#6B7280" />
-                      <Text style={styles.metadataText}>{metadata.subject_name}</Text>
+                      <ThemedText variant="semibold" style={styles.metadataText}>
+                        {metadata.subject_name}
+                      </ThemedText>
                     </View>
                   )}
                   {metadata.lecturer_name && (
                     <View style={styles.metadataRow}>
                       <Ionicons name="person-outline" size={16} color="#6B7280" />
-                      <Text style={styles.metadataText}>Dosen: {metadata.lecturer_name}</Text>
+                      <ThemedText variant="semibold" style={styles.metadataText}>
+                        Dosen: {metadata.lecturer_name}
+                      </ThemedText>
                     </View>
                   )}
                 </View>
@@ -154,7 +163,9 @@ const CustomModal: React.FC<CustomModalProps> = ({ visible, onClose, title, mess
 
             {/* Action Button */}
             <TouchableOpacity style={[styles.modalButton, { backgroundColor: iconConfig.color }]} onPress={onClose} activeOpacity={0.8}>
-              <Text style={styles.modalButtonText}>Tutup</Text>
+              <ThemedText variant="semibold" style={styles.modalButtonText}>
+                Tutup
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -218,15 +229,19 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ visible, onClose, onConfirm
             </View>
 
             {/* Title */}
-            <Text style={styles.modalTitle}>{title}</Text>
+            <ThemedText variant="bold" style={styles.modalTitle}>
+              {title}
+            </ThemedText>
 
             {/* Message */}
-            <Text style={styles.modalMessage}>{message}</Text>
+            <ThemedText style={styles.modalMessage}>{message}</ThemedText>
 
             {/* Action Buttons */}
             <View style={styles.buttonRow}>
               <TouchableOpacity style={[styles.halfButton, styles.cancelButton]} onPress={onClose} activeOpacity={0.8}>
-                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+                <ThemedText variant="semibold" style={styles.cancelButtonText}>
+                  {cancelText}
+                </ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -237,7 +252,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ visible, onClose, onConfirm
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.confirmButtonText}>{confirmText}</Text>
+                <ThemedText variant="semibold" style={styles.confirmButtonText}>
+                  {confirmText}
+                </ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -381,27 +398,33 @@ export default function NotificationScreen() {
         </View>
 
         <View style={styles.contentContainer}>
-          <Text style={styles.notificationTitle} numberOfLines={1}>
+          <ThemedText variant="bold" style={styles.notificationTitle} numberOfLines={1}>
             {item.title}
-          </Text>
+          </ThemedText>
 
-          <Text style={styles.notificationMessage} numberOfLines={2}>
+          <ThemedText style={styles.notificationMessage} numberOfLines={2}>
             {item.message}
-          </Text>
+          </ThemedText>
 
           {item.type === "announcement" && item.metadata.class_code && (
             <View style={styles.classChip}>
               <Ionicons name="school-outline" size={12} color="#015023" />
-              <Text style={styles.classChipText}>{item.metadata.class_code}</Text>
+              <ThemedText variant="semibold" style={styles.classChipText}>
+                {item.metadata.class_code}
+              </ThemedText>
             </View>
           )}
 
           <View style={styles.metaRow}>
-            <Text style={styles.timeText}>{formatTime(item.sent_at)}</Text>
+            <ThemedText variant="semibold" style={styles.timeText}>
+              {formatTime(item.sent_at)}
+            </ThemedText>
             {item.sender !== "System" && (
               <>
-                <Text style={styles.separator}>•</Text>
-                <Text style={styles.senderText}>{item.sender}</Text>
+                <ThemedText style={styles.separator}>•</ThemedText>
+                <ThemedText variant="semibold" style={styles.senderText}>
+                  {item.sender}
+                </ThemedText>
               </>
             )}
           </View>
@@ -424,7 +447,9 @@ export default function NotificationScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifikasi</Text>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Notifikasi
+          </ThemedText>
           {unreadCount > 0 && (
             <TouchableOpacity onPress={showMarkAllConfirmation} style={styles.markAllButton}>
               <Ionicons name="checkmark-done" size={20} color="#DABC4E" />
@@ -438,7 +463,9 @@ export default function NotificationScreen() {
           <View style={styles.unreadBadgeContainer}>
             <View style={styles.unreadBadge}>
               <Ionicons name="notifications" size={16} color="#fff" />
-              <Text style={styles.unreadBadgeText}>{unreadCount} notifikasi belum dibaca</Text>
+              <ThemedText variant="semibold" style={styles.unreadBadgeText}>
+                {unreadCount} notifikasi belum dibaca
+              </ThemedText>
             </View>
           </View>
         )}
@@ -447,32 +474,44 @@ export default function NotificationScreen() {
         <View style={styles.filterContainer}>
           <View style={styles.filterRow}>
             <TouchableOpacity style={[styles.filterTab, filterType === "all" && styles.activeFilterTab]} onPress={() => setFilterType("all")}>
-              <Text style={[styles.filterTabText, filterType === "all" && styles.activeFilterTabText]}>Semua</Text>
+              <ThemedText variant="semibold" style={[styles.filterTabText, filterType === "all" && styles.activeFilterTabText]}>
+                Semua
+              </ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterTab, filterType === "chat" && styles.activeFilterTab]} onPress={() => setFilterType("chat")}>
               <Ionicons name="chatbubble" size={14} color={filterType === "chat" ? "#015023" : "#F5EFD3"} />
-              <Text style={[styles.filterTabText, filterType === "chat" && styles.activeFilterTabText]}>Chat</Text>
+              <ThemedText variant="semibold" style={[styles.filterTabText, filterType === "chat" && styles.activeFilterTabText]}>
+                Chat
+              </ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterTab, filterType === "announcement" && styles.activeFilterTab]} onPress={() => setFilterType("announcement")}>
               <Ionicons name="megaphone" size={14} color={filterType === "announcement" ? "#015023" : "#F5EFD3"} />
-              <Text style={[styles.filterTabText, filterType === "announcement" && styles.activeFilterTabText]}>Pengumuman</Text>
+              <ThemedText variant="semibold" style={[styles.filterTabText, filterType === "announcement" && styles.activeFilterTabText]}>
+                Pengumuman
+              </ThemedText>
             </TouchableOpacity>
           </View>
 
           {/* Status Filter */}
           <View style={styles.statusFilterRow}>
             <TouchableOpacity style={[styles.statusFilterChip, filterStatus === "all" && styles.activeStatusChip]} onPress={() => setFilterStatus("all")}>
-              <Text style={[styles.statusFilterText, filterStatus === "all" && styles.activeStatusText]}>Semua</Text>
+              <ThemedText variant="semibold" style={[styles.statusFilterText, filterStatus === "all" && styles.activeStatusText]}>
+                Semua
+              </ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.statusFilterChip, filterStatus === "unread" && styles.activeStatusChip]} onPress={() => setFilterStatus("unread")}>
-              <Text style={[styles.statusFilterText, filterStatus === "unread" && styles.activeStatusText]}>Belum Dibaca</Text>
+              <ThemedText variant="semibold" style={[styles.statusFilterText, filterStatus === "unread" && styles.activeStatusText]}>
+                Belum Dibaca
+              </ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.statusFilterChip, filterStatus === "read" && styles.activeStatusChip]} onPress={() => setFilterStatus("read")}>
-              <Text style={[styles.statusFilterText, filterStatus === "read" && styles.activeStatusText]}>Sudah Dibaca</Text>
+              <ThemedText variant="semibold" style={[styles.statusFilterText, filterStatus === "read" && styles.activeStatusText]}>
+                Sudah Dibaca
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -481,13 +520,17 @@ export default function NotificationScreen() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#DABC4E" />
-            <Text style={styles.loadingText}>Memuat notifikasi...</Text>
+            <ThemedText variant="semibold" style={styles.loadingText}>
+              Memuat notifikasi...
+            </ThemedText>
           </View>
         ) : notifications.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={64} color="rgba(255,255,255,0.5)" />
-            <Text style={styles.emptyText}>Tidak ada notifikasi</Text>
-            <Text style={styles.emptySubtext}>{filterType === "all" && filterStatus === "all" ? "Anda belum memiliki notifikasi" : "Tidak ada notifikasi yang sesuai filter"}</Text>
+            <ThemedText variant="semibold" style={styles.emptyText}>
+              Tidak ada notifikasi
+            </ThemedText>
+            <ThemedText style={styles.emptySubtext}>{filterType === "all" && filterStatus === "all" ? "Anda belum memiliki notifikasi" : "Tidak ada notifikasi yang sesuai filter"}</ThemedText>
           </View>
         ) : (
           <FlatList
@@ -537,7 +580,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "700",
     color: "#ffffff",
     flex: 1,
     textAlign: "center",
@@ -568,7 +610,6 @@ const styles = StyleSheet.create({
   },
   unreadBadgeText: {
     fontSize: 13,
-    fontWeight: "600",
     color: "#DABC4E",
   },
   filterContainer: {
@@ -599,7 +640,6 @@ const styles = StyleSheet.create({
   },
   filterTabText: {
     fontSize: 13,
-    fontWeight: "600",
     color: "#F5EFD3",
   },
   activeFilterTabText: {
@@ -623,12 +663,10 @@ const styles = StyleSheet.create({
   },
   statusFilterText: {
     fontSize: 12,
-    fontWeight: "500",
     color: "rgba(245, 239, 211, 0.7)",
   },
   activeStatusText: {
     color: "#F5EFD3",
-    fontWeight: "600",
   },
   listContent: {
     paddingHorizontal: 16,
@@ -689,7 +727,6 @@ const styles = StyleSheet.create({
   },
   notificationTitle: {
     fontSize: 15,
-    fontWeight: "700",
     color: "#015023",
     marginBottom: 2,
   },
@@ -712,7 +749,6 @@ const styles = StyleSheet.create({
   },
   classChipText: {
     fontSize: 11,
-    fontWeight: "600",
     color: "#015023",
   },
   metaRow: {
@@ -723,7 +759,6 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 11,
     color: "#9CA3AF",
-    fontWeight: "500",
   },
   separator: {
     fontSize: 11,
@@ -732,7 +767,6 @@ const styles = StyleSheet.create({
   senderText: {
     fontSize: 11,
     color: "#6B7280",
-    fontWeight: "500",
   },
   arrowContainer: {
     justifyContent: "center",
@@ -746,7 +780,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: "#FFFFFF",
-    fontWeight: "500",
   },
   emptyContainer: {
     flex: 1,
@@ -756,7 +789,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: "600",
     color: "rgba(255, 255, 255, 0.9)",
     marginTop: 12,
     textAlign: "center",
@@ -806,7 +838,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "700",
     color: "#1F2937",
     textAlign: "center",
     marginBottom: 12,
@@ -838,7 +869,6 @@ const styles = StyleSheet.create({
   metadataText: {
     fontSize: 13,
     color: "#6B7280",
-    fontWeight: "500",
   },
   modalButton: {
     width: "100%",
@@ -849,7 +879,6 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 16,
-    fontWeight: "600",
     color: "#FFFFFF",
   },
   buttonRow: {
@@ -871,7 +900,6 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#6B7280",
   },
   confirmButton: {
@@ -879,7 +907,6 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     fontSize: 15,
-    fontWeight: "600",
     color: "#FFFFFF",
   },
 });

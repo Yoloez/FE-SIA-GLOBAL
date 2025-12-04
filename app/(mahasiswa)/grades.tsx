@@ -2,9 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
+import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
 
 interface GradeItem {
@@ -144,10 +145,14 @@ export default function GradesScreen() {
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <View style={styles.codeChip}>
-              <Text style={styles.codeChipText}>{item.code_subject}</Text>
+              <ThemedText variant="bold" style={styles.codeChipText}>
+                {item.code_subject}
+              </ThemedText>
             </View>
             <View style={styles.sksChipSmall}>
-              <Text style={styles.sksChipText}>SKS: {item.sks}</Text>
+              <ThemedText variant="semibold" style={styles.sksChipText}>
+                SKS: {item.sks}
+              </ThemedText>
             </View>
           </View>
           <TouchableOpacity style={styles.menuIcon}>
@@ -155,22 +160,26 @@ export default function GradesScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.subjectTitle} numberOfLines={2}>
+        <ThemedText variant="bold" style={styles.subjectTitle} numberOfLines={2}>
           {item.subject_name}
-        </Text>
-        <Text style={styles.classCode}>Class: {item.code_class}</Text>
+        </ThemedText>
+        <ThemedText style={styles.classCode}>Class: {item.code_class}</ThemedText>
 
         <View style={styles.gradeFooter}>
           <View style={styles.gradeItem}>
-            <Text style={styles.gradeLabel}>Nilai</Text>
-            <Text style={styles.gradeValueLarge}>{item.grade_details ? item.grade_details.letter : "-"}</Text>
+            <ThemedText style={styles.gradeLabel}>Nilai</ThemedText>
+            <ThemedText variant="bold" style={styles.gradeValueLarge}>
+              {item.grade_details ? item.grade_details.letter : "-"}
+            </ThemedText>
           </View>
 
           <View style={styles.gradeDivider} />
 
           <View style={styles.gradeItem}>
-            <Text style={styles.gradeLabel}>Skor</Text>
-            <Text style={styles.gradeValue}>{item.grade_details ? item.grade_details.score.toFixed(2) : "-"}</Text>
+            <ThemedText style={styles.gradeLabel}>Skor</ThemedText>
+            <ThemedText variant="bold" style={styles.gradeValue}>
+              {item.grade_details ? item.grade_details.score.toFixed(2) : "-"}
+            </ThemedText>
           </View>
         </View>
       </View>
@@ -182,7 +191,9 @@ export default function GradesScreen() {
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPeriodModal(false)}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Pilih Periode Akademik</Text>
+            <ThemedText variant="bold" style={styles.modalTitle}>
+              Pilih Periode Akademik
+            </ThemedText>
             <TouchableOpacity onPress={() => setShowPeriodModal(false)}>
               <Ionicons name="close" size={24} color="#015023" />
             </TouchableOpacity>
@@ -191,7 +202,9 @@ export default function GradesScreen() {
           <ScrollView style={styles.periodList}>
             {academicPeriods.map((period) => (
               <TouchableOpacity key={period.id} style={[styles.periodItem, selectedPeriod === period.id && styles.periodItemSelected]} onPress={() => handlePeriodSelect(period.id)}>
-                <Text style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>{period.name}</Text>
+                <ThemedText variant="semibold" style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>
+                  {period.name}
+                </ThemedText>
                 {selectedPeriod === period.id && <Ionicons name="checkmark-circle" size={20} color="#015023" />}
               </TouchableOpacity>
             ))}
@@ -211,8 +224,10 @@ export default function GradesScreen() {
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Study</Text>
-              <Text style={styles.headerSubtitle}>{selectedPeriodName}</Text>
+              <ThemedText variant="bold" style={styles.headerTitle}>
+                Study
+              </ThemedText>
+              <ThemedText style={styles.headerSubtitle}>{selectedPeriodName}</ThemedText>
             </View>
           </View>
           <TouchableOpacity>
@@ -223,10 +238,14 @@ export default function GradesScreen() {
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           <TouchableOpacity style={[styles.tab, activeTab === "plan" && styles.tabActive]} onPress={() => setActiveTab("plan")}>
-            <Text style={[styles.tabText, activeTab === "plan" && styles.tabTextActive]}>Study Plan</Text>
+            <ThemedText variant="semibold" style={[styles.tabText, activeTab === "plan" && styles.tabTextActive]}>
+              Study Plan
+            </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tab, activeTab === "results" && styles.tabActive]} onPress={() => setActiveTab("results")}>
-            <Text style={[styles.tabText, activeTab === "results" && styles.tabTextActive]}>Study Results</Text>
+            <ThemedText variant="semibold" style={[styles.tabText, activeTab === "results" && styles.tabTextActive]}>
+              Study Results
+            </ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -238,9 +257,11 @@ export default function GradesScreen() {
                 <Ionicons name="trophy" size={16} color="#015023" />
               </View>
               <View>
-                <Text style={styles.statLabel}>SKS</Text>
+                <ThemedText style={styles.statLabel}>SKS</ThemedText>
                 <View style={styles.statValueRow}>
-                  <Text style={styles.statValue}>{statistics.totalSks} SKS</Text>
+                  <ThemedText variant="bold" style={styles.statValue}>
+                    {statistics.totalSks} SKS
+                  </ThemedText>
                 </View>
               </View>
             </View>
@@ -250,9 +271,11 @@ export default function GradesScreen() {
                 <Ionicons name="trophy" size={16} color="#015023" />
               </View>
               <View>
-                <Text style={styles.statLabel}>IPK</Text>
+                <ThemedText style={styles.statLabel}>IPK</ThemedText>
                 <View style={styles.statValueRow}>
-                  <Text style={styles.statValue}>{statistics.ipk}</Text>
+                  <ThemedText variant="bold" style={styles.statValue}>
+                    {statistics.ipk}
+                  </ThemedText>
                 </View>
               </View>
             </View>
@@ -262,9 +285,11 @@ export default function GradesScreen() {
                 <Ionicons name="trophy" size={16} color="#015023" />
               </View>
               <View>
-                <Text style={styles.statLabel}>IPS</Text>
+                <ThemedText style={styles.statLabel}>IPS</ThemedText>
                 <View style={styles.statValueRow}>
-                  <Text style={styles.statValue}>{statistics.ips}</Text>
+                  <ThemedText variant="bold" style={styles.statValue}>
+                    {statistics.ips}
+                  </ThemedText>
                 </View>
               </View>
             </View>
@@ -277,9 +302,9 @@ export default function GradesScreen() {
             <TouchableOpacity style={styles.periodSelector} onPress={() => setShowPeriodModal(true)}>
               <View style={styles.periodSelectorContent}>
                 <Ionicons name="calendar" size={18} color="#F5EFD3" />
-                <Text style={styles.periodSelectorText} numberOfLines={1}>
+                <ThemedText variant="semibold" style={styles.periodSelectorText} numberOfLines={1}>
                   {selectedPeriodName}
-                </Text>
+                </ThemedText>
               </View>
               <Ionicons name="chevron-down" size={20} color="#F5EFD3" />
             </TouchableOpacity>
@@ -290,7 +315,7 @@ export default function GradesScreen() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#DABC4E" />
-            <Text style={styles.loadingText}>Loading grades...</Text>
+            <ThemedText style={styles.loadingText}>Loading grades...</ThemedText>
           </View>
         ) : (
           <FlatList
@@ -302,8 +327,10 @@ export default function GradesScreen() {
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="document-text-outline" size={64} color="rgba(255,255,255,0.3)" />
-                <Text style={styles.emptyText}>No grades available</Text>
-                <Text style={styles.emptySubtext}>{selectedPeriod ? "No grades available for this period" : "Grades will appear here once your lecturers input them"}</Text>
+                <ThemedText variant="semibold" style={styles.emptyText}>
+                  No grades available
+                </ThemedText>
+                <ThemedText style={styles.emptySubtext}>{selectedPeriod ? "No grades available for this period" : "Grades will appear here once your lecturers input them"}</ThemedText>
               </View>
             }
           />
@@ -337,7 +364,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "bold",
     color: "#fff",
   },
   headerSubtitle: {
@@ -363,7 +389,6 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 13,
-    fontWeight: "600",
     color: "rgba(255,255,255,0.6)",
   },
   tabTextActive: {
@@ -416,7 +441,6 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 13,
-    fontWeight: "bold",
     color: "#333",
   },
   filterContainer: {
@@ -442,7 +466,6 @@ const styles = StyleSheet.create({
   },
   periodSelectorText: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#F5EFD3",
     flex: 1,
   },
@@ -482,7 +505,6 @@ const styles = StyleSheet.create({
   },
   codeChipText: {
     fontSize: 11,
-    fontWeight: "bold",
     color: "#015023",
   },
   sksChipSmall: {
@@ -493,7 +515,6 @@ const styles = StyleSheet.create({
   },
   sksChipText: {
     fontSize: 11,
-    fontWeight: "600",
     color: "#666",
   },
   menuIcon: {
@@ -504,7 +525,6 @@ const styles = StyleSheet.create({
   },
   subjectTitle: {
     fontSize: 15,
-    fontWeight: "bold",
     color: "#333",
     marginBottom: 4,
     lineHeight: 20,
@@ -530,12 +550,10 @@ const styles = StyleSheet.create({
   },
   gradeValueLarge: {
     fontSize: 28,
-    fontWeight: "bold",
     color: "#015023",
   },
   gradeValue: {
     fontSize: 16,
-    fontWeight: "bold",
     color: "#333",
   },
   gradeDivider: {
@@ -563,7 +581,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: "600",
     color: "rgba(255,255,255,0.9)",
     marginTop: 20,
     marginBottom: 8,
@@ -598,7 +615,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "700",
     color: "#015023",
   },
   periodList: {
@@ -619,11 +635,9 @@ const styles = StyleSheet.create({
   periodItemText: {
     fontSize: 15,
     color: "#374151",
-    fontWeight: "500",
     flex: 1,
   },
   periodItemTextSelected: {
     color: "#015023",
-    fontWeight: "700",
   },
 });

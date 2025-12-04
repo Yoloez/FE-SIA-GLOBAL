@@ -2,9 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
+import { ThemedText } from "../../components/ThemedText";
 
 interface ClassItem {
   no: number;
@@ -98,28 +99,28 @@ export default function PresencePage() {
       {/* Header Card */}
       <View style={styles.cardHeader}>
         <View style={styles.codeChip}>
-          <Text style={styles.codeChipText}>{item.kode_matkul}</Text>
+          <ThemedText variant="bold" style={styles.codeChipText}>{item.kode_matkul}</ThemedText>
         </View>
         <View style={styles.sksChip}>
-          <Text style={styles.sksChipText}>{item.sks} SKS</Text>
+          <ThemedText variant="bold" style={styles.sksChipText}>{item.sks} SKS</ThemedText>
         </View>
       </View>
 
       {/* Course Name */}
-      <Text style={styles.courseName} numberOfLines={2}>
+      <ThemedText variant="bold" style={styles.courseName} numberOfLines={2}>
         {item.nama_matkul}
-      </Text>
+      </ThemedText>
 
       {/* Class Code */}
       <View style={styles.infoRow}>
         <Ionicons name="people-outline" size={16} color="#666" />
-        <Text style={styles.infoText}>Kelas {item.kelas}</Text>
+        <ThemedText style={styles.infoText}>Kelas {item.kelas}</ThemedText>
       </View>
 
       {/* Meeting Count */}
       <View style={styles.infoRow}>
         <Ionicons name="calendar-outline" size={16} color="#666" />
-        <Text style={styles.infoText}>{item.jumlah_pertemuan} Pertemuan</Text>
+        <ThemedText style={styles.infoText}>{item.jumlah_pertemuan} Pertemuan</ThemedText>
       </View>
 
       {/* Arrow Icon */}
@@ -134,7 +135,7 @@ export default function PresencePage() {
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPeriodModal(false)}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Pilih Periode Akademik</Text>
+            <ThemedText variant="bold" style={styles.modalTitle}>Pilih Periode Akademik</ThemedText>
             <TouchableOpacity onPress={() => setShowPeriodModal(false)}>
               <Ionicons name="close" size={24} color="#015023" />
             </TouchableOpacity>
@@ -143,7 +144,7 @@ export default function PresencePage() {
           <ScrollView style={styles.periodList}>
             {academicPeriods.map((period) => (
               <TouchableOpacity key={period.id} style={[styles.periodItem, selectedPeriod === period.id && styles.periodItemSelected]} onPress={() => handlePeriodSelect(period.id)}>
-                <Text style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>{period.name}</Text>
+                <ThemedText variant={selectedPeriod === period.id ? "bold" : "regular"} style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>{period.name}</ThemedText>
                 {selectedPeriod === period.id && <Ionicons name="checkmark-circle" size={20} color="#015023" />}
               </TouchableOpacity>
             ))}
@@ -161,7 +162,7 @@ export default function PresencePage() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Presensi Kelas</Text>
+          <ThemedText variant="bold" style={styles.headerTitle}>Presensi Kelas</ThemedText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -171,9 +172,9 @@ export default function PresencePage() {
             <TouchableOpacity style={styles.periodSelector} onPress={() => setShowPeriodModal(true)}>
               <View style={styles.periodSelectorContent}>
                 <Ionicons name="calendar" size={18} color="#F5EFD3" />
-                <Text style={styles.periodSelectorText} numberOfLines={1}>
+                <ThemedText variant="semibold" style={styles.periodSelectorText} numberOfLines={1}>
                   {selectedPeriodName}
-                </Text>
+                </ThemedText>
               </View>
               <Ionicons name="chevron-down" size={20} color="#F5EFD3" />
             </TouchableOpacity>
@@ -184,7 +185,7 @@ export default function PresencePage() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#F5EFD3" />
-            <Text style={styles.loadingText}>Memuat data kelas...</Text>
+            <ThemedText variant="semibold" style={styles.loadingText}>Memuat data kelas...</ThemedText>
           </View>
         ) : (
           <>
@@ -194,8 +195,8 @@ export default function PresencePage() {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="folder-open-outline" size={64} color="rgba(255,255,255,0.5)" />
-                <Text style={styles.emptyText}>Tidak ada kelas</Text>
-                <Text style={styles.emptySubtext}>{selectedPeriod ? "Tidak ada kelas pada periode ini" : "Belum ada kelas yang tersedia"}</Text>
+                <ThemedText variant="semibold" style={styles.emptyText}>Tidak ada kelas</ThemedText>
+                <ThemedText style={styles.emptySubtext}>{selectedPeriod ? "Tidak ada kelas pada periode ini" : "Belum ada kelas yang tersedia"}</ThemedText>
               </View>
             )}
           </>
@@ -230,7 +231,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "700",
     color: "#ffffff",
     flex: 1,
     textAlign: "center",
@@ -261,7 +261,6 @@ const styles = StyleSheet.create({
   },
   periodSelectorText: {
     fontSize: 14,
-    fontWeight: "600",
     color: "#F5EFD3",
     flex: 1,
   },
@@ -274,7 +273,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: "#F5EFD3",
-    fontWeight: "500",
   },
   listContainer: {
     padding: 20,
@@ -306,7 +304,6 @@ const styles = StyleSheet.create({
   },
   codeChipText: {
     fontSize: 12,
-    fontWeight: "700",
     color: "#015023",
   },
   sksChip: {
@@ -317,12 +314,10 @@ const styles = StyleSheet.create({
   },
   sksChipText: {
     fontSize: 12,
-    fontWeight: "700",
     color: "#F5EFD3",
   },
   courseName: {
     fontSize: 16,
-    fontWeight: "700",
     color: "#015023",
     marginBottom: 12,
     lineHeight: 22,
@@ -337,7 +332,6 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 13,
     color: "#666",
-    fontWeight: "500",
   },
   arrowIcon: {
     position: "absolute",
@@ -355,7 +349,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "rgba(255,255,255,0.9)",
     marginTop: 16,
-    fontWeight: "600",
   },
   emptySubtext: {
     fontSize: 13,
@@ -388,7 +381,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "700",
     color: "#015023",
   },
   periodList: {
@@ -409,11 +401,9 @@ const styles = StyleSheet.create({
   periodItemText: {
     fontSize: 15,
     color: "#374151",
-    fontWeight: "500",
     flex: 1,
   },
   periodItemTextSelected: {
     color: "#015023",
-    fontWeight: "700",
   },
 });

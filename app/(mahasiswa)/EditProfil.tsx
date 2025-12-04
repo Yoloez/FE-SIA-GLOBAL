@@ -5,7 +5,8 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
 
 export default function EditProfilScreen() {
@@ -142,7 +143,9 @@ export default function EditProfilScreen() {
         <StatusBar barStyle="light-content" backgroundColor="#1a5f3f" />
         <View style={styles.content}>
           <View style={styles.profileCard}>
-            <Text style={styles.profileTitle}>Edit Profile</Text>
+            <ThemedText variant="semibold" style={styles.profileTitle}>
+              Edit Profile
+            </ThemedText>
 
             <View style={styles.avatarContainer}>
               <Image source={profileImage ? { uri: profileImage } : require("../../assets/images/kairi.png")} style={styles.avatar} />
@@ -155,34 +158,36 @@ export default function EditProfilScreen() {
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
               <ScrollView style={{ flex: 1, width: "100%" }} showsVerticalScrollIndicator={false}>
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Nama Lengkap:</Text>
+                  <ThemedText style={styles.label}>Nama Lengkap:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={fullName} onChangeText={setFullName} />
                   </View>
                 </View>
 
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Email:</Text>
+                  <ThemedText style={styles.label}>Email:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
                   </View>
                 </View>
 
-                <Text style={styles.passwordSectionTitle}>Ubah Password (Opsional)</Text>
+                <ThemedText variant="semibold" style={styles.passwordSectionTitle}>
+                  Ubah Password (Opsional)
+                </ThemedText>
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Password Saat Ini:</Text>
+                  <ThemedText style={styles.label}>Password Saat Ini:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
                   </View>
                 </View>
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Password Baru:</Text>
+                  <ThemedText style={styles.label}>Password Baru:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
                   </View>
                 </View>
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Konfirmasi Password Baru:</Text>
+                  <ThemedText style={styles.label}>Konfirmasi Password Baru:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry />
                   </View>
@@ -190,10 +195,18 @@ export default function EditProfilScreen() {
 
                 {/* Save Button */}
                 <TouchableOpacity style={styles.settingButton} onPress={handleSave} disabled={isLoading}>
-                  {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <Text style={styles.settingButtonText}>Save Changes</Text>}
+                  {isLoading ? (
+                    <ActivityIndicator color="#1a1a1a" />
+                  ) : (
+                    <ThemedText variant="semibold" style={styles.settingButtonText}>
+                      Save Changes
+                    </ThemedText>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={isLoading}>
-                  <Text style={styles.cancelButtonText}>Batal</Text>
+                  <ThemedText variant="semibold" style={styles.cancelButtonText}>
+                    Batal
+                  </ThemedText>
                 </TouchableOpacity>
               </ScrollView>
             </KeyboardAvoidingView>
@@ -252,7 +265,6 @@ const styles = StyleSheet.create({
   profileTitle: {
     color: "#ffffff",
     fontSize: 20,
-    fontWeight: "600",
     textAlign: "center",
     marginBottom: 20,
   },
@@ -318,7 +330,6 @@ const styles = StyleSheet.create({
   settingButtonText: {
     color: "#1a1a1a",
     fontSize: 16,
-    fontWeight: "600",
   },
   bottomNav: {
     flexDirection: "row",
@@ -347,7 +358,6 @@ const styles = StyleSheet.create({
   passwordSectionTitle: {
     color: "#DABC4E",
     fontSize: 16,
-    fontWeight: "bold",
     textAlign: "center",
     marginVertical: 15,
     borderTopWidth: 1,
@@ -369,6 +379,5 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#ffffff",
     fontSize: 16,
-    fontWeight: "600",
   },
 });

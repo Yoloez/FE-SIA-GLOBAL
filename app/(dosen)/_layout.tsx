@@ -51,7 +51,7 @@ export default function TabLayout() {
       {/* Tab Presensi (Tengah - Kustom) */}
 
       <Tabs.Screen
-        name="presensi"
+        name="Presence"
         options={{
           tabBarButton: (props) => (
             <TabBarButton {...props}>
@@ -133,6 +133,13 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="getNotification"
+        options={{
+          href: null,
+          tabBarStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="presensi"
         options={{
           href: null,
           tabBarStyle: { display: "none" },

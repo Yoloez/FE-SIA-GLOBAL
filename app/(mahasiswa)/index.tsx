@@ -1,3 +1,4 @@
+import { ThemedText } from "@/components/ThemedText";
 import { Urbanist_400Regular } from "@expo-google-fonts/urbanist/400Regular";
 import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
 import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
@@ -390,17 +391,17 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => router.push("/(mahasiswa)/grades" as any)} activeOpacity={0.7}>
               <View style={styles.achievementContainer}>
                 <View style={styles.achievementCard}>
-                  <Text style={styles.achievementLabel}>Total SKS</Text>
+                  <ThemedText style={styles.achievementLabel}>Total SKS</ThemedText>
                   {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats.totalSks}</Text>}
                 </View>
 
                 <View style={styles.achievementCard}>
-                  <Text style={styles.achievementLabel}>IPK</Text>
+                  <ThemedText style={styles.achievementLabel}>IPK</ThemedText>
                   {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats.ipk}</Text>}
                 </View>
 
                 <View style={styles.achievementCard}>
-                  <Text style={styles.achievementLabel}>IPS</Text>
+                  <ThemedText style={styles.achievementLabel}>IPS</ThemedText>
                   {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats.currentIps}</Text>}
                 </View>
               </View>

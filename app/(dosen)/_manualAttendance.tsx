@@ -1,143 +1,264 @@
-import { router } from 'expo-router';
-import { ArrowLeft, Check } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import api from "../../api/axios";
+import { ThemedText } from "../../components/ThemedText";
 
+interface Student {
+  id_user_si: number;
+  nim: string;
+  name: string;
+  email: string;
+  checked: boolean;
+}
 
-export default function AttendanceList() {
-  const [students, setStudents] = useState([
-    { id: 1, name: 'Woody', nim: '24/123456/SV/54321', checked: false },
-    { id: 2, name: 'Buzz', nim: '24/123456/SV/54321', checked: true },
-    { id: 3, name: 'Jessie', nim: '24/123456/SV/54321', checked: false },
-    { id: 4, name: 'Lotso', nim: '24/123456/SV/54321', checked: false },
-    { id: 5, name: 'T-Rex', nim: '24/123456/SV/54321', checked: false },
-    { id: 6, name: 'Woody', nim: '24/123456/SV/54321', checked: true },
-    { id: 7, name: 'Buzz', nim: '24/123456/SV/54321', checked: false },
-    { id: 8, name: 'Jessie', nim: '24/123456/SV/54321', checked: false },
-    { id: 9, name: 'Rex', nim: '24/123456/SV/54321', checked: false },
-    { id: 10, name: 'Hamm', nim: '24/123456/SV/54321', checked: false },
-    { id: 11, name: 'Woody', nim: '24/123456/SV/54321', checked: true },
-    { id: 12, name: 'Buzz', nim: '24/123456/SV/54321', checked: false },
-    { id: 13, name: 'Jessie', nim: '24/123456/SV/54321', checked: false },
-    { id: 14, name: 'Rex', nim: '24/123456/SV/54321', checked: false },
-    { id: 15, name: 'Hamm', nim: '24/123456/SV/54321', checked: false },
-     { id: 16, name: 'Hamm', nim: '24/123456/SV/54321', checked: false },
-    { id: 17, name: 'Woody', nim: '24/123456/SV/54321', checked: true },
-    { id: 18, name: 'Buzz', nim: '24/123456/SV/54321', checked: false },
-    { id: 19, name: 'Jessie', nim: '24/123456/SV/54321', checked: false },
-    { id: 20, name: 'Rex', nim: '24/123456/SV/54321', checked: false },
-    { id: 21, name: 'Hamm', nim: '24/123456/SV/54321', checked: false },
-  ]);
+interface ClassInfo {
+  id_class: number;
+  code_class: string;
+  code_subject: string;
+  name_subject: string;
+  sks: number;
+  dosen: string;
+  academic_period: string;
+}
 
-  const toggleStudent = (id) => {
-    setStudents(students.map(student => 
-      student.id === id ? { ...student, checked: !student.checked } : student
-    ));
+interface ApiResponse {
+  status: string;
+  message: string;
+  data: {
+    class_info: ClassInfo;
+    students: Student[];
+  };
+}
+
+export default function ManualAttendance() {
+  const { id_class, id_schedule, pertemuan } = useLocalSearchParams<{
+    id_class: string;
+    id_schedule: string;
+    pertemuan: string;
+  }>();
+
+  const [students, setStudents] = useState<Student[]>([]);
+  const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const fetchClassDetail = useCallback(async () => {
+    if (!id_class) return;
+
+    setIsLoading(true);
+    try {
+      const response = await api.get<ApiResponse>(`lecturer/attendance/classes/${id_class}`);
+
+      if (response.data.status === "success") {
+        setClassInfo(response.data.data.class_info);
+        setStudents(
+          response.data.data.students.map((student) => ({
+            ...student,
+            checked: false,
+          }))
+        );
+      }
+    } catch (error: any) {
+      console.error("Error fetching class detail:", error);
+      Alert.alert("Error", error.response?.data?.message || "Gagal memuat data mahasiswa");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id_class]);
+
+  useEffect(() => {
+    fetchClassDetail();
+  }, [fetchClassDetail]);
+
+  const toggleStudent = (id: number) => {
+    setStudents(students.map((student) => (student.id_user_si === id ? { ...student, checked: !student.checked } : student)));
   };
 
+  const handleSave = async () => {
+    const checkedStudents = students.filter((s) => s.checked);
+
+    if (checkedStudents.length === 0) {
+      Alert.alert("Peringatan", "Pilih minimal 1 mahasiswa untuk presensi");
+      return;
+    }
+
+    Alert.alert("Konfirmasi", `Simpan presensi untuk ${checkedStudents.length} mahasiswa?`, [
+      { text: "Batal", style: "cancel" },
+      {
+        text: "Simpan",
+        onPress: async () => {
+          setIsSaving(true);
+          try {
+            const studentIds = checkedStudents.map((s) => s.id_user_si);
+
+            const response = await api.post(`lecturer/schedules/${id_schedule}/presences`, {
+              student_ids: studentIds,
+            });
+
+            if (response.data.status === "success") {
+              Alert.alert("Berhasil", "Presensi manual berhasil disimpan", [
+                {
+                  text: "OK",
+                  onPress: () => router.back(),
+                },
+              ]);
+            }
+          } catch (error: any) {
+            console.error("Error saving attendance:", error);
+            Alert.alert("Error", error.response?.data?.message || "Gagal menyimpan presensi");
+          } finally {
+            setIsSaving(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  if (isLoading) {
+    return (
+      <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#F5EFD3" />
+            <ThemedText variant="semibold" style={styles.loadingText}>
+              Memuat data mahasiswa...
+            </ThemedText>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  if (!classInfo) {
+    return (
+      <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="alert-circle-outline" size={64} color="rgba(255,255,255,0.5)" />
+            <ThemedText variant="semibold" style={styles.emptyText}>
+              Data kelas tidak ditemukan
+            </ThemedText>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}
-         onPress={() => router.push('/_presencePage')}
-        >
-          <ArrowLeft size={24} color="#fff" />
-          <Text style={styles.headerText}>Attendance</Text>
-        </TouchableOpacity>
-      </View>
+    <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Presensi Manual
+          </ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
 
-      {/* Scrollable Content */}
-      <ScrollView 
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Student List Card */}
-        <View style={styles.cardContainer}>
-          <View style={styles.card}>
-            {/* Course Info */}
-            <View style={styles.courseInfo}>
-              <Text style={styles.courseTitle}>Analisis dan Desain Perangkat Lunak</Text>
-              <Text style={styles.courseDetail}>Class: PL3BB</Text>
-              <Text style={styles.courseDetail}>Student: 50</Text>
-            </View>
+        {/* Scrollable Content */}
+        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Student List Card */}
+          <View style={styles.cardContainer}>
+            <View style={styles.card}>
+              {/* Course Info */}
+              <View style={styles.courseInfo}>
+                <ThemedText variant="semibold" style={styles.courseTitle}>
+                  {classInfo.name_subject}
+                </ThemedText>
+                <ThemedText style={styles.courseDetail}>Kelas: {classInfo.code_class}</ThemedText>
+                <ThemedText style={styles.courseDetail}>Pertemuan: {pertemuan}</ThemedText>
+                <ThemedText style={styles.courseDetail}>Mahasiswa: {students.length}</ThemedText>
+              </View>
 
-            {/* Student List */}
-            <View style={styles.studentList}>
-              {students.map((student) => (
-                <TouchableOpacity
-                  key={student.id}
-                  style={styles.studentItem}
-                  onPress={() => toggleStudent(student.id)}
-                  activeOpacity={0.7}
-                >
-                  {/* Avatar */}
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>?</Text>
-                  </View>
-                  
-                  {/* Info */}
-                  <View style={styles.studentInfo}>
-                    <Text style={styles.studentName}>{student.name}</Text>
-                    <Text style={styles.studentNim}>{student.nim}</Text>
-                  </View>
+              {/* Student List */}
+              <View style={styles.studentList}>
+                {students.map((student) => (
+                  <TouchableOpacity key={student.id_user_si} style={styles.studentItem} onPress={() => toggleStudent(student.id_user_si)} activeOpacity={0.7}>
+                    {/* Avatar */}
+                    <View style={styles.avatar}>
+                      <Ionicons name="person" size={24} color="#666" />
+                    </View>
 
-                  {/* Checkbox */}
-                  <View style={styles.checkbox}>
-                    {student.checked && (
-                      <Check size={18} strokeWidth={3} color="#000" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+                    {/* Info */}
+                    <View style={styles.studentInfo}>
+                      <ThemedText variant="semibold" style={styles.studentName}>
+                        {student.name}
+                      </ThemedText>
+                      <ThemedText style={styles.studentNim}>{student.nim}</ThemedText>
+                    </View>
+
+                    {/* Checkbox */}
+                    <View style={[styles.checkbox, student.checked && styles.checkboxChecked]}>{student.checked && <Ionicons name="checkmark" size={18} color="#015023" />}</View>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Save Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          {/* Save Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} onPress={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <ThemedText variant="semibold" style={styles.saveButtonText}>
+                  Simpan Presensi
+                </ThemedText>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#015023',
-    paddingTop: 20,
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
-    paddingTop: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingVertical: 16,
   },
   backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "flex-start",
   },
-  headerText: {
-    color: '#fff',
+  headerTitle: {
     fontSize: 18,
-    fontWeight: '500',
-    marginLeft: 8,
+    color: "#ffffff",
+    flex: 1,
+    textAlign: "center",
+  },
+  headerSpacer: {
+    width: 40,
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120, // Padding besar untuk navigasi bottom
+    paddingBottom: 40,
   },
   cardContainer: {
     paddingHorizontal: 20,
   },
   card: {
-    backgroundColor: '#F1E8C2',
+    backgroundColor: "#F5EFD3",
     borderRadius: 24,
     padding: 20,
   },
@@ -145,61 +266,60 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#d1d5db',
+    borderBottomColor: "rgba(1, 80, 35, 0.1)",
   },
   courseTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 4,
+    color: "#015023",
+    marginBottom: 8,
   },
   courseDetail: {
     fontSize: 14,
-    color: '#6b7280',
-    marginTop: 2,
+    color: "#666",
+    marginTop: 4,
   },
   studentList: {
-    // Hapus flex: 1
+    // Students container
   },
   studentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 14,
     paddingVertical: 4,
   },
   avatar: {
     width: 48,
     height: 48,
-    backgroundColor: '#d1d5db',
+    backgroundColor: "rgba(1, 80, 35, 0.1)",
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 24,
   },
   studentInfo: {
     flex: 1,
   },
   studentName: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#1f2937',
+    color: "#015023",
   },
   studentNim: {
     fontSize: 12,
-    color: '#6b7280',
+    color: "#666",
     marginTop: 2,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: '#000',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#015023",
+    borderRadius: 6,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#DABC4E",
+    borderColor: "#DABC4E",
   },
   buttonContainer: {
     paddingHorizontal: 20,
@@ -207,14 +327,38 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   saveButton: {
-    backgroundColor: '#DABC4E',
+    backgroundColor: "#DABC4E",
     paddingVertical: 16,
     borderRadius: 25,
-    alignItems: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonText: {
-    color: '#000',
-    fontSize: 18,
-    fontWeight: '600',
+    color: "#015023",
+    fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#F5EFD3",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "rgba(255,255,255,0.9)",
+    marginTop: 16,
   },
 });

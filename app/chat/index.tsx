@@ -3,8 +3,9 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import api from "../../api/axios";
+import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
 
 interface Contact {
@@ -192,12 +193,12 @@ const ChatListApp = () => {
           />
 
           <View style={styles.contactInfo}>
-            <Text style={styles.contactName} numberOfLines={1}>
+            <ThemedText style={styles.contactName} numberOfLines={1}>
               {item.name}
-            </Text>
-            <Text style={styles.contactId} numberOfLines={1}>
+            </ThemedText>
+            <ThemedText style={styles.contactId} numberOfLines={1}>
               @{item.username}
-            </Text>
+            </ThemedText>
           </View>
 
           <Ionicons name="chatbubble-ellipses-outline" size={28} color="#015023" />
@@ -218,13 +219,13 @@ const ChatListApp = () => {
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Chat</Text>
+            <ThemedText style={styles.headerTitle}>Chat</ThemedText>
             <View style={styles.headerSpacer} />
           </View>
 
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#FACC15" />
-            <Text style={styles.loadingTextWhite}>Memuat kontak...</Text>
+            <ThemedText style={styles.loadingTextWhite}>Memuat kontak...</ThemedText>
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -241,7 +242,7 @@ const ChatListApp = () => {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chat</Text>
+          <ThemedText style={styles.headerTitle}>Chat</ThemedText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -252,7 +253,7 @@ const ChatListApp = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.5)" />
-              <Text style={styles.emptyText}>Belum ada kontak tersedia</Text>
+              <ThemedText style={styles.emptyText}>Belum ada kontak tersedia</ThemedText>
             </View>
           }
           data={[{ key: "sections" }]}
@@ -265,7 +266,7 @@ const ChatListApp = () => {
                     <View style={styles.sectionContainer}>
                       <View style={styles.badgeContainer}>
                         <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Mahasiswa</Text>
+                          <ThemedText style={styles.badgeText}>Mahasiswa</ThemedText>
                         </View>
                       </View>
                       {classmates.map((item) => (
@@ -281,7 +282,7 @@ const ChatListApp = () => {
                     <View style={styles.sectionContainer}>
                       <View style={styles.badgeContainer}>
                         <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Dosen</Text>
+                          <ThemedText style={styles.badgeText}>Dosen</ThemedText>
                         </View>
                       </View>
                       {lecturers.map((item) => (
@@ -294,7 +295,7 @@ const ChatListApp = () => {
                     <View style={styles.sectionContainer}>
                       <View style={styles.badgeContainer}>
                         <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Teman Kelas</Text>
+                          <ThemedText style={styles.badgeText}>Teman Kelas</ThemedText>
                         </View>
                       </View>
                       {classmates.map((item) => (

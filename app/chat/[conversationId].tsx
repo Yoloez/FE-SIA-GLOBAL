@@ -1,3 +1,4 @@
+import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
@@ -387,8 +388,8 @@ export default function ChatScreen() {
       return (
         <View style={[styles.messageWrapper, isMyMessage ? styles.myMessageWrapper : styles.theirMessageWrapper]}>
           <View style={[styles.messageContainer, isMyMessage ? styles.myMessage : styles.theirMessage, item.sendFailed && styles.failedMessage]}>
-            {!isMyMessage && <Text style={styles.senderName}>{item.sender.name}</Text>}
-            <Text style={[styles.messageText, item.sendFailed && styles.failedMessageText]}>{item.message}</Text>
+            {!isMyMessage && <ThemedText style={styles.senderName}>{item.sender.name}</ThemedText>}
+            <ThemedText style={[styles.messageText, item.sendFailed && styles.failedMessageText]}>{item.message}</ThemedText>
             <View style={styles.messageFooter}>
               <Text style={styles.timestamp}>
                 {new Date(item.created_at).toLocaleTimeString([], {
@@ -420,7 +421,7 @@ export default function ChatScreen() {
         <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#FFFFFF" />
-            <Text style={styles.loadingText}>Memuat pesan...</Text>
+            <ThemedText style={styles.loadingText}>Memuat pesan...</ThemedText>
           </View>
         </LinearGradient>
       </SafeAreaView>

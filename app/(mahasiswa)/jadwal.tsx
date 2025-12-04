@@ -2,9 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import api from "../../api/axios";
 import CustomAlert from "../../components/CustomAlert";
+import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
 
 // Interface disesuaikan dengan data dari API controller
@@ -189,7 +190,9 @@ export default function ScheduleScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Your Schedule</Text>
+          <ThemedText variant="semibold" style={styles.headerTitle}>
+            Your Schedule
+          </ThemedText>
           <TouchableOpacity style={styles.calendarButton} onPress={goToThisWeek}>
             <Ionicons name="calendar-outline" size={24} color="#ffffff" />
           </TouchableOpacity>
@@ -201,7 +204,7 @@ export default function ScheduleScreen() {
             <TouchableOpacity onPress={goToPreviousWeek}>
               <Ionicons name="chevron-back" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.weekText}>{getWeekLabel()}</Text>
+            <ThemedText style={styles.weekText}>{getWeekLabel()}</ThemedText>
             <TouchableOpacity onPress={goToNextWeek}>
               <Ionicons name="chevron-forward" size={24} color="#ffffff" />
             </TouchableOpacity>
@@ -209,10 +212,14 @@ export default function ScheduleScreen() {
 
           {/* Date Display */}
           <View style={styles.dateDisplay}>
-            <Text style={styles.dateNumber}>{dateInfo.date}</Text>
+            <ThemedText variant="bold" style={styles.dateNumber}>
+              {dateInfo.date}
+            </ThemedText>
             <View>
-              <Text style={styles.dayName}>{dateInfo.dayName}</Text>
-              <Text style={styles.monthYear}>{dateInfo.monthYear}</Text>
+              <ThemedText variant="semibold" style={styles.dayName}>
+                {dateInfo.dayName}
+              </ThemedText>
+              <ThemedText style={styles.monthYear}>{dateInfo.monthYear}</ThemedText>
             </View>
           </View>
 
@@ -224,8 +231,12 @@ export default function ScheduleScreen() {
 
               return (
                 <TouchableOpacity key={index} style={[styles.dateItem, isSelected && styles.dateItemActive, isTodayDate && !isSelected && styles.dateItemToday]} onPress={() => setSelectedDate(item.fullDate)}>
-                  <Text style={[styles.dateDay, isSelected && styles.dateDayActive, isTodayDate && !isSelected && styles.dateDayToday]}>{item.day}</Text>
-                  <Text style={[styles.dateNum, isSelected && styles.dateNumActive, isTodayDate && !isSelected && styles.dateNumToday]}>{item.date}</Text>
+                  <ThemedText variant="semibold" style={[styles.dateDay, isSelected && styles.dateDayActive, isTodayDate && !isSelected && styles.dateDayToday]}>
+                    {item.day}
+                  </ThemedText>
+                  <ThemedText variant="bold" style={[styles.dateNum, isSelected && styles.dateNumActive, isTodayDate && !isSelected && styles.dateNumToday]}>
+                    {item.date}
+                  </ThemedText>
                 </TouchableOpacity>
               );
             })}
@@ -235,7 +246,7 @@ export default function ScheduleScreen() {
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#DABC4E" />
-              <Text style={styles.loadingText}>Memuat jadwal...</Text>
+              <ThemedText style={styles.loadingText}>Memuat jadwal...</ThemedText>
             </View>
           ) : (
             /* Schedule Cards with Image Background */
@@ -247,24 +258,28 @@ export default function ScheduleScreen() {
                     <View style={styles.cardOverlay}>
                       <View style={styles.cardHeader}>
                         <View style={styles.scheduleLabel}>
-                          <Text style={styles.scheduleLabelText}>Schedule</Text>
+                          <ThemedText variant="semibold" style={styles.scheduleLabelText}>
+                            Schedule
+                          </ThemedText>
                         </View>
-                        <Text style={styles.scheduleTime}>
+                        <ThemedText variant="semibold" style={styles.scheduleTime}>
                           {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
-                        </Text>
+                        </ThemedText>
                       </View>
 
-                      <Text style={styles.scheduleTitle}>{schedule.subject?.name_subject || "Subject Name"}</Text>
-                      <Text style={styles.scheduleCode}>{schedule.code_class || "Class Code"}</Text>
+                      <ThemedText variant="bold" style={styles.scheduleTitle}>
+                        {schedule.subject?.name_subject || "Subject Name"}
+                      </ThemedText>
+                      <ThemedText style={styles.scheduleCode}>{schedule.code_class || "Class Code"}</ThemedText>
 
                       <View style={styles.scheduleInfo}>
                         <View style={styles.infoRow}>
                           <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <Text style={styles.infoText}>{schedule.lecturer_name || user?.name || "Lecturer Name"}</Text>
+                          <ThemedText style={styles.infoText}>{schedule.lecturer_name || user?.name || "Lecturer Name"}</ThemedText>
                         </View>
                         <View style={styles.infoRow}>
                           <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <Text style={styles.infoText}>{schedule.room || "Room"}</Text>
+                          <ThemedText style={styles.infoText}>{schedule.room || "Room"}</ThemedText>
                         </View>
                       </View>
                     </View>
@@ -273,7 +288,7 @@ export default function ScheduleScreen() {
               ) : (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="calendar-outline" size={48} color="#ffffff" />
-                  <Text style={styles.emptyText}>Tidak ada jadwal untuk hari ini</Text>
+                  <ThemedText style={styles.emptyText}>Tidak ada jadwal untuk hari ini</ThemedText>
                 </View>
               )}
             </View>
@@ -306,7 +321,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: "#ffffff",
     fontSize: 18,
-    fontWeight: "600",
   },
   calendarButton: {
     width: 35,
@@ -339,13 +353,11 @@ const styles = StyleSheet.create({
   dateNumber: {
     color: "#ffffff",
     fontSize: 48,
-    fontWeight: "bold",
     marginRight: 15,
   },
   dayName: {
     color: "#ffffff",
     fontSize: 16,
-    fontWeight: "500",
   },
   monthYear: {
     color: "#ffffff",
@@ -376,7 +388,6 @@ const styles = StyleSheet.create({
   dateDay: {
     color: "#015023",
     fontSize: 10,
-    fontWeight: "600",
     marginBottom: 2,
   },
   dateDayActive: {
@@ -384,19 +395,16 @@ const styles = StyleSheet.create({
   },
   dateDayToday: {
     color: "#015023",
-    fontWeight: "700",
   },
   dateNum: {
     color: "#015023",
     fontSize: 16,
-    fontWeight: "bold",
   },
   dateNumActive: {
     color: "#1a1a1a",
   },
   dateNumToday: {
     color: "#015023",
-    fontWeight: "800",
   },
   scheduleList: {
     paddingBottom: 20,
@@ -429,17 +437,14 @@ const styles = StyleSheet.create({
   scheduleLabelText: {
     color: "#015023",
     fontSize: 12,
-    fontWeight: "600",
   },
   scheduleTime: {
     color: "#015023",
     fontSize: 14,
-    fontWeight: "600",
   },
   scheduleTitle: {
     color: "#1a1a1a",
     fontSize: 16,
-    fontWeight: "bold",
     marginBottom: 4,
   },
   scheduleCode: {

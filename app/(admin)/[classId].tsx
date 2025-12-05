@@ -5,7 +5,7 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
@@ -25,6 +25,8 @@ export default function ClassDetailScreen() {
   // Generate Schedule Modal States
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [startDate, setStartDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [jumlahPertemuan, setJumlahPertemuan] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -100,6 +102,55 @@ export default function ClassDetailScreen() {
     };
   }, [classDetails, searchQuery]);
 
+  const formatDisplayDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  const generateCalendarDays = () => {
+    const today = new Date();
+    const currentMonth = selectedDate.getMonth();
+    const currentYear = selectedDate.getFullYear();
+
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+
+    // Empty slots for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+
+    // Actual days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(currentYear, currentMonth, day));
+    }
+
+    return days;
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    const formattedDate = date.toISOString().split("T")[0];
+    setStartDate(formattedDate);
+    setShowDatePicker(false);
+  };
+
+  const handlePreviousMonth = () => {
+    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
+  };
+
   const handleGenerateSchedule = useCallback(async () => {
     if (!startDate || !jumlahPertemuan) {
       setAlertConfig({
@@ -132,6 +183,7 @@ export default function ClassDetailScreen() {
       if (response.data.status === "success") {
         setShowGenerateModal(false);
         setStartDate("");
+        setSelectedDate(new Date());
         setJumlahPertemuan("");
         setAlertConfig({
           visible: true,
@@ -401,11 +453,11 @@ export default function ClassDetailScreen() {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Tanggal Mulai</Text>
-                  <View style={styles.inputContainer}>
+                  <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
                     <Ionicons name="calendar-outline" size={20} color="#666" />
-                    <TextInput style={styles.modalInput} placeholder="YYYY-MM-DD" placeholderTextColor="#9ca3af" value={startDate} onChangeText={setStartDate} />
-                  </View>
-                  <Text style={styles.inputHint}>Format: 2025-01-15 (harus sesuai hari kelas)</Text>
+                    <Text style={[styles.datePickerText, !startDate && { color: "#9ca3af" }]}>{startDate ? formatDisplayDate(startDate) : "Pilih tanggal mulai"}</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.inputHint}>Pilih tanggal yang sesuai dengan hari kelas</Text>
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -434,6 +486,60 @@ export default function ClassDetailScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Calendar Modal */}
+        <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
+          <View style={styles.calendarModalOverlay}>
+            <View style={styles.calendarModal}>
+              <View style={styles.calendarHeader}>
+                <TouchableOpacity onPress={handlePreviousMonth} style={styles.calendarNavButton}>
+                  <Ionicons name="chevron-back" size={24} color="#015023" />
+                </TouchableOpacity>
+                <Text style={styles.calendarHeaderText}>{selectedDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</Text>
+                <TouchableOpacity onPress={handleNextMonth} style={styles.calendarNavButton}>
+                  <Ionicons name="chevron-forward" size={24} color="#015023" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.calendarWeekDays}>
+                {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((day) => (
+                  <Text key={day} style={styles.weekDayText}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
+
+              <ScrollView style={styles.calendarDaysContainer}>
+                <View style={styles.calendarDays}>
+                  {generateCalendarDays().map((date, index) => {
+                    if (!date) {
+                      return <View key={`empty-${index}`} style={styles.emptyDay} />;
+                    }
+
+                    const isToday = date.toDateString() === new Date().toDateString();
+                    const isSelected = startDate && date.toISOString().split("T")[0] === startDate;
+                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[styles.dayButton, isToday && styles.todayButton, isSelected && styles.selectedDayButton, isPast && styles.pastDayButton]}
+                        onPress={() => !isPast && handleDateSelect(date)}
+                        disabled={isPast}
+                      >
+                        <Text style={[styles.dayText, isToday && styles.todayText, isSelected && styles.selectedDayText, isPast && styles.pastDayText]}>{date.getDate()}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.calendarCloseButton}>
+                <Text style={styles.calendarCloseText}>Tutup</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -849,5 +955,135 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#015023",
+  },
+  datePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f9fafb",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1f2937",
+  },
+  calendarModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  calendarModal: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "80%",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: "#F5EFD3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  calendarHeaderText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#015023",
+  },
+  calendarNavButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(1, 80, 35, 0.1)",
+  },
+  calendarWeekDays: {
+    flexDirection: "row",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: "#f9fafb",
+  },
+  weekDayText: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#666",
+  },
+  calendarDaysContainer: {
+    maxHeight: 320,
+  },
+  calendarDays: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  emptyDay: {
+    width: "14.28%",
+    aspectRatio: 1,
+    padding: 4,
+  },
+  dayButton: {
+    width: "14.28%",
+    aspectRatio: 1,
+    padding: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  todayButton: {
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: 8,
+  },
+  selectedDayButton: {
+    backgroundColor: "#DABC4E",
+    borderRadius: 8,
+  },
+  pastDayButton: {
+    opacity: 0.3,
+  },
+  dayText: {
+    fontSize: 14,
+    color: "#1f2937",
+    fontWeight: "500",
+  },
+  todayText: {
+    color: "#3b82f6",
+    fontWeight: "700",
+  },
+  selectedDayText: {
+    color: "#015023",
+    fontWeight: "700",
+  },
+  pastDayText: {
+    color: "#9ca3af",
+  },
+  calendarCloseButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#f9fafb",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    alignItems: "center",
+  },
+  calendarCloseText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6b7280",
   },
 });

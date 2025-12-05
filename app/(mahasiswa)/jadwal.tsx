@@ -9,23 +9,31 @@ import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
 
 // Interface disesuaikan dengan data dari API controller
+interface ScheduleItem {
+  id_schedule: number;
+  date: string;
+}
+
 interface ClassScheduleItem {
   id_class: number;
   code_class: string;
   day_of_week: number;
   start_time: string;
   end_time: string;
-  room: string | null;
+  member_class: number;
+  is_active: boolean;
   subject: {
     id_subject: number;
     name_subject: string;
+    code_subject: string;
   };
-  academic_period?: {
-    id: number;
+  academic_period: {
+    id_academic_period: number;
     name: string;
+    is_active: boolean;
   };
-  // Untuk data dosen, tambahkan jika ada
-  lecturer_name?: string;
+  total_meetings: number;
+  schedules: ScheduleItem[];
 }
 
 export default function ScheduleScreen() {
@@ -270,16 +278,24 @@ export default function ScheduleScreen() {
                       <ThemedText variant="bold" style={styles.scheduleTitle}>
                         {schedule.subject?.name_subject || "Subject Name"}
                       </ThemedText>
-                      <ThemedText style={styles.scheduleCode}>{schedule.code_class || "Class Code"}</ThemedText>
+                      <ThemedText style={styles.scheduleCode}>
+                        {schedule.code_class} • {schedule.subject?.code_subject}
+                      </ThemedText>
 
                       <View style={styles.scheduleInfo}>
                         <View style={styles.infoRow}>
-                          <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <ThemedText style={styles.infoText}>{schedule.lecturer_name || user?.name || "Lecturer Name"}</ThemedText>
+                          <Ionicons name="school-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                          <ThemedText style={styles.infoText}>{schedule.academic_period?.name || "Academic Period"}</ThemedText>
                         </View>
                         <View style={styles.infoRow}>
-                          <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <ThemedText style={styles.infoText}>{schedule.room || "Room"}</ThemedText>
+                          <Ionicons name="calendar-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                          <ThemedText style={styles.infoText}>
+                            {schedule.total_meetings} {schedule.total_meetings === 1 ? "Meeting" : "Meetings"}
+                          </ThemedText>
+                        </View>
+                        <View style={styles.infoRow}>
+                          <Ionicons name="people-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                          <ThemedText style={styles.infoText}>{schedule.member_class} Students</ThemedText>
                         </View>
                       </View>
                     </View>

@@ -127,7 +127,13 @@ export default function LoginScreen() {
                 </TouchableOpacity> */}
 
                 <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-                  {isLoading ? <ActivityIndicator size="small" color="#000000" /> : <ThemedText style={styles.buttonText}>Login</ThemedText>}
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#000000" />
+                  ) : (
+                    <ThemedText variant="bold" style={styles.buttonText}>
+                      Login
+                    </ThemedText>
+                  )}
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -221,7 +227,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "black",
     fontSize: 18,
-    fontWeight: "bold",
     textAlign: "center",
   },
 });

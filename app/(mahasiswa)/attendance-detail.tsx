@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
@@ -63,9 +63,11 @@ export default function AttendanceDetailScreen() {
     }
   }, [id_class]);
 
-  useEffect(() => {
-    fetchAttendanceHistory();
-  }, [fetchAttendanceHistory]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchAttendanceHistory();
+    }, [fetchAttendanceHistory])
+  );
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

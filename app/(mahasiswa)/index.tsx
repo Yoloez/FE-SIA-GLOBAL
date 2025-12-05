@@ -337,7 +337,7 @@ export default function HomeScreen() {
         <Image
           source={{ uri: profileImageUri }}
           style={styles.avatar}
-          defaultSource={require("../../assets/images/kairi.png")}
+          defaultSource={require("../../assets/images/unnamed.jpg")}
           onError={(error) => {
             console.log("Image load error:", error.nativeEvent.error);
           }}
@@ -345,7 +345,7 @@ export default function HomeScreen() {
       );
     }
 
-    return <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />;
+    return <Image source={require("../../assets/images/unnamed.jpg")} style={styles.avatar} />;
   };
 
   if (!fontsLoaded) return null;

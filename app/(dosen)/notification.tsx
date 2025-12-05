@@ -1,9 +1,10 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ClassItem {
@@ -98,28 +99,30 @@ export default function NotificationScreen() {
       <View style={styles.classCard}>
         <View style={styles.cardHeader}>
           <View style={styles.codeChip}>
-            <Text style={styles.codeText}>{item.code_subject}</Text>
+            <ThemedText style={styles.codeText}>{item.code_subject}</ThemedText>
           </View>
           <View style={styles.sksChip}>
-            <Text style={styles.sksText}>{item.sks} SKS</Text>
+            <ThemedText variant="bold" style={styles.sksText}>
+              {item.sks} SKS
+            </ThemedText>
           </View>
         </View>
 
-        <Text style={styles.subjectName} numberOfLines={2}>
+        <ThemedText variant="bold" style={styles.subjectName} numberOfLines={2}>
           {item.name_subject}
-        </Text>
+        </ThemedText>
 
         <View style={styles.infoRow}>
           <Ionicons name="business-outline" size={14} color="#666" />
-          <Text style={styles.infoText}>Kelas {item.code_class}</Text>
+          <ThemedText style={styles.infoText}>Kelas {item.code_class}</ThemedText>
         </View>
 
         <View style={styles.periodChip}>
-          <Text style={styles.periodText}>{item.academic_period}</Text>
+          <ThemedText style={styles.periodText}>{item.academic_period}</ThemedText>
         </View>
 
         <View style={styles.actionRow}>
-          <Text style={styles.actionText}>Tap untuk buat pengumuman</Text>
+          <ThemedText style={styles.actionText}>Tap untuk buat pengumuman</ThemedText>
           <Ionicons name="chevron-forward" size={20} color="#015023" />
         </View>
       </View>
@@ -131,7 +134,7 @@ export default function NotificationScreen() {
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPeriodModal(false)}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Pilih Periode Akademik</Text>
+            <ThemedText style={styles.modalTitle}>Pilih Periode Akademik</ThemedText>
             <TouchableOpacity onPress={() => setShowPeriodModal(false)}>
               <Ionicons name="close" size={24} color="#015023" />
             </TouchableOpacity>
@@ -140,7 +143,7 @@ export default function NotificationScreen() {
           <ScrollView style={styles.periodList}>
             {academicPeriods.map((period) => (
               <TouchableOpacity key={period.id} style={[styles.periodItem, selectedPeriod === period.id && styles.periodItemSelected]} onPress={() => handlePeriodSelect(period.id)}>
-                <Text style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>{period.name}</Text>
+                <ThemedText style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>{period.name}</ThemedText>
                 {selectedPeriod === period.id && <Ionicons name="checkmark-circle" size={20} color="#015023" />}
               </TouchableOpacity>
             ))}
@@ -160,7 +163,9 @@ export default function NotificationScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Buat Pengumuman</Text>
+          <ThemedText variant="semibold" style={styles.headerTitle}>
+            Buat Pengumuman
+          </ThemedText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -170,9 +175,9 @@ export default function NotificationScreen() {
             <TouchableOpacity style={styles.periodSelector} onPress={() => setShowPeriodModal(true)}>
               <View style={styles.periodSelectorContent}>
                 <Ionicons name="calendar" size={18} color="#F5EFD3" />
-                <Text style={styles.periodSelectorText} numberOfLines={1}>
+                <ThemedText style={styles.periodSelectorText} numberOfLines={1}>
                   {selectedPeriodName}
-                </Text>
+                </ThemedText>
               </View>
               <Ionicons name="chevron-down" size={20} color="#F5EFD3" />
             </TouchableOpacity>
@@ -183,12 +188,12 @@ export default function NotificationScreen() {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#DABC4E" />
-            <Text style={styles.loadingText}>Memuat daftar kelas...</Text>
+            <ThemedText style={styles.loadingText}>Memuat daftar kelas...</ThemedText>
           </View>
         ) : filteredClasses.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="school-outline" size={64} color="rgba(255,255,255,0.5)" />
-            <Text style={styles.emptyText}>{selectedPeriod ? "Tidak ada kelas pada periode ini" : "Belum ada kelas yang diampu"}</Text>
+            <ThemedText style={styles.emptyText}>{selectedPeriod ? "Tidak ada kelas pada periode ini" : "Belum ada kelas yang diampu"}</ThemedText>
           </View>
         ) : (
           <FlatList data={filteredClasses} renderItem={renderClassItem} keyExtractor={(item) => item.id_class.toString()} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} />
@@ -221,7 +226,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "700",
     color: "#ffffff",
     flex: 1,
     textAlign: "center",
@@ -261,7 +265,6 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontSize: 11,
-    fontWeight: "700",
     color: "#FFFFFF",
     letterSpacing: 0.5,
   },
@@ -273,12 +276,10 @@ const styles = StyleSheet.create({
   },
   sksText: {
     fontSize: 11,
-    fontWeight: "700",
     color: "#015023",
   },
   subjectName: {
     fontSize: 17,
-    fontWeight: "700",
     color: "#015023",
     marginBottom: 10,
     lineHeight: 24,

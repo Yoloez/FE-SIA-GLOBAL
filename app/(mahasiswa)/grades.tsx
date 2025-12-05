@@ -257,9 +257,6 @@ export default function GradesScreen() {
               </ThemedText>
             </View>
           </View>
-          <TouchableOpacity style={styles.menuIcon}>
-            <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
-          </TouchableOpacity>
         </View>
 
         <ThemedText variant="bold" style={styles.subjectTitle} numberOfLines={2}>
@@ -332,9 +329,6 @@ export default function GradesScreen() {
               <ThemedText style={styles.headerSubtitle}>{selectedPeriodName}</ThemedText>
             </View>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="menu" size={24} color="#fff" />
-          </TouchableOpacity>
         </View>
 
         {/* Tab Navigation */}
@@ -531,7 +525,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 20,
-    padding: 16,  
+    padding: 16,
     borderWidth: 1,
     borderColor: "black",
     shadowColor: "#000",

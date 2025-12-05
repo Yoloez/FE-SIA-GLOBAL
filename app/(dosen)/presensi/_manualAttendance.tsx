@@ -35,6 +35,24 @@ interface ApiResponse {
   };
 }
 
+interface AttendedStudent {
+  id_user_si: number;
+  nim: string;
+  name: string;
+  time: string;
+  qr_session: string | null;
+}
+
+interface PresenceResponse {
+  status: string;
+  message: string;
+  data: {
+    id_schedule: number;
+    total_present: number;
+    students: AttendedStudent[];
+  };
+}
+
 // Custom Modal Components
 interface CustomModalProps {
   visible: boolean;
@@ -215,6 +233,7 @@ export default function ManualAttendance() {
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [attendedStudentIds, setAttendedStudentIds] = useState<Set<number>>(new Set());
 
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
@@ -229,22 +248,39 @@ export default function ManualAttendance() {
   const savedChecklistRef = useRef<{ [key: number]: boolean }>({});
 
   const fetchClassDetail = useCallback(async () => {
-    if (!id_class) return;
+    if (!id_class || !id_schedule) return;
 
     setIsLoading(true);
     try {
-      const response = await api.get<ApiResponse>(`lecturer/attendance/classes/${id_class}`);
+      // Fetch both class detail and existing presences in parallel
+      const [classResponse, presenceResponse] = await Promise.all([api.get<ApiResponse>(`lecturer/attendance/classes/${id_class}`), api.get<PresenceResponse>(`lecturer/schedules/${id_schedule}/presences`).catch(() => null)]);
 
-      if (response.data.status === "success") {
-        setClassInfo(response.data.data.class_info);
+      if (classResponse.data.status === "success") {
+        setClassInfo(classResponse.data.data.class_info);
 
-        // Restore checklist dari ref jika ada
+        // Get IDs of students who are already present
+        const presentIds = new Set<number>();
+        if (presenceResponse?.data?.status === "success") {
+          presenceResponse.data.data.students.forEach((student) => {
+            presentIds.add(student.id_user_si);
+          });
+        }
+        setAttendedStudentIds(presentIds);
+
+        // Set students with pre-checked status based on existing presences
         setStudents(
-          response.data.data.students.map((student) => ({
+          classResponse.data.data.students.map((student) => ({
             ...student,
-            checked: savedChecklistRef.current[student.id_user_si] || false,
+            checked: presentIds.has(student.id_user_si) || savedChecklistRef.current[student.id_user_si] || false,
           }))
         );
+
+        // Update ref with initial checked state
+        classResponse.data.data.students.forEach((student) => {
+          if (presentIds.has(student.id_user_si)) {
+            savedChecklistRef.current[student.id_user_si] = true;
+          }
+        });
       }
     } catch (error: any) {
       console.error("Error fetching class detail:", error);
@@ -257,7 +293,7 @@ export default function ManualAttendance() {
     } finally {
       setIsLoading(false);
     }
-  }, [id_class]);
+  }, [id_class, id_schedule]);
 
   useEffect(() => {
     fetchClassDetail();

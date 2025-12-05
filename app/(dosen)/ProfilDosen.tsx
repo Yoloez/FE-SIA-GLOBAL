@@ -1,4 +1,5 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
@@ -146,7 +147,7 @@ const ProfilDosen = () => {
       <View style={styles.container}>
         <LinearGradient colors={["#015023", "#1C352D"]} style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.loadingText}>Memuat profil...</Text>
+          <ThemedText style={styles.loadingText}>Memuat profil...</ThemedText>
         </LinearGradient>
       </View>
     );
@@ -180,7 +181,7 @@ const ProfilDosen = () => {
             <Text style={styles.profileTitle}>Profile</Text>
 
             <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
-              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} defaultSource={require("../../assets/images/kairi.png")} />
+              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} defaultSource={require("../../assets/images/unnamed.jpg")} />
               <View style={styles.avatarOverlay}>
                 <Ionicons name="expand-outline" size={24} color="#fff" />
               </View>

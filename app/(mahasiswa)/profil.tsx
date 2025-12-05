@@ -102,7 +102,7 @@ const Profil = () => {
             </ThemedText>
 
             <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
-              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} />
+              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} />
             </TouchableOpacity>
 
             {/* --- DATA SEKARANG DINAMIS --- */}
@@ -160,7 +160,7 @@ const Profil = () => {
               <TouchableOpacity style={styles.closeButton} onPress={() => setShowImageModal(false)}>
                 <Ionicons name="close-circle" size={36} color="#fff" />
               </TouchableOpacity>
-              <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.fullImage} resizeMode="contain" />
+              <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.fullImage} resizeMode="contain" />
               <ThemedText variant="semibold" style={styles.imageModalName}>
                 {profileData?.full_name}
               </ThemedText>

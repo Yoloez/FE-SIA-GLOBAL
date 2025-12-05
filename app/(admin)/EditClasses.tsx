@@ -3,16 +3,16 @@ import { Picker } from "@react-native-picker/picker";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
@@ -93,8 +93,15 @@ export default function EditClassScreen() {
         
         setPeriodId(classData.id_academic_period?.toString() || "");
         setDayOfWeek(classData.day_of_week || 1);
-        setStartTime(classData.start_time || "");
-        setEndTime(classData.end_time || "");
+        
+        // Format waktu ke HH:MM (hapus detik jika ada)
+        const formatTime = (time: string) => {
+          if (!time) return "";
+          return time.substring(0, 5); // Ambil 5 karakter pertama (HH:MM)
+        };
+        
+        setStartTime(formatTime(classData.start_time || ""));
+        setEndTime(formatTime(classData.end_time || ""));
       }
     } catch (error) {
       console.error("Error fetching data:", error);

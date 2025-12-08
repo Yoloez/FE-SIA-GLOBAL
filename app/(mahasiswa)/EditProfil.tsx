@@ -148,7 +148,7 @@ export default function EditProfilScreen() {
             </ThemedText>
 
             <View style={styles.avatarContainer}>
-              <Image source={profileImage ? { uri: profileImage } : require("../../assets/images/kairi.png")} style={styles.avatar} />
+              <Image source={profileImage ? { uri: profileImage } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} />
               <TouchableOpacity style={styles.editImageButton} onPress={pickImage}>
                 <Ionicons name="camera" size={20} color="#fff" />
               </TouchableOpacity>

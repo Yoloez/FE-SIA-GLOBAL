@@ -104,12 +104,6 @@ export default function AddManagerScreen() {
       />
       <ScrollView contentContainerStyle={styles.container}>
         {/* Icon Tambah */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconPlus}>+</Text>
-          </View>
-          <Text style={styles.iconLabel}>Add</Text>
-        </View>
 
         <View style={styles.form}>
           <Text style={styles.label}>Name:</Text>

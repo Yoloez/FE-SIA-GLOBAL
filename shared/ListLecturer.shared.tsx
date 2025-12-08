@@ -1,10 +1,16 @@
 import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../../context/AuthContext";
+
+interface ListLecturerProps {
+  viewMode: "admin" | "manager";
+  onAddLecturer?: () => void;
+  onEditLecturer?: (lecturerData: { id: number; name: string; nip: string; email: string; image: string }) => void;
+  onBack?: () => void;
+}
 
 interface Lecturer {
   id_user_si: number;
@@ -16,9 +22,8 @@ interface Lecturer {
   is_active: boolean;
 }
 
-export default function ListLecturerScreen() {
+export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLecturer, onBack }: ListLecturerProps) {
   const { token } = useAuth();
-  const router = useRouter();
 
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [filteredLecturers, setFilteredLecturers] = useState<Lecturer[]>([]);
@@ -27,8 +32,19 @@ export default function ListLecturerScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
+  const isMountedRef = React.useRef(true);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   useEffect(() => {
+    isMountedRef.current = true;
     fetchLecturers();
+
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -36,17 +52,39 @@ export default function ListLecturerScreen() {
   }, [searchQuery, lecturers]);
 
   const fetchLecturers = async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    if (typeof AbortController !== "undefined") {
+      abortControllerRef.current = new AbortController();
+    }
+
     try {
       setIsLoading(true);
-      const response = await api.get("/manager/lecturers");
+      const response = await api.get("/manager/lecturers", {
+        signal: abortControllerRef.current?.signal,
+      });
       console.log("Response lecturers:", response.data);
-      setLecturers(response.data.data || []);
-    } catch (error) {
+
+      if (isMountedRef.current) {
+        setLecturers(response.data.data || []);
+      }
+    } catch (error: any) {
+      if (error.name === "AbortError" || error.name === "CanceledError") {
+        console.log("Fetch lecturers aborted");
+        return;
+      }
+
       console.error("Error fetching lecturers:", error);
-      Alert.alert("Error", "Gagal memuat daftar dosen.");
+      if (isMountedRef.current) {
+        Alert.alert("Error", "Gagal memuat daftar dosen.");
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -66,50 +104,74 @@ export default function ListLecturerScreen() {
     setFilteredLecturers(filtered);
   };
 
-  
-  const handleEditLecturer = (lecturerId: number) => {
-    router.push(`/(admin)/EditLecturer`);
+  const handleEditLecturer = (lecturer: Lecturer) => {
+    if (onEditLecturer) {
+      onEditLecturer({
+        id: lecturer.id_user_si,
+        name: lecturer.name,
+        nip: lecturer.employee_id_number || "",
+        email: lecturer.email,
+        image: lecturer.profile_image || "",
+      });
+    } else {
+      Alert.alert("Error", "Fungsi edit tidak tersedia.");
+    }
+  };
+  const handleAddLecturer = () => {
+    if (onAddLecturer) {
+      onAddLecturer();
+    } else {
+      Alert.alert("Error", "Fungsi tambah tidak tersedia.");
+    }
   };
 
-  const handleToggleStatus = useCallback((lecturer: Lecturer) => {
-    const newStatus = lecturer.is_active ? "nonaktif" : "aktif";
-    const statusMessage = lecturer.is_active ? `Nonaktifkan dosen "${lecturer.name}"?` : `Aktifkan dosen "${lecturer.name}"?`;
+  const handleToggleStatus = useCallback(
+    (lecturer: Lecturer) => {
+      const newStatus = lecturer.is_active ? "nonaktif" : "aktif";
+      const statusMessage = lecturer.is_active ? `Nonaktifkan dosen "${lecturer.name}"?` : `Aktifkan dosen "${lecturer.name}"?`;
 
-    Alert.alert("Konfirmasi Ubah Status", statusMessage, [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Ubah",
-        style: "default",
-        onPress: async () => {
-          setTogglingId(lecturer.id_user_si);
-          try {
-            const response = await api.patch(`/admin/managers/${lecturer.id_user_si}/toggle-status`);
+      Alert.alert("Konfirmasi Ubah Status", statusMessage, [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Ubah",
+          style: "default",
+          onPress: async () => {
+            if (!isMountedRef.current) return;
 
-            if (response.data.status === "success") {
-              setLecturers((prevLecturers) => prevLecturers.map((lect) => (lect.id_user_si === lecturer.id_user_si ? { ...lect, is_active: !lect.is_active } : lect)));
-              Alert.alert("Sukses", `Status dosen berhasil diubah menjadi ${newStatus}.`);
-            } else {
-              Alert.alert("Gagal", response.data.message || "Gagal mengubah status dosen.");
+            setTogglingId(lecturer.id_user_si);
+            try {
+              const response = await api.patch(`/admin/managers/${lecturer.id_user_si}/toggle-status`);
+
+              if (!isMountedRef.current) return;
+
+              if (response.data.status === "success") {
+                setLecturers((prevLecturers) => prevLecturers.map((lect) => (lect.id_user_si === lecturer.id_user_si ? { ...lect, is_active: !lect.is_active } : lect)));
+                Alert.alert("Sukses", `Status dosen berhasil diubah menjadi ${newStatus}.`);
+              } else {
+                Alert.alert("Gagal", response.data.message || "Gagal mengubah status dosen.");
+              }
+            } catch (error) {
+              console.error("Error toggling lecturer status:", error);
+              if (isMountedRef.current) {
+                Alert.alert("Gagal", "Gagal mengubah status dosen.");
+              }
+            } finally {
+              if (isMountedRef.current) {
+                setTogglingId(null);
+              }
             }
-          } catch (error) {
-            console.error("Error toggling lecturer status:", error);
-            Alert.alert("Gagal", "Gagal mengubah status dosen.");
-          } finally {
-            setTogglingId(null);
-          }
+          },
         },
-      },
-    ]);
-  }, []);
-  
+      ]);
+    },
+    [viewMode]
+  );
+
   // useFocusEffect(
   //   useCallback(() => {
   //     fetchLecturers();
   //   }, [fetchLecturers])
   // );
-  const handleAddLecturer = () => {
-    router.push("/(admin)/AddLecturer");
-  };
 
   const renderLecturerItem = ({ item }: { item: Lecturer }) => (
     <View style={styles.lecturerCard}>
@@ -137,7 +199,7 @@ export default function ListLecturerScreen() {
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => handleEditLecturer(item.id_user_si)}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => handleEditLecturer(item)}>
             <Ionicons name="create-outline" size={26} color="#015023" />
           </TouchableOpacity>
 
@@ -151,20 +213,6 @@ export default function ListLecturerScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          title: "Daftar Dosen",
-          headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#015023" },
-          headerTintColor: "#fff",
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
-              <Ionicons name="arrow-back" size={28} color="#ffffff" />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
       <View style={styles.container}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>

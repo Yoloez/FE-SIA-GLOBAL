@@ -1,12 +1,49 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React from "react";
-import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../../api/axios";
 import { ThemedText } from "../../components/ThemedText";
 
+interface ContactData {
+  lecturers: any[];
+  classmates: any[];
+}
+
 export default function PresencePage() {
+  const [totalClasses, setTotalClasses] = useState(0);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [classesResponse, contactsResponse] = await Promise.all([api.get("/lecturer/classes"), api.get("/chat/contacts")]);
+
+      // Hitung total kelas aktif
+      if (classesResponse.data?.data) {
+        setTotalClasses(classesResponse.data.data.length);
+      }
+
+      // Hitung total mahasiswa unik dari contacts
+      if (contactsResponse.data?.data?.classmates) {
+        setTotalStudents(contactsResponse.data.data.classmates.length);
+      }
+    } catch (error) {
+      console.error("Error fetching presence data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
+
   return (
     <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -27,9 +64,13 @@ export default function PresencePage() {
               <View style={styles.statIconContainer}>
                 <Ionicons name="calendar-outline" size={24} color="#015023" />
               </View>
-              <ThemedText variant="bold" style={styles.statValue}>
-                8
-              </ThemedText>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#015023" style={{ marginVertical: 8 }} />
+              ) : (
+                <ThemedText variant="bold" style={styles.statValue}>
+                  {totalClasses}
+                </ThemedText>
+              )}
               <ThemedText style={styles.statLabel}>Kelas Aktif</ThemedText>
             </View>
 
@@ -37,9 +78,13 @@ export default function PresencePage() {
               <View style={styles.statIconContainer}>
                 <Ionicons name="people-outline" size={24} color="#015023" />
               </View>
-              <ThemedText variant="bold" style={styles.statValue}>
-                240
-              </ThemedText>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#015023" style={{ marginVertical: 8 }} />
+              ) : (
+                <ThemedText variant="bold" style={styles.statValue}>
+                  {totalStudents}
+                </ThemedText>
+              )}
               <ThemedText style={styles.statLabel}>Total Mahasiswa</ThemedText>
             </View>
           </View>
@@ -71,30 +116,6 @@ export default function PresencePage() {
             </TouchableOpacity>
 
             {/* History Card */}
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => {
-                // TODO: Navigate to history page when implemented
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.actionIconContainer}>
-                <LinearGradient colors={["#DABC4E", "#C4A83E"]} style={styles.actionIconGradient}>
-                  <Ionicons name="time-outline" size={28} color="#015023" />
-                </LinearGradient>
-              </View>
-
-              <View style={styles.actionContent}>
-                <ThemedText variant="bold" style={styles.actionTitle}>
-                  Riwayat Presensi
-                </ThemedText>
-                <ThemedText style={styles.actionDescription}>Lihat riwayat kehadiran mahasiswa</ThemedText>
-              </View>
-
-              <View style={styles.actionArrow}>
-                <Ionicons name="chevron-forward" size={24} color="#015023" />
-              </View>
-            </TouchableOpacity>
           </View>
 
           {/* Info Section */}

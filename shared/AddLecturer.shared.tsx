@@ -1,22 +1,26 @@
 import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
-import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../../context/AuthContext";
 
 interface Program {
   id_program: number;
   name: string;
 }
 
-export default function CreateLecturerScreen() {
+interface AddLecturerProps {
+  viewMode: "admin" | "manager";
+  onBack?: () => void;
+  onSuccess?: () => void;
+}
+
+export default function CreateLecturerScreen({ viewMode, onBack, onSuccess }: AddLecturerProps) {
   const { token } = useAuth();
-  const router = useRouter();
 
   // State untuk setiap input form
   const [name, setName] = useState("");
@@ -29,16 +33,49 @@ export default function CreateLecturerScreen() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<number | null>(null);
 
+  const isMountedRef = React.useRef(true);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   useEffect(() => {
+    isMountedRef.current = true;
+
     const fetchPrograms = async () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      if (typeof AbortController !== "undefined") {
+        abortControllerRef.current = new AbortController();
+      }
+
       try {
-        const response = await api.get("/manager/programs");
-        setPrograms(response.data.data);
-      } catch (error) {
-        Alert.alert("Error", "Gagal memuat daftar program studi.");
+        const response = await api.get("/manager/programs", {
+          signal: abortControllerRef.current?.signal,
+        });
+
+        if (isMountedRef.current) {
+          setPrograms(response.data.data);
+        }
+      } catch (error: any) {
+        if (error.name === "AbortError" || error.name === "CanceledError") {
+          console.log("Fetch programs aborted");
+          return;
+        }
+
+        if (isMountedRef.current) {
+          Alert.alert("Error", "Gagal memuat daftar program studi.");
+        }
       }
     };
+
     fetchPrograms();
+
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   // Fungsi untuk memilih gambar
@@ -113,6 +150,8 @@ export default function CreateLecturerScreen() {
   };
 
   const handleCreateLecturer = async () => {
+    if (!isMountedRef.current) return;
+
     if (!name || !username || !email || !password || !passwordConfirmation) {
       Alert.alert("Input Tidak Valid", "Semua kolom wajib diisi.");
       return;
@@ -129,7 +168,9 @@ export default function CreateLecturerScreen() {
       formData.append("name", name);
       formData.append("username", username);
       formData.append("email", email);
-      formData.append("id_program", selectedProgram);
+      if (selectedProgram !== null) {
+        formData.append("id_program", selectedProgram.toString());
+      }
       formData.append("password", password);
       formData.append("password_confirmation", passwordConfirmation);
 
@@ -164,9 +205,21 @@ export default function CreateLecturerScreen() {
         transformRequest: (data) => data, // Penting: jangan transform FormData
       });
 
-      Alert.alert("Sukses", `Dosen "${response.data.data.name}" berhasil ditambahkan.`);
-      router.back();
+      if (!isMountedRef.current) return;
+
+      Alert.alert("Sukses", `Dosen "${response.data.data.name}" berhasil ditambahkan.`, [
+        {
+          text: "OK",
+          onPress: () => {
+            if (isMountedRef.current) {
+              onSuccess?.();
+            }
+          },
+        },
+      ]);
     } catch (error) {
+      if (!isMountedRef.current) return;
+
       if (axios.isAxiosError(error)) {
         console.error("Gagal menambah dosen:", error.response?.data);
         console.error("Error details:", error);
@@ -174,22 +227,15 @@ export default function CreateLecturerScreen() {
         Alert.alert("Gagal", message);
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView} keyboardVerticalOffset={0}>
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <Stack.Screen
-          options={{
-            title: "Tambah Dosen",
-            presentation: "modal",
-            headerStyle: { backgroundColor: "#015023" },
-            headerTintColor: "#fff",
-            headerTitleAlign: "left",
-          }}
-        />
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
           {/* Icon Plus dengan Circle atau Preview Image */}
           <TouchableOpacity style={styles.iconContainer} onPress={showImageOptions} activeOpacity={0.8}>

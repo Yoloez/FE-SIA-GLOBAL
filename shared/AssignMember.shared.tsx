@@ -1,10 +1,19 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Keyboard, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../../context/AuthContext";
+
+interface AssignMemberProps {
+  viewMode: "admin" | "manager";
+  classId: string;
+  role: "dosen" | "mahasiswa";
+  onBack?: () => void;
+  onSuccess?: () => void;
+}
 
 interface User {
   id_user_si: number;
@@ -16,11 +25,7 @@ interface User {
   program_name: string | null;
 }
 
-export default function AssignMemberScreen() {
-  const { classId, role } = useLocalSearchParams<{
-    classId: string;
-    role: "dosen" | "mahasiswa";
-  }>();
+export default function AssignMemberScreen({ viewMode, classId, role, onBack, onSuccess }: AssignMemberProps) {
   const { token } = useAuth();
 
   const [users, setUsers] = useState<User[]>([]);
@@ -28,6 +33,7 @@ export default function AssignMemberScreen() {
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
   const [isAssigning, setIsAssigning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [existingMemberIds, setExistingMemberIds] = useState<Set<number>>(new Set());
 
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -42,8 +48,8 @@ export default function AssignMemberScreen() {
   }, []);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (!token || !role) return;
+    const fetchData = async () => {
+      if (!token || !role || !classId) return;
 
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
@@ -51,13 +57,26 @@ export default function AssignMemberScreen() {
       if (isMounted.current) setIsLoading(true);
 
       try {
-        const response = await api.get(`/manager/users-by-role?role=${role}`, {
-          signal: abortControllerRef.current.signal,
-        });
+        // Fetch class details and users in parallel
+        const [classResponse, usersResponse] = await Promise.all([
+          api.get(`/manager/classes/${classId}`, {
+            signal: abortControllerRef.current.signal,
+          }),
+          api.get(`/manager/users-by-role?role=${role}`, {
+            signal: abortControllerRef.current.signal,
+          }),
+        ]);
 
         if (isMounted.current) {
-          if (response.data.status === "success" && response.data.data) {
-            setUsers(response.data.data);
+          // Get existing member IDs
+          const classData = classResponse.data.data;
+          const existingMembers = role === "dosen" ? classData.lecturers || [] : classData.students || [];
+          const memberIds = new Set(existingMembers.map((member: any) => member.id_user_si || member.id));
+          setExistingMemberIds(memberIds);
+
+          // Set users
+          if (usersResponse.data.status === "success" && usersResponse.data.data) {
+            setUsers(usersResponse.data.data);
           } else {
             setUsers([]);
           }
@@ -69,24 +88,29 @@ export default function AssignMemberScreen() {
         }
 
         if (isMounted.current) {
-          console.error("Fetch Users Error:", error);
-          Alert.alert("Error", error.response?.data?.message || "Gagal memuat daftar pengguna.");
+          console.error("Fetch Data Error:", error);
+          Alert.alert("Error", error.response?.data?.message || "Gagal memuat data.");
           setUsers([]);
         }
       } finally {
         if (isMounted.current) setIsLoading(false);
       }
     };
-    fetchUsers();
-  }, [role, token]);
+    fetchData();
+  }, [role, token, classId]);
 
-  // Filter users based on search query
+  // Filter users based on search query and exclude existing members
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
+    // First filter out users who are already assigned
+    const availableUsers = users.filter((user) => !existingMemberIds.has(user.id_user_si));
+
+    if (!searchQuery.trim()) return availableUsers;
 
     const query = searchQuery.toLowerCase().trim();
-    return users.filter((user) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query) || user.username.toLowerCase().includes(query) || (user.program_name && user.program_name.toLowerCase().includes(query)));
-  }, [users, searchQuery]);
+    return availableUsers.filter(
+      (user) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query) || user.username.toLowerCase().includes(query) || (user.program_name && user.program_name.toLowerCase().includes(query))
+    );
+  }, [users, searchQuery, existingMemberIds]);
 
   const toggleUserSelection = (userId: number) => {
     setSelectedUsers((prev) => {
@@ -146,7 +170,7 @@ export default function AssignMemberScreen() {
           {
             text: "OK",
             onPress: () => {
-              if (isMounted.current) router.back();
+              if (isMounted.current) onSuccess?.();
             },
           },
         ]);
@@ -164,16 +188,16 @@ export default function AssignMemberScreen() {
     return (
       <TouchableOpacity style={[styles.userCard, isSelected && styles.userCardSelected]} onPress={() => toggleUserSelection(item.id_user_si)} disabled={isAssigning} activeOpacity={0.7}>
         <View style={styles.userInfo}>
-          <Text style={styles.userName} numberOfLines={1}>
+          <ThemedText variant="bold" style={styles.userName} numberOfLines={1}>
             {item.name}
-          </Text>
-          <Text style={styles.userEmail} numberOfLines={1}>
+          </ThemedText>
+          <ThemedText style={styles.userEmail} numberOfLines={1}>
             {item.email}
-          </Text>
+          </ThemedText>
           {item.program_name && (
-            <Text style={styles.userProgram} numberOfLines={1}>
+            <ThemedText style={styles.userProgram} numberOfLines={1}>
               {item.program_name}
-            </Text>
+            </ThemedText>
           )}
         </View>
         <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>{isSelected && <Ionicons name="checkmark" size={20} color="#fff" />}</View>
@@ -211,12 +235,14 @@ export default function AssignMemberScreen() {
 
       {/* Info Bar */}
       <View style={styles.infoBar}>
-        <Text style={styles.infoText}>
+        <ThemedText variant="medium" style={styles.infoText}>
           {filteredUsers.length} {role === "dosen" ? "dosen" : "mahasiswa"} tersedia
-        </Text>
+        </ThemedText>
         {filteredUsers.length > 0 && (
           <TouchableOpacity onPress={handleSelectAll} disabled={isAssigning} style={styles.selectAllButton}>
-            <Text style={styles.selectAllText}>{selectedUsers.size === filteredUsers.length ? "Batal Pilih Semua" : "Pilih Semua"}</Text>
+            <ThemedText variant="semibold" style={styles.selectAllText}>
+              {selectedUsers.size === filteredUsers.length ? "Batal Pilih Semua" : "Pilih Semua"}
+            </ThemedText>
           </TouchableOpacity>
         )}
       </View>
@@ -225,85 +251,118 @@ export default function AssignMemberScreen() {
 
   const ListEmptyComponent = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="people-outline" size={64} color="#ccc" />
-      <Text style={styles.emptyText}>{searchQuery ? `Tidak ada ${role === "dosen" ? "dosen" : "mahasiswa"} yang sesuai pencarian` : `Tidak ada ${role === "dosen" ? "dosen" : "mahasiswa"} yang tersedia untuk ditambahkan.`}</Text>
+      <Ionicons name="people-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+      <ThemedText variant="semibold" style={styles.emptyText}>
+        {searchQuery ? `Tidak ada ${role === "dosen" ? "dosen" : "mahasiswa"} yang sesuai pencarian` : `Semua ${role === "dosen" ? "dosen" : "mahasiswa"} sudah ditambahkan atau tidak ada yang tersedia.`}
+      </ThemedText>
       {searchQuery && (
         <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearSearchButton}>
-          <Text style={styles.clearSearchText}>Hapus Pencarian</Text>
+          <ThemedText variant="semibold" style={styles.clearSearchText}>
+            Hapus Pencarian
+          </ThemedText>
         </TouchableOpacity>
       )}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <Stack.Screen
-        options={{
-          title: `Pilih ${role === "dosen" ? "Dosen" : "Mahasiswa"}`,
-          headerStyle: {
-            backgroundColor: "#015023",
-          },
-          headerTintColor: "#fff",
-          headerTitleStyle: {
-            fontWeight: "bold",
-          },
-        }}
-      />
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#DABC4E" />
-          <Text style={styles.loadingText}>Memuat data...</Text>
+    <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        {/* Custom Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => onBack?.()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={28} color="#fff" />
+          </TouchableOpacity>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Pilih {role === "dosen" ? "Dosen" : "Mahasiswa"}
+          </ThemedText>
+          <View style={styles.headerSpacer} />
         </View>
-      ) : (
-        <View style={styles.mainContainer}>
-          <FlatList
-            data={filteredUsers}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id_user_si.toString()}
-            contentContainerStyle={styles.container}
-            ListHeaderComponent={ListHeaderComponent}
-            ListEmptyComponent={ListEmptyComponent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          />
 
-          {selectedUsers.size > 0 && (
-            <View style={styles.bottomBar}>
-              <Text style={styles.selectedCount}>{selectedUsers.size} dipilih</Text>
-              <TouchableOpacity style={[styles.assignButton, isAssigning && styles.assignButtonDisabled]} onPress={handleAssignSelected} disabled={isAssigning} activeOpacity={0.8}>
-                {isAssigning ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="add-circle" size={20} color="#fff" />
-                    <Text style={styles.assignButtonText}>Tambahkan</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      )}
-    </SafeAreaView>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#DABC4E" />
+            <ThemedText variant="medium" style={styles.loadingText}>
+              Memuat data...
+            </ThemedText>
+          </View>
+        ) : (
+          <View style={styles.mainContainer}>
+            <FlatList
+              data={filteredUsers}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id_user_si.toString()}
+              contentContainerStyle={styles.container}
+              ListHeaderComponent={ListHeaderComponent}
+              ListEmptyComponent={ListEmptyComponent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            />
+
+            {selectedUsers.size > 0 && (
+              <View style={styles.bottomBar}>
+                <ThemedText variant="bold" style={styles.selectedCount}>
+                  {selectedUsers.size} dipilih
+                </ThemedText>
+                <TouchableOpacity style={[styles.assignButton, isAssigning && styles.assignButtonDisabled]} onPress={handleAssignSelected} disabled={isAssigning} activeOpacity={0.8}>
+                  {isAssigning ? (
+                    <ActivityIndicator color="#015023" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="add-circle" size={20} color="#015023" />
+                      <ThemedText variant="bold" style={styles.assignButtonText}>
+                        Tambahkan
+                      </ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#015023" },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 20,
+    color: "#FFFFFF",
+  },
+  headerSpacer: {
+    width: 40,
+  },
   mainContainer: {
     flex: 1,
-    backgroundColor: "#015023",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#015023",
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: "#fff",
+    color: "#FFFFFF",
   },
   container: {
     paddingBottom: 100,
@@ -331,6 +390,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     padding: 0,
+    fontFamily: "Urbanist",
   },
   clearButton: {
     padding: 4,
@@ -346,7 +406,6 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 14,
     color: "#F5EFD3",
-    fontWeight: "500",
   },
   selectAllButton: {
     paddingVertical: 6,
@@ -359,7 +418,6 @@ const styles = StyleSheet.create({
   selectAllText: {
     fontSize: 13,
     color: "#F5EFD3",
-    fontWeight: "600",
   },
   userCard: {
     backgroundColor: "#F5EFD3",
@@ -389,7 +447,6 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 16,
-    fontWeight: "bold",
     color: "#015023",
     marginBottom: 4,
   },
@@ -441,21 +498,20 @@ const styles = StyleSheet.create({
   clearSearchText: {
     color: "#015023",
     fontSize: 14,
-    fontWeight: "600",
   },
   bottomBar: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#F5EFD3",
+    backgroundColor: "#1C352D",
     paddingVertical: 15,
     paddingHorizontal: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: "#ddd",
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
     elevation: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
@@ -464,11 +520,10 @@ const styles = StyleSheet.create({
   },
   selectedCount: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#015023",
+    color: "#FFFFFF",
   },
   assignButton: {
-    backgroundColor: "#015023",
+    backgroundColor: "#DABC4E",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 10,
@@ -485,8 +540,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   assignButtonText: {
-    color: "#fff",
+    color: "#015023",
     fontSize: 16,
-    fontWeight: "bold",
   },
 });

@@ -1,14 +1,42 @@
 import { Slot, SplashScreen, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FontProvider } from "../context/FontContext";
+// TEMPORARILY DISABLED: useNotifications requires native modules (expo-device)
+// import { useNotifications } from "../hooks/useNotifications";
 
 SplashScreen.preventAutoHideAsync();
+
+// Global Error Handler
+if (typeof ErrorUtils !== "undefined") {
+  const originalHandler = ErrorUtils.getGlobalHandler();
+
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error("========================================");
+    console.error("[GLOBAL ERROR HANDLER] Unhandled Error Detected!");
+    console.error("[GLOBAL ERROR HANDLER] Is Fatal:", isFatal);
+    console.error("[GLOBAL ERROR HANDLER] Error:", error);
+    console.error("[GLOBAL ERROR HANDLER] Error Name:", error.name);
+    console.error("[GLOBAL ERROR HANDLER] Error Message:", error.message);
+    console.error("[GLOBAL ERROR HANDLER] Error Stack:", error.stack);
+    console.error("[GLOBAL ERROR HANDLER] Timestamp:", new Date().toISOString());
+    console.error("========================================");
+
+    // Call original handler
+    if (originalHandler) {
+      originalHandler(error, isFatal);
+    }
+  });
+}
 
 function RootLayoutNav() {
   const { user, isLoggedIn, isLoading: isAuthLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // TEMPORARILY DISABLED: Initialize notifications for logged-in user
+  // useNotifications(user?.id_user_si);
 
   // --- INI PERBAIKANNYA ---
   // State baru untuk memastikan kita tidak merender <Slot> terlalu cepat
@@ -24,7 +52,7 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = segments[0] === "(auth)";
-    const inSharedRoute = segments[0] === "chat" || segments[0] === "modal"; // Routes yang bisa diakses semua role
+    const inSharedRoute = segments[0] === "chat"; // Routes yang bisa diakses semua role
 
     if (isLoggedIn && user) {
       // PENGGUNA SUDAH LOGIN
@@ -98,10 +126,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <FontProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
-    </FontProvider>
+    <ErrorBoundary>
+      <FontProvider>
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
+      </FontProvider>
+    </ErrorBoundary>
   );
 }

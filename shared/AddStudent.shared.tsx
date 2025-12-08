@@ -1,19 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
-import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
+import api from "../api/axios";
 
 interface Program {
   id_program: number;
   name: string;
 }
 
-export default function CreateStudentScreen() {
-  const router = useRouter();
+interface AddStudentProps {
+  viewMode: "admin" | "manager";
+  onBack?: () => void;
+  onSuccess?: () => void;
+}
+
+export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: AddStudentProps) {
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -124,7 +128,7 @@ export default function CreateStudentScreen() {
             text: "OK",
             onPress: () => {
               if (isMounted.current) {
-                router.back();
+                onSuccess?.();
               }
             },
           },
@@ -151,7 +155,6 @@ export default function CreateStudentScreen() {
   if (isLoadingPrograms) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#D4AF37" />
           <Text style={styles.loadingText}>Memuat data...</Text>
@@ -163,109 +166,111 @@ export default function CreateStudentScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <Stack.Screen options={{ headerShown: false }} />
-
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          {/* Custom Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton} disabled={isLoading}>
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Tambah Mahasiswa Baru</Text>
-          </View>
-
-          {/* Add Icon Button */}
-          <View style={styles.addIconContainer}>
-            <View style={styles.addIconCircle}>
-              <Ionicons name="add" size={32} color="#ffffff" />
-            </View>
-            <Text style={styles.addText}>Tambah foto</Text>
-          </View>
-
-          {/* Form */}
-          <Text style={styles.label}>Nama Lengkap</Text>
-          <TextInput style={styles.input} placeholder="Nama sesuai ijazah" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} editable={!isLoading} maxLength={100} />
-
-          <Text style={styles.label}>Username</Text>
-          <TextInput style={styles.input} placeholder="Username unik" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} editable={!isLoading} maxLength={50} />
-
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Email aktif"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isLoading}
-            maxLength={100}
-          />
-
-          <Text style={styles.label}>Nomor Induk Mahasiswa (NIM)</Text>
-          <TextInput style={styles.input} placeholder="Contoh: 24/123456/SV/12345" placeholderTextColor="rgba(255,255,255,0.5)" value={registrationNumber} onChangeText={setRegistrationNumber} editable={!isLoading} maxLength={50} />
-
-          <Text style={styles.label}>Program Studi</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedProgram}
-              onValueChange={(itemValue) => {
-                if (itemValue !== null && itemValue !== undefined) {
-                  setSelectedProgram(itemValue as number);
-                }
-              }}
-              enabled={!isLoading}
-              style={styles.picker}
-            >
-              <Picker.Item label="-- Pilih Program Studi --" value={0} color="#999" />
-              {programs.map((program) => (
-                <Picker.Item key={program.id_program} label={program.name} value={program.id_program} />
-              ))}
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Minimal 8 karakter"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!isLoading}
-            maxLength={100}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={styles.label}>Konfirmasi Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ulangi password"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={passwordConfirmation}
-            onChangeText={setPasswordConfirmation}
-            secureTextEntry
-            editable={!isLoading}
-            maxLength={100}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <View style={styles.buttonContainer}>
-            {isLoading ? (
-              <View style={styles.loadingButton}>
-                <ActivityIndicator size="small" color="#1a5230" />
-                <Text style={styles.loadingButtonText}>Memproses...</Text>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.button} onPress={handleCreateStudent} activeOpacity={0.8}>
-                <Text style={styles.buttonText}>Tambah Mahasiswa</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}>
+          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {/* Custom Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => onBack?.()} style={styles.backButton} disabled={isLoading}>
+                <Ionicons name="arrow-back" size={24} color="#ffffff" />
               </TouchableOpacity>
-            )}
-          </View>
-        </ScrollView>
+              <Text style={styles.headerTitle}>Tambah Mahasiswa Baru</Text>
+            </View>
+
+            {/* Form */}
+            <Text style={styles.label}>Nama Lengkap</Text>
+            <TextInput style={styles.input} placeholder="Nama sesuai ijazah" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} editable={!isLoading} maxLength={100} />
+
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Username unik"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              maxLength={50}
+            />
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email aktif"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              maxLength={100}
+            />
+
+            <Text style={styles.label}>Nomor Induk Mahasiswa (NIM)</Text>
+            <TextInput style={styles.input} placeholder="Contoh: 24/123456/SV/12345" placeholderTextColor="rgba(255,255,255,0.5)" value={registrationNumber} onChangeText={setRegistrationNumber} editable={!isLoading} maxLength={50} />
+
+            <Text style={styles.label}>Program Studi</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedProgram}
+                onValueChange={(itemValue) => {
+                  if (itemValue !== null && itemValue !== undefined) {
+                    setSelectedProgram(itemValue as number);
+                  }
+                }}
+                enabled={!isLoading}
+                style={styles.picker}
+              >
+                <Picker.Item label="-- Pilih Program Studi --" value={0} color="#999" />
+                {programs.map((program) => (
+                  <Picker.Item key={program.id_program} label={program.name} value={program.id_program} />
+                ))}
+              </Picker>
+            </View>
+
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Minimal 8 karakter"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!isLoading}
+              maxLength={100}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Text style={styles.label}>Konfirmasi Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ulangi password"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={passwordConfirmation}
+              onChangeText={setPasswordConfirmation}
+              secureTextEntry
+              editable={!isLoading}
+              maxLength={100}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={styles.buttonContainer}>
+              {isLoading ? (
+                <View style={styles.loadingButton}>
+                  <ActivityIndicator size="small" color="#1a5230" />
+                  <Text style={styles.loadingButtonText}>Memproses...</Text>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.button} onPress={handleCreateStudent} activeOpacity={0.8}>
+                  <Text style={styles.buttonText}>Tambah Mahasiswa</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );

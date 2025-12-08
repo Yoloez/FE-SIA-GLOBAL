@@ -1,20 +1,18 @@
+import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { Stack, useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { useAuth } from "../../context/AuthContext";
+
+interface ListSubjectsProps {
+  viewMode: "admin" | "manager";
+  onAddSubject?: () => void;
+  onEditSubject?: (subjectData: { id: number; name: string; code: string; sks: number }) => void;
+  onBack?: () => void;
+}
 
 interface Subject {
   id_subject: number;
@@ -23,25 +21,59 @@ interface Subject {
   sks: number;
 }
 
-export default function SubjectListScreen() {
-  const { token } = useAuth();
-  const router = useRouter();
+export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubject, onBack }: ListSubjectsProps) {
+  const { token, user } = useAuth();
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const isMountedRef = React.useRef(true);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // Fetch subjects list
   const fetchSubjects = useCallback(async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    if (typeof AbortController !== "undefined") {
+      abortControllerRef.current = new AbortController();
+    }
+
     setIsLoadingList(true);
     try {
-      const response = await api.get("/manager/subjects");
-      setSubjects(response.data.data);
-    } catch (error) {
+      const response = await api.get("/manager/subjects", {
+        signal: abortControllerRef.current?.signal,
+      });
+
+      if (isMountedRef.current) {
+        setSubjects(response.data.data);
+      }
+    } catch (error: any) {
+      if (error.name === "AbortError" || error.name === "CanceledError") {
+        console.log("Fetch subjects aborted");
+        return;
+      }
+
       console.error("Gagal mengambil data mata kuliah:", error);
-      Alert.alert("Error", "Gagal mengambil data mata kuliah");
+      if (isMountedRef.current) {
+        Alert.alert("Error", "Gagal mengambil data mata kuliah");
+      }
     } finally {
-      setIsLoadingList(false);
+      if (isMountedRef.current) {
+        setIsLoadingList(false);
+      }
     }
   }, []);
 
@@ -53,28 +85,31 @@ export default function SubjectListScreen() {
 
   const handleDeleteSubject = useCallback(
     (subjectId: number, subjectName: string) => {
-      Alert.alert(
-        "Konfirmasi Hapus",
-        `Apakah Anda yakin ingin menghapus mata kuliah "${subjectName}"? Tindakan ini tidak dapat dibatalkan.`,
-        [
-          { text: "Batal", style: "cancel" },
-          {
-            text: "Hapus",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                await api.delete(`/manager/subjects/${subjectId}`);
-                Alert.alert("Sukses", "Mata kuliah berhasil dihapus.");
-                fetchSubjects();
-              } catch (error) {
-                if (axios.isAxiosError(error))
-                  console.error("Gagal menghapus mata kuliah:", error.response?.data);
+      Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus mata kuliah "${subjectName}"? Tindakan ini tidak dapat dibatalkan.`, [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            if (!isMountedRef.current) return;
+
+            try {
+              await api.delete(`/manager/subjects/${subjectId}`);
+
+              if (!isMountedRef.current) return;
+
+              Alert.alert("Sukses", "Mata kuliah berhasil dihapus.");
+              fetchSubjects();
+            } catch (error) {
+              if (axios.isAxiosError(error)) console.error("Gagal menghapus mata kuliah:", error.response?.data);
+
+              if (isMountedRef.current) {
                 Alert.alert("Gagal", "Gagal menghapus mata kuliah.");
               }
-            },
+            }
           },
-        ]
-      );
+        },
+      ]);
     },
     [fetchSubjects]
   );
@@ -83,11 +118,7 @@ export default function SubjectListScreen() {
   const filteredSubjects = useMemo(() => {
     if (!searchQuery.trim()) return subjects;
     const query = searchQuery.toLowerCase();
-    return subjects.filter(
-      (subject) =>
-        subject.name_subject.toLowerCase().includes(query) ||
-        subject.code_subject.toLowerCase().includes(query)
-    );
+    return subjects.filter((subject) => subject.name_subject.toLowerCase().includes(query) || subject.code_subject.toLowerCase().includes(query));
   }, [subjects, searchQuery]);
 
   const clearSearch = useCallback(() => setSearchQuery(""), []);
@@ -103,28 +134,24 @@ export default function SubjectListScreen() {
           <Text style={styles.subjectSks}>SKS: {item.sks}</Text>
         </View>
         <View style={styles.actions}>
-<TouchableOpacity
-  style={styles.editButton}
-  onPress={(e) => {
-    e.stopPropagation();
-    router.push({
-      pathname: "/(admin)/EditSubject",
-      params: {
-        id: item.id_subject,
-        name: item.name_subject,
-        code: item.code_subject,
-        sks: item.sks.toString(),
-      },
-    });
-  }}
->
-  <Ionicons name="create-outline" size={24} color="#DABC4E" />
-</TouchableOpacity>
-
           <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleDeleteSubject(item.id_subject, item.name_subject)}
+            style={styles.editButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              if (onEditSubject) {
+                onEditSubject({
+                  id: item.id_subject,
+                  name: item.name_subject,
+                  code: item.code_subject,
+                  sks: item.sks,
+                });
+              }
+            }}
           >
+            <Ionicons name="create-outline" size={24} color="#DABC4E" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteSubject(item.id_subject, item.name_subject)}>
             <Ionicons name="trash-outline" size={22} color="#B00020" />
           </TouchableOpacity>
         </View>
@@ -135,34 +162,12 @@ export default function SubjectListScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          title: "Daftar Mata Kuliah",
-          headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#015023" },
-          headerTintColor: "#fff",
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
       <View style={styles.container}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
             <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Cari mata kuliah (nama, kode)..."
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <TextInput style={styles.searchInput} placeholder="Cari mata kuliah (nama, kode)..." placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" autoCorrect={false} />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
                 <Ionicons name="close-circle" size={20} color="#666" />
@@ -175,16 +180,10 @@ export default function SubjectListScreen() {
         <View style={styles.listHeader}>
           <View>
             <Text style={styles.listTitle}>Daftar Mata Kuliah</Text>
-            {searchQuery.length > 0 && (
-              <Text style={styles.resultCount}>{filteredSubjects.length} hasil ditemukan</Text>
-            )}
+            {searchQuery.length > 0 && <Text style={styles.resultCount}>{filteredSubjects.length} hasil ditemukan</Text>}
           </View>
 
-          <TouchableOpacity
-            onPress={() => router.push("/(admin)/AddSubjects")
-}
-            style={styles.addButton}
-          >
+          <TouchableOpacity onPress={() => onAddSubject?.()} style={styles.addButton}>
             <Ionicons name="add-circle-outline" size={28} color="white" />
           </TouchableOpacity>
         </View>
@@ -203,16 +202,8 @@ export default function SubjectListScreen() {
               keyExtractor={(item) => `subject-${item.id_subject}`}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Ionicons
-                    name={searchQuery ? "search-outline" : "book-outline"}
-                    size={64}
-                    color="rgba(255,255,255,0.6)"
-                  />
-                  <Text style={styles.emptyText}>
-                    {searchQuery
-                      ? `Tidak ada mata kuliah yang cocok dengan "${searchQuery}"`
-                      : "Belum ada mata kuliah yang ditambahkan."}
-                  </Text>
+                  <Ionicons name={searchQuery ? "search-outline" : "book-outline"} size={64} color="rgba(255,255,255,0.6)" />
+                  <Text style={styles.emptyText}>{searchQuery ? `Tidak ada mata kuliah yang cocok dengan "${searchQuery}"` : "Belum ada mata kuliah yang ditambahkan."}</Text>
                   {searchQuery && (
                     <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
                       <Text style={styles.clearSearchText}>Hapus Pencarian</Text>
@@ -234,7 +225,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#015023",
-    paddingTop: 0 
+    paddingTop: 0,
   },
   container: {
     flex: 1,
@@ -244,7 +235,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     marginBottom: 10,
-    paddingTop:0,
+    paddingTop: 0,
   },
   searchInputWrapper: {
     flexDirection: "row",

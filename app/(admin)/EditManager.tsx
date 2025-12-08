@@ -1,19 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { handleApiError } from "../../utils/errorHandler";
@@ -24,11 +12,9 @@ export default function EditManagerScreen() {
   const managerId = params.id_user_si as string;
 
   // State untuk form
-  const [name, setName] = useState(params.name as string || "");
-  const [email, setEmail] = useState(params.email as string || "");
-  const [employeeIdNumber, setEmployeeIdNumber] = useState(
-    params.employee_id_number as string || ""
-  );
+  const [name, setName] = useState((params.name as string) || "");
+  const [email, setEmail] = useState((params.email as string) || "");
+  const [employeeIdNumber, setEmployeeIdNumber] = useState((params.employee_id_number as string) || "");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -38,19 +24,22 @@ export default function EditManagerScreen() {
       Alert.alert("Validasi", "Nama tidak boleh kosong");
       return false;
     }
-    if (!email.trim()) {
-      Alert.alert("Validasi", "Email tidak boleh kosong");
+    if (name.trim().length < 4) {
+      Alert.alert("Validasi", "Nama minimal 4 karakter");
       return false;
     }
     if (!employeeIdNumber.trim()) {
-      Alert.alert("Validasi", "NIP tidak boleh kosong");
+      Alert.alert("Validasi", "Username (NIP) tidak boleh kosong");
       return false;
     }
-    
-    // Validasi format email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Validasi", "Format email tidak valid");
+    if (employeeIdNumber.trim().length < 3) {
+      Alert.alert("Validasi", "Username minimal 3 karakter");
+      return false;
+    }
+    // Validasi alpha_dash (huruf, angka, dash, underscore)
+    const usernamRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!usernamRegex.test(employeeIdNumber.trim())) {
+      Alert.alert("Validasi", "Username hanya boleh huruf, angka, dash, dan underscore");
       return false;
     }
 
@@ -61,47 +50,37 @@ export default function EditManagerScreen() {
   const handleUpdate = async () => {
     if (!validateForm()) return;
 
-    Alert.alert(
-      "Konfirmasi Update",
-      "Apakah Anda yakin ingin mengupdate data manajer ini?",
-      [
-        { text: "Batal", style: "cancel" },
-        {
-          text: "Update",
-          onPress: async () => {
-            setIsLoading(true);
-            try {
-              // Siapkan data yang akan dikirim
-              const updateData: any = {
-                name: name.trim(),
-                email: email.trim(),
-                employee_id_number: employeeIdNumber.trim(),
-              };
+    Alert.alert("Konfirmasi Update", "Apakah Anda yakin ingin mengupdate data manajer ini?", [
+      { text: "Batal", style: "cancel" },
+      {
+        text: "Update",
+        onPress: async () => {
+          setIsLoading(true);
+          try {
+            // Siapkan data yang akan dikirim
+            const updateData = {
+              name: name.trim(),
+              username: employeeIdNumber.trim(), // NIP sebagai username
+            };
 
-              // Tambahkan password jika diisi
-              if (password.trim()) {
-                updateData.password = password.trim();
-              }
+            // Kirim request update ke API menggunakan POST
+            await api.post(`/profile/staff`, updateData);
 
-              // Kirim request update ke API
-              await api.put(`/admin/managers/${managerId}`, updateData);
-
-              Alert.alert("Sukses", "Data manajer berhasil diupdate", [
-                {
-                  text: "OK",
-                  onPress: () => router.back(),
-                },
-              ]);
-            } catch (error) {
-              const apiError = handleApiError(error);
-              Alert.alert("Gagal", apiError.message);
-            } finally {
-              setIsLoading(false);
-            }
-          },
+            Alert.alert("Sukses", "Data manajer berhasil diupdate", [
+              {
+                text: "OK",
+                onPress: () => router.back(),
+              },
+            ]);
+          } catch (error) {
+            const apiError = handleApiError(error);
+            Alert.alert("Gagal", apiError.message);
+          } finally {
+            setIsLoading(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -113,107 +92,41 @@ export default function EditManagerScreen() {
           headerStyle: { backgroundColor: "#015023" },
           headerTintColor: "#fff",
           headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{ marginLeft: 15 }}
-            >
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
           ),
         }}
       />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Profile Image */}
-          <View style={styles.profileImageContainer}>
-            <Image
-              source={require("../../assets/images/kairi.png")}
-              style={styles.profileImage}
-            />
-            <Text style={styles.editImageText}>Edit Foto</Text>
-          </View>
-
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {/* Form Container */}
           <View style={styles.formContainer}>
             {/* Nama */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nama Lengkap</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Masukkan nama lengkap"
-                placeholderTextColor="#999"
-                editable={!isLoading}
-              />
+              <Text style={styles.helperText}>Minimal 4 karakter</Text>
+              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Masukkan nama lengkap" placeholderTextColor="#999" editable={!isLoading} />
             </View>
 
-            {/* Email */}
+            {/* Email - Read Only */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Masukkan email"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!isLoading}
-              />
+              <Text style={styles.helperText}>Email tidak dapat diubah</Text>
+              <TextInput style={[styles.input, styles.inputDisabled]} value={email} placeholder="Email" placeholderTextColor="#999" editable={false} />
             </View>
 
-            {/* NIP */}
+            {/* Username/NIP */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>NIP (Nomor Induk Pegawai)</Text>
-              <TextInput
-                style={styles.input}
-                value={employeeIdNumber}
-                onChangeText={setEmployeeIdNumber}
-                placeholder="Masukkan NIP"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                editable={!isLoading}
-              />
-            </View>
-
-            {/* Password (Optional) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password Baru (Opsional)</Text>
-              <Text style={styles.helperText}>
-                Kosongkan jika tidak ingin mengubah password
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Masukkan password baru"
-                placeholderTextColor="#999"
-                secureTextEntry
-                editable={!isLoading}
-              />
+              <Text style={styles.label}>Username</Text>
+              <TextInput style={styles.input} value={employeeIdNumber} onChangeText={setEmployeeIdNumber} placeholder="Masukkan username/NIP" placeholderTextColor="#999" autoCapitalize="none" editable={!isLoading} />
             </View>
           </View>
 
           {/* Update Button */}
-          <TouchableOpacity
-            style={[styles.updateButton, isLoading && styles.updateButtonDisabled]}
-            onPress={handleUpdate}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#015023" />
-            ) : (
-              <Text style={styles.updateButtonText}>Update Data</Text>
-            )}
+          <TouchableOpacity style={[styles.updateButton, isLoading && styles.updateButtonDisabled]} onPress={handleUpdate} disabled={isLoading}>
+            {isLoading ? <ActivityIndicator color="#015023" /> : <Text style={styles.updateButtonText}>Update Data</Text>}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -233,13 +146,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
-    paddingTop:0,
+    paddingTop: 0,
   },
   profileImageContainer: {
     alignItems: "center",
     marginTop: 0,
     marginBottom: 0,
-
   },
   profileImage: {
     width: 100,
@@ -280,6 +192,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     borderWidth: 2,
     borderColor: "#333",
+  },
+  inputDisabled: {
+    backgroundColor: "#E5E5E5",
+    opacity: 0.6,
   },
   updateButton: {
     backgroundColor: "#FFD43B",

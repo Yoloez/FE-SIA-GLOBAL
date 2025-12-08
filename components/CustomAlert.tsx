@@ -6,6 +6,7 @@ interface CustomAlertProps {
   visible: boolean;
   title: string;
   message: string;
+  type?: "info" | "warning" | "error" | "success";
   onClose: () => void;
   buttons?: { text: string; onPress: () => void; style?: "cancel" | "destructive" }[];
 }

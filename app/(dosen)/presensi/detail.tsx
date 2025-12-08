@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../../api/axios";
@@ -47,29 +47,51 @@ export default function ClassDetailPage() {
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const fetchClassDetail = useCallback(async () => {
-    if (!id_class) return;
+    if (!id_class || !isMounted.current) return;
 
     setIsLoading(true);
     try {
       const response = await api.get<ApiResponse>(`/lecturer/attendance/classes/${id_class}/schedules`);
 
-      if (response.data.status === "success") {
+      if (response.data.status === "success" && isMounted.current) {
         setClassInfo(response.data.data.class_info);
         setSchedules(response.data.data.schedules);
       }
     } catch (error: any) {
       console.error("Error fetching class detail:", error);
-      Alert.alert("Error", error.response?.data?.message || "Gagal memuat data kelas");
+      if (isMounted.current) {
+        Alert.alert("Error", error.response?.data?.message || "Gagal memuat data kelas");
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   }, [id_class]);
 
+  // Fetch pertama kali saat mount
   useEffect(() => {
     fetchClassDetail();
   }, [fetchClassDetail]);
+
+  // Auto-refresh setiap kali screen menjadi focus (kembali dari halaman lain)
+  useFocusEffect(
+    useCallback(() => {
+      if (isMounted.current) {
+        fetchClassDetail();
+      }
+    }, [fetchClassDetail])
+  );
 
   const handleManualPresence = (schedule: Schedule) => {
     if (!classInfo) return;

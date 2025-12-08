@@ -1,10 +1,15 @@
 import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../../context/AuthContext";
+
+interface ListClassesProps {
+  viewMode: "admin" | "manager";
+  onAddClass?: () => void;
+  onEditClass?: (classData: { id_class: string; code_class: string; code_subject: string; name_subject: string; member_class: string; id_academic_period: string; day_of_week: string; start_time: string; end_time: string }) => void;
+}
 
 interface Subject {
   id_subject: number;
@@ -43,10 +48,10 @@ const DAY_NAMES: { [key: number]: string } = {
   7: "Minggu",
 };
 
-export default function ClassListScreen() {
+export default function ClassListScreen({ viewMode, onAddClass, onEditClass }: ListClassesProps) {
   const { token, user } = useAuth();
-  const router = useRouter();
   const isMounted = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
@@ -59,40 +64,55 @@ export default function ClassListScreen() {
     fetchData();
     return () => {
       isMounted.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
   const fetchData = async () => {
+    // Guard: Jangan fetch jika component sudah unmount
+    if (!isMounted.current) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    if (typeof AbortController !== "undefined") {
+      abortControllerRef.current = new AbortController();
+    }
+
+    if (!isMounted.current) return; // Double check sebelum setState
     setIsLoadingClasses(true);
     try {
-      const subjectsRes = await api.get("/manager/subjects");
-      const periodsRes = await api.get("/academic-periods");
-      const classesRes = await api.get("/manager/classes");
-
-      console.log("📚 Subjects Response:", JSON.stringify(subjectsRes.data, null, 2));
-      console.log("📅 Periods Response:", JSON.stringify(periodsRes.data, null, 2));
-      console.log("🏫 Classes Response:", JSON.stringify(classesRes.data, null, 2));
+      const subjectsRes = await api.get("/manager/subjects", {
+        signal: abortControllerRef.current?.signal,
+      });
+      const periodsRes = await api.get("/academic-periods", {
+        signal: abortControllerRef.current?.signal,
+      });
+      const classesRes = await api.get("/manager/classes", {
+        signal: abortControllerRef.current?.signal,
+      });
 
       if (isMounted.current) {
         const subjectsData = subjectsRes.data?.data || subjectsRes.data || [];
         const periodsData = periodsRes.data?.data || periodsRes.data || [];
         const classesData = classesRes.data?.data || classesRes.data || [];
 
-        console.log("✅ Subjects loaded:", subjectsData.length);
-        console.log("✅ Periods loaded:", periodsData.length);
-        console.log("✅ Classes loaded:", classesData.length);
-
-        if (classesData.length > 0) {
-          console.log("🔍 Sample class data:", JSON.stringify(classesData[0], null, 2));
-        }
-
         setSubjects(subjectsData);
         setPeriods(periodsData);
         setClasses(classesData);
       }
     } catch (error: any) {
-      console.error("❌ Fetch error:", error);
-      Alert.alert("Error", `Gagal memuat data: ${error.response?.data?.message || error.message}`);
+      if (error.name === "AbortError" || error.name === "CanceledError") {
+        console.log("Fetch classes data aborted");
+        return;
+      }
+
+      if (isMounted.current) {
+        Alert.alert("Error", `Gagal memuat data: ${error.response?.data?.message || error.message}`);
+      }
     } finally {
       if (isMounted.current) setIsLoadingClasses(false);
     }
@@ -106,28 +126,30 @@ export default function ClassListScreen() {
   };
 
   const handleAddClasses = () => {
-    if (user?.role === "admin") router.push("/(admin)/AddClasses");
-    else if (user?.role === "manager") router.push("/(manager)/AddClasses");
-    else Alert.alert("Error", "Role Anda tidak diizinkan untuk menambah kelas.");
+    if (onAddClass) {
+      onAddClass();
+    } else {
+      Alert.alert("Error", "Fungsi tambah kelas tidak tersedia.");
+    }
   };
 
   const handleEditClass = (cls: Class) => {
-    const editParams = {
-      id_class: String(cls.id_class || ""),
-      code_class: cls.code_class || "",
-      code_subject: cls.code_subject || "",
-      name_subject: cls.name_subject || "",
-      member_class: String(cls.member_class || ""),
-      id_academic_period: String(cls.id_academic_period || ""),
-      day_of_week: String(cls.day_of_week || ""),
-      start_time: cls.start_time || "",
-      end_time: cls.end_time || "",
-    };
-
-    router.push({
-      pathname: user?.role === "admin" ? "/(admin)/EditClasses" : "/(manager)/EditClasses",
-      params: editParams,
-    });
+    if (onEditClass) {
+      const editParams = {
+        id_class: String(cls.id_class || ""),
+        code_class: cls.code_class || "",
+        code_subject: cls.code_subject || "",
+        name_subject: cls.name_subject || "",
+        member_class: String(cls.member_class || ""),
+        id_academic_period: String(cls.id_academic_period || ""),
+        day_of_week: String(cls.day_of_week || ""),
+        start_time: cls.start_time || "",
+        end_time: cls.end_time || "",
+      };
+      onEditClass(editParams);
+    } else {
+      Alert.alert("Error", "Fungsi edit kelas tidak tersedia.");
+    }
   };
 
   const filteredClasses = classes.filter((cls) => {
@@ -138,15 +160,6 @@ export default function ClassListScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          title: "Daftar Kelas",
-          headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#015023" },
-          headerTintColor: "#fff",
-        }}
-      />
-
       <View style={styles.container}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>

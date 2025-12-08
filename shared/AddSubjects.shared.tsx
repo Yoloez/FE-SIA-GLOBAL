@@ -1,22 +1,37 @@
+import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { Stack, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { useAuth } from "../../context/AuthContext";
 
-export default function CreateSubjectScreen() {
+interface CreateSubjectScreenProps {
+  viewMode: "admin" | "manager";
+  onBack?: () => void;
+  onSuccess?: () => void;
+}
+
+export default function CreateSubjectScreen({ viewMode, onBack, onSuccess }: CreateSubjectScreenProps) {
   const { token } = useAuth();
-  const router = useRouter();
 
   const [nameSubject, setNameSubject] = useState("");
   const [codeSubject, setCodeSubject] = useState("");
   const [sks, setSks] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const isMountedRef = React.useRef(true);
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const handleCreateSubject = async () => {
+    if (!isMountedRef.current) return;
+
     if (!nameSubject || !codeSubject || !sks) {
       Alert.alert("Error", "Semua kolom wajib diisi.");
       return;
@@ -31,9 +46,21 @@ export default function CreateSubjectScreen() {
         sks: parseInt(sks, 10),
       });
 
-      Alert.alert("Sukses", `Mata kuliah "${response.data.data.name_subject}" berhasil ditambahkan.`);
-      router.back();
+      if (!isMountedRef.current) return;
+
+      Alert.alert("Sukses", `Mata kuliah "${response.data.data.name_subject}" berhasil ditambahkan.`, [
+        {
+          text: "OK",
+          onPress: () => {
+            if (isMountedRef.current) {
+              onSuccess?.();
+            }
+          },
+        },
+      ]);
     } catch (error) {
+      if (!isMountedRef.current) return;
+
       console.error("Gagal menambah mata kuliah:", error);
 
       let errorMessage = "Terjadi kesalahan. Silakan coba lagi.";
@@ -46,18 +73,18 @@ export default function CreateSubjectScreen() {
       }
       Alert.alert("Gagal", errorMessage);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ headerShown: false }} />
-
       <ScrollView contentContainerStyle={styles.container}>
         {/* Custom Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => onBack?.()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Tambah Mata Kuliah</Text>

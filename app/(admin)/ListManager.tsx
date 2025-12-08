@@ -9,13 +9,19 @@ import { handleApiError, isAbortError } from "../../utils/errorHandler";
 
 interface StaffProfile {
   employee_id_number: string;
+  full_name?: string;
+  position?: string;
 }
 
 interface Manager {
   id_user_si: number;
   name: string;
   email: string;
+  username: string;
+  is_active: boolean;
+  profile_image: string | null;
   staff_profile: StaffProfile | null;
+  created_at: string;
 }
 
 export default function AdminDashboardScreen() {
@@ -32,20 +38,6 @@ export default function AdminDashboardScreen() {
       abortControllerRef.current?.abort();
     };
   }, []);
-
-  const handleLogout = useCallback(() => {
-    Alert.alert("Konfirmasi Logout", "Apakah Anda yakin ingin keluar?", [
-      {
-        text: "Batal",
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: () => logout(),
-      },
-    ]);
-  }, [logout]);
 
   const fetchManagers = useCallback(async () => {
     // Batalkan request sebelumnya
@@ -121,7 +113,14 @@ export default function AdminDashboardScreen() {
     }
 
     const query = searchQuery.toLowerCase();
-    return managers.filter((manager) => manager.name.toLowerCase().includes(query) || manager.email.toLowerCase().includes(query) || manager.staff_profile?.employee_id_number?.toLowerCase().includes(query));
+    return managers.filter(
+      (manager) =>
+        manager.name.toLowerCase().includes(query) ||
+        manager.email.toLowerCase().includes(query) ||
+        manager.username?.toLowerCase().includes(query) ||
+        manager.staff_profile?.employee_id_number?.toLowerCase().includes(query) ||
+        manager.staff_profile?.full_name?.toLowerCase().includes(query)
+    );
   }, [managers, searchQuery]);
 
   const clearSearch = useCallback(() => {
@@ -132,38 +131,42 @@ export default function AdminDashboardScreen() {
     ({ item }: { item: Manager }) => (
       <View style={styles.managerCard}>
         <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-          <Image source={require("../../assets/images/kairi.png")} style={styles.avatar} />
+          {item.profile_image ? <Image source={{ uri: item.profile_image }} style={styles.avatar} /> : <Image source={require("../../assets/images/unnamed.jpg")} style={styles.avatar} />}
           <View style={{ flex: 1 }}>
-            <Text style={styles.managerName} numberOfLines={1}>
-              {item.name}
-            </Text>
+            <View style={styles.nameContainer}>
+              <Text style={styles.managerName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {!item.is_active && (
+                <View style={styles.inactiveBadge}>
+                  <Text style={styles.inactiveBadgeText}>Inactive</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.managerEmail} numberOfLines={1}>
               {item.email}
             </Text>
-            <Text style={styles.managerEmail}>{item.staff_profile?.employee_id_number || "NIP: Belum diatur"}</Text>
+            <Text style={styles.managerEmail}>Username: {item.username || "Belum diatur"}</Text>
+            {item.staff_profile?.employee_id_number && <Text style={styles.managerEmail}>NIP: {item.staff_profile.employee_id_number}</Text>}
           </View>
         </View>
         <View style={styles.actions}>
-<TouchableOpacity
-  style={styles.actionButton}
-  onPress={() =>
-    router.push({
-      pathname: "/(admin)/EditManager",
-      params: {
-        id_user_si: item.id_user_si,
-        name: item.name,
-        email: item.email,
-        employee_id_number: item.staff_profile?.employee_id_number ?? "",
-      },
-    })
-  }
->
-  <Ionicons name="create-outline" size={22} color="#015023" />
-</TouchableOpacity>
-
-
-
-
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() =>
+              router.push({
+                pathname: "/(admin)/EditManager",
+                params: {
+                  id_user_si: item.id_user_si,
+                  name: item.name,
+                  email: item.email,
+                  employee_id_number: item.username ?? "",
+                },
+              })
+            }
+          >
+            <Ionicons name="create-outline" size={22} color="#015023" />
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteManager(item.id_user_si, item.name)}>
             <Ionicons name="trash-outline" size={22} color="#B00020" />
@@ -182,11 +185,6 @@ export default function AdminDashboardScreen() {
           headerTitleAlign: "center",
           headerStyle: { backgroundColor: "#015023" },
           headerTintColor: "#fff",
-          headerRight: () => (
-            <TouchableOpacity onPress={handleLogout} style={{ marginRight: 15 }}>
-              <Ionicons name="log-out-outline" size={26} color="#ffffff" />
-            </TouchableOpacity>
-          ),
         }}
       />
 
@@ -325,15 +323,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  nameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   managerName: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 4,
+  },
+  inactiveBadge: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  inactiveBadgeText: {
+    fontSize: 10,
+    color: "#fff",
+    fontWeight: "600",
   },
   managerEmail: {
     fontSize: 13,
     color: "#666",
+    marginBottom: 2,
   },
   actions: {
     flexDirection: "row",

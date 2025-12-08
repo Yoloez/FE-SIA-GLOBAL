@@ -1,3 +1,5 @@
+// TEMPORARILY DISABLED: Notification service requires native modules (expo-device)
+// import notificationService from "@/utils/notificationService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
@@ -31,6 +33,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("========================================");
       console.log("[INVESTIGASI] App Start: Mencoba memuat data sesi...");
       try {
+        // Check if force logout flag is set
+        const forceLogoutFlag = await AsyncStorage.getItem("forceLogout");
+        if (forceLogoutFlag === "true") {
+          console.log("[INVESTIGASI] Force logout flag detected - clearing session");
+          await AsyncStorage.removeItem("forceLogout");
+          await AsyncStorage.removeItem("userToken");
+          await AsyncStorage.removeItem("userData");
+          setUser(null);
+          setToken(null);
+          setIsLoading(false);
+          return;
+        }
+
         const storedToken = await AsyncStorage.getItem("userToken");
         const storedUserData = await AsyncStorage.getItem("userData");
 
@@ -54,6 +69,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     loadUserData();
+
+    // Check for force logout flag every 2 seconds
+    const interval = setInterval(async () => {
+      const forceLogoutFlag = await AsyncStorage.getItem("forceLogout");
+      if (forceLogoutFlag === "true") {
+        console.log("[AUTH CONTEXT] Force logout detected in interval check");
+        await AsyncStorage.removeItem("forceLogout");
+        setUser(null);
+        setToken(null);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const login = async (userData: User, authToken: string) => {
@@ -74,6 +102,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Verifikasi data tersimpan
       const savedData = await AsyncStorage.getItem("userData");
       console.log("[INVESTIGASI] Verifikasi data tersimpan:", savedData);
+
+      // TEMPORARILY DISABLED: Register for push notifications after login
+      // await notificationService.registerForPushNotifications();
     } catch (e) {
       console.error("[INVESTIGASI] GAGAL menyimpan data ke storage", e);
     }
@@ -85,6 +116,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("[LOGOUT] Memulai proses logout...");
     try {
       console.log("[LOGOUT] Menghapus state user dan token...");
+
+      // TEMPORARILY DISABLED: Remove device token from backend
+      // await notificationService.removeDeviceToken();
+
+      // TEMPORARILY DISABLED: Clear badge count
+      // await notificationService.setBadgeCount(0);
+
       setUser(null);
       setToken(null);
 

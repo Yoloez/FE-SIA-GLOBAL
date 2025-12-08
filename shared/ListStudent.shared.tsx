@@ -1,10 +1,11 @@
+import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { Stack, useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
 
 interface Student {
   id_user_si: number;
@@ -18,29 +19,70 @@ interface Student {
   is_active: boolean;
 }
 
-export default function StudentListScreen() {
-  const router = useRouter();
+interface ListStudentProps {
+  viewMode: "admin" | "manager";
+  onAddStudent?: () => void;
+  onEditStudent?: (studentData: any) => void;
+}
 
+export default function StudentListScreen({ viewMode, onAddStudent, onEditStudent }: ListStudentProps) {
+  const { user } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
+  const isMountedRef = React.useRef(true);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // Fetch students list
   const fetchStudents = useCallback(async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    if (typeof AbortController !== "undefined") {
+      abortControllerRef.current = new AbortController();
+    }
+
     setIsLoadingList(true);
     try {
-      const response = await api.get("/manager/students");
+      const response = await api.get("/manager/students", {
+        signal: abortControllerRef.current?.signal,
+      });
       console.log("Response students:", response.data);
-      setStudents(response.data.data || []);
-    } catch (error) {
+
+      if (isMountedRef.current) {
+        setStudents(response.data.data || []);
+      }
+    } catch (error: any) {
+      if (error.name === "AbortError" || error.name === "CanceledError") {
+        console.log("Fetch students aborted");
+        return;
+      }
+
       console.error("Gagal mengambil data mahasiswa:", error);
       if (axios.isAxiosError(error)) {
         console.error("Error response:", error.response?.data);
       }
-      Alert.alert("Error", "Gagal mengambil data mahasiswa");
+
+      if (isMountedRef.current) {
+        Alert.alert("Error", "Gagal mengambil data mahasiswa");
+      }
     } finally {
-      setIsLoadingList(false);
+      if (isMountedRef.current) {
+        setIsLoadingList(false);
+      }
     }
   }, []);
 
@@ -60,9 +102,13 @@ export default function StudentListScreen() {
         text: "Ubah",
         style: "default",
         onPress: async () => {
+          if (!isMountedRef.current) return;
+
           setTogglingId(studentId);
           try {
             const response = await api.patch(`/admin/managers/${studentId}/toggle-status`);
+
+            if (!isMountedRef.current) return;
 
             if (response.data.status === "success") {
               // Update local state
@@ -73,6 +119,8 @@ export default function StudentListScreen() {
             }
           } catch (error) {
             console.error("Gagal mengubah status:", error);
+            if (!isMountedRef.current) return;
+
             if (axios.isAxiosError(error)) {
               console.error("Error response:", error.response?.data);
               Alert.alert("Gagal", error.response?.data?.message || "Gagal mengubah status mahasiswa.");
@@ -80,7 +128,9 @@ export default function StudentListScreen() {
               Alert.alert("Gagal", "Gagal mengubah status mahasiswa.");
             }
           } finally {
-            setTogglingId(null);
+            if (isMountedRef.current) {
+              setTogglingId(null);
+            }
           }
         },
       },
@@ -125,19 +175,18 @@ export default function StudentListScreen() {
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() =>
-              router.push({
-                pathname: "/(admin)/EditStudent",
-                params: {
+            onPress={() => {
+              if (onEditStudent) {
+                onEditStudent({
                   id: item.id_user_si,
                   full_name: item.full_name,
                   nim: item.registration_number,
                   email: item.email,
                   program: item.program_name,
                   image: item.profile_image,
-                },
-              })
-            }
+                });
+              }
+            }}
           >
             <Ionicons name="create-outline" size={22} color="#015023" />
           </TouchableOpacity>
@@ -152,25 +201,11 @@ export default function StudentListScreen() {
         </View>
       </View>
     ),
-    [handleToggleStatus, router, togglingId]
+    [handleToggleStatus, onEditStudent, togglingId]
   );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen
-        options={{
-          title: "Daftar Mahasiswa",
-          headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#015023" },
-          headerTintColor: "#fff",
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 15 }}>
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
       <View style={styles.container}>
         {/* Search bar */}
         <View style={styles.searchContainer}>
@@ -192,7 +227,7 @@ export default function StudentListScreen() {
             {searchQuery.length > 0 && <Text style={styles.resultCount}>{filteredStudents.length} hasil ditemukan</Text>}
           </View>
 
-          <TouchableOpacity onPress={() => router.push("/(admin)/AddStudent")} style={styles.addButton}>
+          <TouchableOpacity onPress={() => onAddStudent?.()} style={styles.addButton}>
             <Ionicons name="add-circle-outline" size={28} color="white" />
           </TouchableOpacity>
         </View>

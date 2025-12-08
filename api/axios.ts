@@ -32,4 +32,35 @@ api.interceptors.request.use(
   }
 );
 
+// 4. Response interceptor untuk handle 401 Unauthorized (auto logout)
+api.interceptors.response.use(
+  (response) => {
+    // Request berhasil, return response
+    return response;
+  },
+  async (error) => {
+    console.log("========================================");
+    console.log("[AXIOS INTERCEPTOR] Response Error Detected");
+    console.log("[AXIOS INTERCEPTOR] Status:", error.response?.status);
+    console.log("[AXIOS INTERCEPTOR] Message:", error.response?.data?.message);
+    console.log("========================================");
+
+    // Jika error 401 (Unauthorized), auto logout
+    if (error.response?.status === 401) {
+      console.log("[AXIOS INTERCEPTOR] 401 Unauthorized - Auto logout triggered");
+
+      // Clear storage
+      await AsyncStorage.removeItem("userToken");
+      await AsyncStorage.removeItem("userData");
+
+      // Set flag untuk trigger re-render di AuthContext
+      await AsyncStorage.setItem("forceLogout", "true");
+
+      console.log("[AXIOS INTERCEPTOR] User data cleared, redirecting to login...");
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export default api;

@@ -101,12 +101,23 @@ export default function HomeScreen() {
   const fetchStudentIdentity = useCallback(async () => {
     setIsLoadingProfile(true);
     try {
+      console.log("[MAHASISWA HOME] Fetching student identity...");
       const response = await api.get("/student/profile/identity");
       if (isMounted.current) {
         setStudentIdentity(response.data.data);
+        console.log("[MAHASISWA HOME] Student identity loaded successfully");
       }
-    } catch (error) {
-      console.error("Gagal memuat identitas mahasiswa:", error);
+    } catch (error: any) {
+      console.error("========================================");
+      console.error("[MAHASISWA HOME] Error fetching student identity:", error);
+      console.error("[MAHASISWA HOME] Error status:", error.response?.status);
+      console.error("[MAHASISWA HOME] Error message:", error.response?.data?.message);
+      console.error("========================================");
+
+      // If 401, user will be auto-logged out by axios interceptor
+      if (error.response?.status === 401) {
+        console.log("[MAHASISWA HOME] 401 detected - waiting for auto logout");
+      }
     } finally {
       if (isMounted.current) {
         setIsLoadingProfile(false);
@@ -184,8 +195,15 @@ export default function HomeScreen() {
           currentPeriod,
         });
       }
-    } catch (error) {
-      console.error("Gagal memuat data nilai:", error);
+    } catch (error: any) {
+      console.error("========================================");
+      console.error("[MAHASISWA HOME] Error fetching grades:", error);
+      console.error("[MAHASISWA HOME] Error status:", error.response?.status);
+      console.error("========================================");
+
+      if (error.response?.status === 401) {
+        console.log("[MAHASISWA HOME] 401 in grades - waiting for auto logout");
+      }
     } finally {
       if (isMounted.current) {
         setIsLoadingGrades(false);
@@ -199,8 +217,11 @@ export default function HomeScreen() {
       if (isMounted.current && response.data.status === "success") {
         setUnreadCount(response.data.data.unread_count || 0);
       }
-    } catch (error) {
-      console.error("Gagal memuat jumlah notifikasi:", error);
+    } catch (error: any) {
+      console.error("[MAHASISWA HOME] Error fetching unread count:", error);
+      if (error.response?.status === 401) {
+        console.log("[MAHASISWA HOME] 401 in notifications - waiting for auto logout");
+      }
     }
   }, []);
 
@@ -248,8 +269,16 @@ export default function HomeScreen() {
           setFilteredContent([contentItem]);
         }
       }
-    } catch (error) {
-      console.error("Gagal memuat jadwal:", error);
+    } catch (error: any) {
+      console.error("========================================");
+      console.error("[MAHASISWA HOME] Error fetching schedules:", error);
+      console.error("[MAHASISWA HOME] Error status:", error.response?.status);
+      console.error("========================================");
+
+      if (error.response?.status === 401) {
+        console.log("[MAHASISWA HOME] 401 in schedules - waiting for auto logout");
+      }
+
       // Set empty content on error
       const contentItem: ContentItem = {
         id: "schedule-error",

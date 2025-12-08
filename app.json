@@ -33,7 +33,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "/assets/images/logo-ugn.png",
+          "image": "./assets/images/logo-ugn.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#015023",
@@ -57,6 +57,14 @@
           "recordAudioAndroid": true
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/logo-ugn.png",
+          "color": "#015023",
+          "defaultChannel": "default"
+        }
+      ],
       "expo-web-browser"
     ],
     "experiments": {
@@ -68,6 +76,12 @@
       "eas": {
         "projectId": "e1d2b90f-3cad-4f8a-bb98-ecff8f68a39f"
       }
+    },
+    "notification": {
+      "icon": "./assets/images/logo-ugn.png",
+      "color": "#015023",
+      "androidMode": "default",
+      "androidCollapsedTitle": "#{unread_notif_count} notifikasi baru"
     }
   }
 }

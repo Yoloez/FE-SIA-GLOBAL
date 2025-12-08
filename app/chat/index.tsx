@@ -64,7 +64,6 @@ const ChatListApp = () => {
     }
 
     try {
-      console.log("🔄 Fetching contacts from API...");
       const response = await api.get("/chat/contacts", {
         signal: abortControllerRef.current.signal,
       });
@@ -73,7 +72,6 @@ const ChatListApp = () => {
 
       const { lecturers: lecturersData, classmates: classmatesData } = response.data.data;
 
-      console.log(`✅ Loaded ${(lecturersData?.length || 0) + (classmatesData?.length || 0)} contacts`);
       setLecturers(lecturersData || []);
       setClassmates(classmatesData || []);
     } catch (error: any) {
@@ -180,24 +178,14 @@ const ChatListApp = () => {
     return (
       <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <View style={styles.contactCard}>
-          <Image
-            source={{ uri: avatarUri }}
-            style={styles.avatarImage}
-            defaultSource={require("../../assets/images/react-logo.png")}
-            onError={(error) => {
-              console.log("❌ Avatar load error for", item.name, ":", error.nativeEvent.error);
-            }}
-            onLoad={() => {
-              console.log("✅ Avatar loaded for", item.name);
-            }}
-          />
+          <Image source={{ uri: avatarUri }} style={styles.avatarImage} defaultSource={require("../../assets/images/react-logo.png")} />
 
           <View style={styles.contactInfo}>
             <ThemedText style={styles.contactName} numberOfLines={1}>
               {item.name}
             </ThemedText>
             <ThemedText style={styles.contactId} numberOfLines={1}>
-              @{item.username}
+              {item.email}
             </ThemedText>
           </View>
 

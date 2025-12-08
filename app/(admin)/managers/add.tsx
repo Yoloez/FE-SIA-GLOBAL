@@ -1,10 +1,10 @@
+import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import { Stack, router } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { useAuth } from "../../context/AuthContext";
 
 export default function AddManagerScreen() {
   const { token } = useAuth();
@@ -91,7 +91,7 @@ export default function AddManagerScreen() {
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen
         options={{
-          title: "",
+          title: "Tambah Manager",
           headerTitleAlign: "center",
           headerStyle: {
             backgroundColor: "#015023",

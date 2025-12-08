@@ -1,9 +1,10 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BuatNotifScreen() {
@@ -57,7 +58,9 @@ export default function BuatNotifScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Buat Pengumuman</Text>
+          <ThemedText variant="semibold" style={styles.headerTitle}>
+            Buat Pengumuman
+          </ThemedText>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -67,27 +70,29 @@ export default function BuatNotifScreen() {
             <View style={styles.classInfoCard}>
               <View style={styles.classInfoHeader}>
                 <Ionicons name="school" size={24} color="#015023" />
-                <Text style={styles.classInfoTitle}>Pengumuman untuk Kelas</Text>
+                <ThemedText style={styles.classInfoTitle}>Pengumuman untuk Kelas</ThemedText>
               </View>
               <View style={styles.classInfoBody}>
                 <View style={styles.classCodeBadge}>
-                  <Text style={styles.classCodeText}>{params.code_subject}</Text>
+                  <ThemedText style={styles.classCodeText}>{params.code_subject}</ThemedText>
                 </View>
-                <Text style={styles.subjectNameText}>{params.name_subject}</Text>
-                <Text style={styles.classCodeSubtext}>Kelas {params.code_class}</Text>
+                <ThemedText variant="bold" style={styles.subjectNameText}>
+                  {params.name_subject}
+                </ThemedText>
+                <ThemedText style={styles.classCodeSubtext}>Kelas {params.code_class}</ThemedText>
               </View>
             </View>
 
             {/* Form */}
             <View style={styles.formCard}>
-              <Text style={styles.label}>
-                Judul <Text style={styles.optional}>(Opsional)</Text>
-              </Text>
+              <ThemedText style={styles.label}>
+                Judul <ThemedText style={styles.optional}>(Opsional)</ThemedText>
+              </ThemedText>
               <TextInput style={styles.input} placeholder="Masukkan judul pengumuman..." placeholderTextColor="#999" value={title} onChangeText={setTitle} editable={!isSubmitting} />
 
-              <Text style={styles.label}>
-                Pesan <Text style={styles.required}>*</Text>
-              </Text>
+              <ThemedText style={styles.label}>
+                Pesan <ThemedText style={styles.required}>*</ThemedText>
+              </ThemedText>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Tulis pesan pengumuman di sini..."
@@ -102,7 +107,7 @@ export default function BuatNotifScreen() {
 
               <View style={styles.infoBox}>
                 <Ionicons name="information-circle" size={20} color="#015023" />
-                <Text style={styles.infoText}>Pengumuman akan dikirim ke semua mahasiswa di kelas ini</Text>
+                <ThemedText style={styles.infoText}>Pengumuman akan dikirim ke semua mahasiswa di kelas ini</ThemedText>
               </View>
             </View>
 
@@ -112,12 +117,14 @@ export default function BuatNotifScreen() {
                 {isSubmitting ? (
                   <>
                     <ActivityIndicator size="small" color="#015023" />
-                    <Text style={styles.submitButtonText}>Mengirim...</Text>
+                    <ThemedText style={styles.submitButtonText}>Mengirim...</ThemedText>
                   </>
                 ) : (
                   <>
                     <Ionicons name="send" size={20} color="#015023" />
-                    <Text style={styles.submitButtonText}>Kirim Pengumuman</Text>
+                    <ThemedText variant="bold" style={styles.submitButtonText}>
+                      Kirim Pengumuman
+                    </ThemedText>
                   </>
                 )}
               </View>
@@ -149,7 +156,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "700",
     color: "#ffffff",
     flex: 1,
     textAlign: "center",
@@ -201,12 +207,12 @@ const styles = StyleSheet.create({
   },
   classCodeText: {
     fontSize: 12,
-    fontWeight: "700",
+
     color: "#FFFFFF",
   },
   subjectNameText: {
     fontSize: 16,
-    fontWeight: "700",
+
     color: "#015023",
   },
   classCodeSubtext: {
@@ -293,7 +299,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 16,
-    fontWeight: "700",
+
     color: "#015023",
   },
 });

@@ -5,15 +5,25 @@ export default function ManagerLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: "Manager Dashboard", headerShown: false }} />
-      <Stack.Screen name="ListClasses" options={{ title: "Buat Kelas Baru", presentation: "modal" }} />
-      <Stack.Screen name="[classId]" options={{ title: "Detail Kelas" }} />
-      <Stack.Screen name="AssignMember" options={{ title: "Tambah Anggota", presentation: "modal" }} />
-      <Stack.Screen name="ListSubjects" options={{ title: "Buat Mata Kuliah" }} />
-      <Stack.Screen name="ListLecturer" options={{ title: "Tambah Dosen" }} />
-      <Stack.Screen name="ListStudent" options={{ title: "Tambah Mahasiswa" }} />
+
+      {/* Classes Routes */}
+      <Stack.Screen name="classes" options={{ headerShown: false }} />
+
+      {/* Lecturers Routes */}
+      <Stack.Screen name="lecturers" options={{ headerShown: false }} />
+
+      {/* Students Routes */}
+      <Stack.Screen name="students" options={{ headerShown: false }} />
+
+      {/* Subjects Routes */}
+      <Stack.Screen name="subjects" options={{ headerShown: false }} />
+
+      {/* Profile Routes */}
       <Stack.Screen name="Profil" options={{ title: "Profil Manager", headerShown: false }} />
       <Stack.Screen name="EditProfil" options={{ title: "Edit Profil Manager", headerShown: false }} />
-      <Stack.Screen name="EditSubject" options={{ title: "Edit Mata Kuliah", headerTintColor: "#fff", headerStyle: { backgroundColor: "#1a5c3a" }, headerTitleAlign: "center" }} />
+
+      {/* Notification */}
+      <Stack.Screen name="Notification" options={{ title: "Notifikasi", headerShown: false }} />
     </Stack>
   );
 }

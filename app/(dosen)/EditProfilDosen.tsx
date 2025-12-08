@@ -1,11 +1,12 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
 export default function EditProfilScreen() {
@@ -263,7 +264,7 @@ export default function EditProfilScreen() {
         <StatusBar barStyle="light-content" backgroundColor="#1a5f3f" />
         <View style={styles.content}>
           <View style={styles.profileCard}>
-            <Text style={styles.profileTitle}>Edit Profile</Text>
+            <ThemedText style={styles.profileTitle}>Edit Profile</ThemedText>
 
             <View style={styles.avatarContainer}>
               <Image source={profileImage ? { uri: profileImage } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} />
@@ -276,7 +277,7 @@ export default function EditProfilScreen() {
               <ScrollView style={{ flex: 1, width: "100%" }} showsVerticalScrollIndicator={false}>
                 {/* Nama Lengkap */}
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Nama Lengkap: *</Text>
+                  <ThemedText style={styles.label}>Nama Lengkap: *</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={fullName} onChangeText={setFullName} placeholder="Masukkan nama lengkap" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
                   </View>
@@ -284,7 +285,7 @@ export default function EditProfilScreen() {
 
                 {/* Email */}
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Email: *</Text>
+                  <ThemedText style={styles.label}>Email: *</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="Masukkan email" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
                   </View>
@@ -292,7 +293,7 @@ export default function EditProfilScreen() {
 
                 {/* NIP/Employee ID */}
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>NIP/ID Pegawai:</Text>
+                  <ThemedText style={styles.label}>NIP/ID Pegawai:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={employeeIdNumber} onChangeText={setEmployeeIdNumber} placeholder="Masukkan NIP" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
                   </View>
@@ -300,31 +301,31 @@ export default function EditProfilScreen() {
 
                 {/* Posisi/Jabatan */}
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Posisi/Jabatan:</Text>
+                  <ThemedText style={styles.label}>Posisi/Jabatan:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={position} onChangeText={setPosition} placeholder="Masukkan posisi" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
                   </View>
                 </View>
 
                 {/* Section Ubah Password */}
-                <Text style={styles.passwordSectionTitle}>Ubah Password (Opsional)</Text>
+                <ThemedText style={styles.passwordSectionTitle}>Ubah Password (Opsional)</ThemedText>
 
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Password Saat Ini:</Text>
+                  <ThemedText style={styles.label}>Password Saat Ini:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry placeholder="Masukkan password saat ini" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
                   </View>
                 </View>
 
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Password Baru:</Text>
+                  <ThemedText style={styles.label}>Password Baru:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry placeholder="Minimal 8 karakter" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
                   </View>
                 </View>
 
                 <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Konfirmasi Password Baru:</Text>
+                  <ThemedText style={styles.label}>Konfirmasi Password Baru:</ThemedText>
                   <View style={styles.infoBox}>
                     <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry placeholder="Konfirmasi password baru" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
                   </View>
@@ -332,12 +333,12 @@ export default function EditProfilScreen() {
 
                 {/* Save Button */}
                 <TouchableOpacity style={[styles.settingButton, isLoading && styles.disabledButton]} onPress={handleSave} disabled={isLoading}>
-                  {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <Text style={styles.settingButtonText}>Simpan Perubahan</Text>}
+                  {isLoading ? <ActivityIndicator color="#1a1a1a" /> : <ThemedText style={styles.settingButtonText}>Simpan Perubahan</ThemedText>}
                 </TouchableOpacity>
 
                 {/* Cancel Button */}
                 <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={isLoading}>
-                  <Text style={styles.cancelButtonText}>Batal</Text>
+                  <ThemedText style={styles.cancelButtonText}>Batal</ThemedText>
                 </TouchableOpacity>
               </ScrollView>
             </KeyboardAvoidingView>

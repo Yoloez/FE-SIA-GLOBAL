@@ -134,7 +134,9 @@ export default function NotificationScreen() {
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPeriodModal(false)}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <ThemedText style={styles.modalTitle}>Pilih Periode Akademik</ThemedText>
+            <ThemedText variant="semibold" style={styles.modalTitle}>
+              Pilih Periode Akademik
+            </ThemedText>
             <TouchableOpacity onPress={() => setShowPeriodModal(false)}>
               <Ionicons name="close" size={24} color="#015023" />
             </TouchableOpacity>
@@ -143,7 +145,9 @@ export default function NotificationScreen() {
           <ScrollView style={styles.periodList}>
             {academicPeriods.map((period) => (
               <TouchableOpacity key={period.id} style={[styles.periodItem, selectedPeriod === period.id && styles.periodItemSelected]} onPress={() => handlePeriodSelect(period.id)}>
-                <ThemedText style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>{period.name}</ThemedText>
+                <ThemedText variant="semibold" style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>
+                  {period.name}
+                </ThemedText>
                 {selectedPeriod === period.id && <Ionicons name="checkmark-circle" size={20} color="#015023" />}
               </TouchableOpacity>
             ))}
@@ -396,7 +400,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "700",
     color: "#015023",
   },
   periodList: {
@@ -422,6 +425,5 @@ const styles = StyleSheet.create({
   },
   periodItemTextSelected: {
     color: "#015023",
-    fontWeight: "700",
   },
 });

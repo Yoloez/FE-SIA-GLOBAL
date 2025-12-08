@@ -1,4 +1,5 @@
 import api from "@/api/axios";
+import GenerateScheduleModal from "@/components/class/GenerateScheduleModal";
 import CustomAlert from "@/components/CustomAlert";
 import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +9,7 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type TabType = "lecturers" | "students";
@@ -29,13 +30,8 @@ export default function ClassDetailScreen({ viewMode, classId, onBack, onNavigat
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Generate Schedule Modal States
+  // Generate Schedule Modal State
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [jumlahPertemuan, setJumlahPertemuan] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
 
   // CustomAlert States
   const [alertConfig, setAlertConfig] = useState({
@@ -109,127 +105,74 @@ export default function ClassDetailScreen({ viewMode, classId, onBack, onNavigat
     };
   }, [classDetails, searchQuery]);
 
-  const formatDisplayDate = (dateString: string) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
-  };
-
-  const generateCalendarDays = () => {
-    const currentMonth = selectedDate.getMonth();
-    const currentYear = selectedDate.getFullYear();
-
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    const days = [];
-
-    // Empty slots for days before month starts
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-
-    // Actual days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(currentYear, currentMonth, day));
-    }
-
-    return days;
-  };
-
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-    const formattedDate = date.toISOString().split("T")[0];
-    setStartDate(formattedDate);
-    setShowDatePicker(false);
-  };
-
-  const handlePreviousMonth = () => {
-    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
-  };
-
-  const handleGenerateSchedule = useCallback(async () => {
-    if (!startDate || !jumlahPertemuan) {
-      setAlertConfig({
-        visible: true,
-        title: "Validasi Gagal",
-        message: "Tanggal mulai dan jumlah pertemuan harus diisi.",
-        type: "error",
-      });
-      return;
-    }
-
-    const jumlah = parseInt(jumlahPertemuan);
-    if (isNaN(jumlah) || jumlah < 1 || jumlah > 20) {
-      setAlertConfig({
-        visible: true,
-        title: "Validasi Gagal",
-        message: "Jumlah pertemuan harus antara 1-20.",
-        type: "error",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const response = await api.post(`/manager/classes/${classId}/generate-schedule`, {
-        start_date: startDate,
-        jumlah_pertemuan: jumlah,
-      });
-
-      if (response.data.status === "success") {
-        setShowGenerateModal(false);
-        setStartDate("");
-        setSelectedDate(new Date());
-        setJumlahPertemuan("");
+  const handleGenerateSchedule = useCallback(
+    async (startDate: string, jumlahPertemuan: number) => {
+      if (!startDate || !jumlahPertemuan) {
         setAlertConfig({
           visible: true,
-          title: "Berhasil",
-          message: `Berhasil men-generate ${jumlah} jadwal pertemuan.`,
-          type: "success",
+          title: "Validasi Gagal",
+          message: "Tanggal mulai dan jumlah pertemuan harus diisi.",
+          type: "error",
         });
-        fetchClassDetails();
+        return;
       }
-    } catch (error: any) {
-      console.error("Error generating schedule:", error);
 
-      if (axios.isAxiosError(error) && error.response?.data) {
-        const errorData = error.response.data;
-        let errorMessage = errorData.message || "Gagal generate jadwal.";
+      if (isNaN(jumlahPertemuan) || jumlahPertemuan < 1 || jumlahPertemuan > 20) {
+        setAlertConfig({
+          visible: true,
+          title: "Validasi Gagal",
+          message: "Jumlah pertemuan harus antara 1-20.",
+          type: "error",
+        });
+        return;
+      }
+      try {
+        const response = await api.post(`/manager/classes/${classId}/generate-schedule`, {
+          start_date: startDate,
+          jumlah_pertemuan: jumlahPertemuan,
+        });
 
-        // Handle validation errors
-        if (errorData.errors) {
-          const errors = Object.values(errorData.errors).flat();
-          errorMessage = errors.join("\n");
+        if (response.data.status === "success") {
+          setShowGenerateModal(false);
+          setAlertConfig({
+            visible: true,
+            title: "Berhasil",
+            message: `Berhasil men-generate ${jumlahPertemuan} jadwal pertemuan.`,
+            type: "success",
+          });
+          fetchClassDetails();
         }
+      } catch (error: any) {
+        console.error("Error generating schedule:", error);
 
-        setAlertConfig({
-          visible: true,
-          title: "Gagal",
-          message: errorMessage,
-          type: "error",
-        });
-      } else {
-        setAlertConfig({
-          visible: true,
-          title: "Error",
-          message: "Terjadi kesalahan saat generate jadwal.",
-          type: "error",
-        });
+        if (axios.isAxiosError(error) && error.response?.data) {
+          const errorData = error.response.data;
+          let errorMessage = errorData.message || "Gagal generate jadwal.";
+
+          // Handle validation errors
+          if (errorData.errors) {
+            const errors = Object.values(errorData.errors).flat();
+            errorMessage = errors.join("\n");
+          }
+
+          setAlertConfig({
+            visible: true,
+            title: "Gagal",
+            message: errorMessage,
+            type: "error",
+          });
+        } else {
+          setAlertConfig({
+            visible: true,
+            title: "Error",
+            message: "Terjadi kesalahan saat generate jadwal.",
+            type: "error",
+          });
+        }
       }
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [classId, startDate, jumlahPertemuan, fetchClassDetails]);
+    },
+    [classId, fetchClassDetails]
+  );
 
   const handleRemoveMember = useCallback(
     (memberId: number, memberName: string, role: "dosen" | "mahasiswa") => {
@@ -451,127 +394,7 @@ export default function ClassDetailScreen({ viewMode, classId, onBack, onNavigat
         </View>
 
         {/* Generate Schedule Modal */}
-        <Modal visible={showGenerateModal} transparent animationType="fade" onRequestClose={() => setShowGenerateModal(false)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <ThemedText variant="bold" style={styles.modalTitle}>
-                  Generate Jadwal Pertemuan
-                </ThemedText>
-                <TouchableOpacity onPress={() => setShowGenerateModal(false)} style={styles.modalCloseButton}>
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalBody}>
-                <ThemedText style={styles.modalDescription}>Generate jadwal pertemuan untuk kelas ini secara otomatis berdasarkan hari kelas dan tanggal mulai.</ThemedText>
-
-                <View style={styles.inputGroup}>
-                  <ThemedText variant="semibold" style={styles.inputLabel}>
-                    Tanggal Mulai
-                  </ThemedText>
-                  <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.datePickerButton}>
-                    <Ionicons name="calendar-outline" size={20} color="#6b7280" />
-                    <ThemedText style={styles.datePickerText}>{startDate ? formatDisplayDate(startDate) : "Pilih tanggal mulai"}</ThemedText>
-                    <Ionicons name="chevron-down" size={20} color="#6b7280" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <ThemedText variant="semibold" style={styles.inputLabel}>
-                    Jumlah Pertemuan
-                  </ThemedText>
-                  <View style={styles.inputContainer}>
-                    <Ionicons name="list-outline" size={20} color="#6b7280" />
-                    <TextInput style={styles.modalInput} placeholder="Masukkan jumlah pertemuan" placeholderTextColor="#9ca3af" keyboardType="numeric" value={jumlahPertemuan} onChangeText={setJumlahPertemuan} />
-                  </View>
-                  <ThemedText style={styles.inputHint}>Maksimal 20 pertemuan</ThemedText>
-                </View>
-              </View>
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity onPress={() => setShowGenerateModal(false)} style={styles.modalCancelButton}>
-                  <ThemedText variant="semibold" style={styles.modalCancelText}>
-                    Batal
-                  </ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={handleGenerateSchedule} style={[styles.modalGenerateButton, isGenerating && styles.modalGenerateButtonDisabled]} disabled={isGenerating}>
-                  {isGenerating ? (
-                    <ActivityIndicator size="small" color="#015023" />
-                  ) : (
-                    <>
-                      <Ionicons name="calendar" size={18} color="#015023" />
-                      <ThemedText variant="bold" style={styles.modalGenerateText}>
-                        Generate
-                      </ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Calendar Modal */}
-        <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
-          <View style={styles.calendarModalOverlay}>
-            <View style={styles.calendarModal}>
-              <View style={styles.calendarHeader}>
-                <TouchableOpacity onPress={handlePreviousMonth} style={styles.calendarNavButton}>
-                  <Ionicons name="chevron-back" size={24} color="#015023" />
-                </TouchableOpacity>
-                <ThemedText variant="bold" style={styles.calendarHeaderText}>
-                  {selectedDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
-                </ThemedText>
-                <TouchableOpacity onPress={handleNextMonth} style={styles.calendarNavButton}>
-                  <Ionicons name="chevron-forward" size={24} color="#015023" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.calendarWeekDays}>
-                {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((day) => (
-                  <ThemedText key={day} variant="semibold" style={styles.weekDayText}>
-                    {day}
-                  </ThemedText>
-                ))}
-              </View>
-
-              <ScrollView style={styles.calendarDaysContainer}>
-                <View style={styles.calendarDays}>
-                  {generateCalendarDays().map((day, index) => {
-                    if (!day) {
-                      return <View key={`empty-${index}`} style={styles.emptyDay} />;
-                    }
-
-                    const isToday = day.toDateString() === new Date().toDateString();
-                    const isSelected = startDate && day.toDateString() === new Date(startDate).toDateString();
-                    const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
-
-                    return (
-                      <TouchableOpacity
-                        key={day.toISOString()}
-                        style={[styles.dayButton, isToday && styles.todayButton, isSelected && styles.selectedDayButton, isPast && styles.pastDayButton]}
-                        onPress={() => handleDateSelect(day)}
-                        disabled={isPast}
-                      >
-                        <ThemedText variant="medium" style={[styles.dayText, isToday && styles.todayText, isSelected && styles.selectedDayText, isPast && styles.pastDayText]}>
-                          {day.getDate()}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-
-              <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.calendarCloseButton}>
-                <ThemedText variant="semibold" style={styles.calendarCloseText}>
-                  Tutup
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+        <GenerateScheduleModal visible={showGenerateModal} onClose={() => setShowGenerateModal(false)} onGenerate={handleGenerateSchedule} />
 
         {/* CustomAlert */}
         <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} />
@@ -839,251 +662,6 @@ const styles = StyleSheet.create({
   generateButtonText: {
     fontSize: 14,
     color: "#015023",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#015023",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  modalTitle: {
-    fontSize: 18,
-    color: "#FFFFFF",
-    flex: 1,
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 16,
-  },
-  modalBody: {
-    padding: 20,
-  },
-  modalDescription: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 20,
-    lineHeight: 18,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: "#1f2937",
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f9fafb",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  modalInput: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#1f2937",
-    fontFamily: "Urbanist",
-  },
-  inputHint: {
-    fontSize: 11,
-    color: "#9ca3af",
-    marginTop: 4,
-  },
-  modalFooter: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#f9fafb",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#e5e7eb",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalCancelText: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  modalGenerateButton: {
-    flex: 1,
-    flexDirection: "row",
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#DABC4E",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  modalGenerateButtonDisabled: {
-    opacity: 0.6,
-  },
-  modalGenerateText: {
-    fontSize: 14,
-    color: "#015023",
-  },
-  datePickerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f9fafb",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  datePickerText: {
-    flex: 1,
-    fontSize: 14,
-    color: "#1f2937",
-  },
-  calendarModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  calendarModal: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    width: "100%",
-    maxWidth: 400,
-    maxHeight: "80%",
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  calendarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#F5EFD3",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  calendarHeaderText: {
-    fontSize: 16,
-    color: "#015023",
-  },
-  calendarNavButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "rgba(1, 80, 35, 0.1)",
-  },
-  calendarWeekDays: {
-    flexDirection: "row",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    backgroundColor: "#f9fafb",
-  },
-  weekDayText: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 12,
-    color: "#666",
-  },
-  calendarDaysContainer: {
-    maxHeight: 320,
-  },
-  calendarDays: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  emptyDay: {
-    width: "14.28%",
-    aspectRatio: 1,
-    padding: 4,
-  },
-  dayButton: {
-    width: "14.28%",
-    aspectRatio: 1,
-    padding: 4,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  todayButton: {
-    backgroundColor: "rgba(59, 130, 246, 0.1)",
-    borderRadius: 8,
-  },
-  selectedDayButton: {
-    backgroundColor: "#DABC4E",
-    borderRadius: 8,
-  },
-  pastDayButton: {
-    opacity: 0.3,
-  },
-  dayText: {
-    fontSize: 14,
-    color: "#1f2937",
-  },
-  todayText: {
-    color: "#3b82f6",
-    fontWeight: "700",
-  },
-  selectedDayText: {
-    color: "#015023",
-    fontWeight: "700",
-  },
-  pastDayText: {
-    color: "#9ca3af",
-  },
-  calendarCloseButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#f9fafb",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    alignItems: "center",
-  },
-  calendarCloseText: {
-    fontSize: 14,
-    color: "#6b7280",
   },
   loadingContainer: {
     flex: 1,

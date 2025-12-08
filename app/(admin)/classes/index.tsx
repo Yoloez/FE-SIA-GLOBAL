@@ -17,10 +17,10 @@ export default function AdminListClassesScreen() {
       />
       <SharedListClasses
         viewMode="admin"
-        onAddClass={() => router.push("/(admin)/AddClasses")}
+        onAddClass={() => router.push("/classes/add")}
         onEditClass={(classData) =>
           router.push({
-            pathname: "/(admin)/EditClasses",
+            pathname: "/classes/edit",
             params: classData,
           })
         }

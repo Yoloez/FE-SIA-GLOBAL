@@ -1,11 +1,11 @@
+import api from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
+import { handleApiError, isAbortError } from "@/utils/errorHandler";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { useAuth } from "../../context/AuthContext";
-import { handleApiError, isAbortError } from "../../utils/errorHandler";
 
 interface StaffProfile {
   employee_id_number: string;
@@ -131,7 +131,7 @@ export default function AdminDashboardScreen() {
     ({ item }: { item: Manager }) => (
       <View style={styles.managerCard}>
         <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-          {item.profile_image ? <Image source={{ uri: item.profile_image }} style={styles.avatar} /> : <Image source={require("../../assets/images/unnamed.jpg")} style={styles.avatar} />}
+          {item.profile_image ? <Image source={{ uri: item.profile_image }} style={styles.avatar} /> : <Image source={require("@/assets/images/unnamed.jpg")} style={styles.avatar} />}
           <View style={{ flex: 1 }}>
             <View style={styles.nameContainer}>
               <Text style={styles.managerName} numberOfLines={1}>
@@ -155,7 +155,7 @@ export default function AdminDashboardScreen() {
             style={styles.actionButton}
             onPress={() =>
               router.push({
-                pathname: "/(admin)/EditManager",
+                pathname: "/managers/edit",
                 params: {
                   id_user_si: item.id_user_si,
                   name: item.name,
@@ -209,7 +209,7 @@ export default function AdminDashboardScreen() {
               <Text style={styles.listTitle}>Daftar Manajer</Text>
               {searchQuery.length > 0 && <Text style={styles.resultCount}>{filteredManagers.length} hasil ditemukan</Text>}
             </View>
-            <TouchableOpacity onPress={() => router.push("/(admin)/AddManager")} style={styles.addButton}>
+            <TouchableOpacity onPress={() => router.push("/managers/add")} style={styles.addButton}>
               <Ionicons name="add-circle-outline" size={28} color="white" />
             </TouchableOpacity>
           </View>

@@ -17,10 +17,10 @@ export default function AdminListSubjectsScreen() {
       />
       <SharedListSubjects
         viewMode="admin"
-        onAddSubject={() => router.push("/(admin)/AddSubjects")}
+        onAddSubject={() => router.push("/subjects/add")}
         onEditSubject={(subjectData) =>
           router.push({
-            pathname: "/(admin)/EditSubject",
+            pathname: "/subjects/edit",
             params: {
               id: subjectData.id,
               name: subjectData.name,

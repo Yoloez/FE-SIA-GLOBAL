@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, ImageBackground, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -212,7 +212,7 @@ export default function HomeScreen() {
             ) : (
               <>
                 {/* Today's Schedule Card */}
-                <ImageBackground source={require("../../assets/images/batik.png")} style={styles.card} imageStyle={styles.cardImage}>
+                <View style={styles.card}>
                   <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/jadwal")} activeOpacity={0.7}>
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
@@ -262,10 +262,10 @@ export default function HomeScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                </ImageBackground>
+                </View>
 
                 {/* Notifications Card */}
-                <ImageBackground source={require("../../assets/images/batik.png")} style={styles.card} imageStyle={styles.cardImage}>
+                <View style={styles.card}>
                   <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/getNotification")} activeOpacity={0.7}>
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
@@ -312,10 +312,10 @@ export default function HomeScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                </ImageBackground>
+                </View>
 
                 {/* Classes Card */}
-                <ImageBackground source={require("../../assets/images/batik.png")} style={styles.card} imageStyle={styles.cardImage}>
+                <View style={styles.card}>
                   <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/grades")} activeOpacity={0.7}>
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
@@ -361,7 +361,7 @@ export default function HomeScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                </ImageBackground>
+                </View>
               </>
             )}
           </ScrollView>
@@ -463,43 +463,33 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    borderRadius: 20,
+    backgroundColor: "#F5EFD3",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#000",
     marginBottom: 16,
     overflow: "hidden",
-    elevation: 6,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-
-  cardImage: {
-    borderRadius: 20,
-    opacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 
   dashboardCard: {
     backgroundColor: "transparent",
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 18,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
   },
 
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(1, 80, 35, 0.1)",
-    backgroundColor: "rgba(245, 239, 211, 0.9)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginHorizontal: -6,
-    marginTop: -6,
+    borderBottomWidth: 2,
+    borderBottomColor: "#000",
   },
 
   cardHeaderLeft: {
@@ -544,10 +534,12 @@ const styles = StyleSheet.create({
   // Schedule Item Styles
   scheduleItem: {
     paddingVertical: 12,
-    backgroundColor: "rgba(245, 239, 211, 0.7)",
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 8,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
   },
 
   scheduleItemBorder: {
@@ -594,10 +586,12 @@ const styles = StyleSheet.create({
   // Notification Item Styles
   notifItem: {
     paddingVertical: 12,
-    backgroundColor: "rgba(245, 239, 211, 0.7)",
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 8,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
   },
 
   notifHeader: {
@@ -645,10 +639,12 @@ const styles = StyleSheet.create({
   // Class Item Styles
   classItem: {
     paddingVertical: 12,
-    backgroundColor: "rgba(245, 239, 211, 0.7)",
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 8,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
   },
 
   classHeader: {
@@ -666,7 +662,7 @@ const styles = StyleSheet.create({
   },
 
   classBadgeText: {
-    fontSize: 12, 
+    fontSize: 12,
     color: "#015023",
     fontWeight: "600",
   },
@@ -706,9 +702,11 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: "center",
     paddingVertical: 24,
-    backgroundColor: "rgba(245, 239, 211, 0.5)",
-    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 8,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
   },
 
   emptyCardText: {
@@ -723,8 +721,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
     fontWeight: "600",
-    backgroundColor: "rgba(245, 239, 211, 0.7)",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     paddingVertical: 8,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
   },
 });

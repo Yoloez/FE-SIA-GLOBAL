@@ -17,10 +17,10 @@ export default function AdminListLecturerScreen() {
       />
       <SharedListLecturer
         viewMode="admin"
-        onAddLecturer={() => router.push("/(admin)/AddLecturer")}
+        onAddLecturer={() => router.push("/lecturers/add")}
         onEditLecturer={(lecturerData) =>
           router.push({
-            pathname: "/(admin)/EditLecturer",
+            pathname: "/lecturers/edit",
             params: {
               id: lecturerData.id,
               name: lecturerData.name,

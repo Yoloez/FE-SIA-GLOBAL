@@ -35,12 +35,12 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "/(manager)/ListSubjects" },
-  { id: "2", title: "Tambah Kelas", icon: "school-outline", route: "/(manager)/ListClasses" },
-  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "/(manager)/ListLecturer" },
-  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "/(manager)/ListStudent" },
-  { id: "5", title: "Buat Pengumuman", icon: "notifications-outline", route: "/(manager)/Notification" },
-  { id: "6", title: "Profil Saya", icon: "person-outline", route: "/(manager)/Profil" },
+  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "/subjects" },
+  { id: "2", title: "Tambah Kelas", icon: "school-outline", route: "/classes" },
+  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "/lecturers" },
+  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "/students" },
+  { id: "5", title: "Buat Pengumuman", icon: "notifications-outline", route: "/Notification" },
+  { id: "6", title: "Profil Saya", icon: "person-outline", route: "/Profil" },
 ];
 
 // Optimalisasi: Konstanta untuk RecyclerView-like behavior
@@ -54,7 +54,7 @@ const ClassCard = React.memo<{
 }>(
   ({ item, onToggleActive }) => {
     const handlePress = useCallback(() => {
-      router.push(`/(manager)/${item.id_class}`);
+      router.push(`/classes/${item.id_class}`);
     }, [item.id_class]);
 
     const handleToggle = useCallback(
@@ -66,7 +66,7 @@ const ClassCard = React.memo<{
     );
 
     return (
-      <ImageBackground source={require("../../assets/images/batik.png")} style={[styles.card, { height: ITEM_HEIGHT }]} imageStyle={styles.cardImage}>
+      <ImageBackground source={require("../../assets/images/batik.png")} style={[styles.card, { height: ITEM_HEIGHT }]} imageStyle={styles.cardImage} resizeMode="cover">
         <TouchableOpacity style={styles.cardContent} onPress={handlePress} activeOpacity={0.9}>
           <View style={styles.cardTop}>
             <View style={styles.badge}>
@@ -133,17 +133,34 @@ export default function ManagerDashboardScreen() {
     buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
   });
 
+  // Ref untuk tracking animation state
+  const isAnimatingRef = useRef(false);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   React.useEffect(() => {
     return () => {
       isMounted.current = false;
+      // Stop animation immediately
       slideAnim.stopAnimation();
+      // Clear any pending navigation
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
+      }
+      // Abort any ongoing API calls
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
   }, [slideAnim]);
 
+  // Ref untuk prevent double fetch
+  const isFetchingRef = useRef(false);
+
   const fetchClasses = useCallback(async () => {
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) return;
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -152,7 +169,9 @@ export default function ManagerDashboardScreen() {
       abortControllerRef.current = new AbortController();
     }
 
+    isFetchingRef.current = true;
     setIsLoading(true);
+
     try {
       const response = await api.get("/manager/classes", {
         signal: abortControllerRef.current?.signal,
@@ -166,21 +185,26 @@ export default function ManagerDashboardScreen() {
       if (!isMounted.current || isAbortError(error)) return;
 
       const apiError = handleApiError(error);
-      setAlertConfig({
-        visible: true,
-        title: "Error",
-        message: apiError.message,
-        buttons: [{ text: "OK", onPress: () => {} }],
-      });
+      if (isMounted.current) {
+        setAlertConfig({
+          visible: true,
+          title: "Error",
+          message: apiError.message,
+          buttons: [{ text: "OK", onPress: () => {} }],
+        });
+      }
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
       }
+      isFetchingRef.current = false;
     }
-  }, []);
+  }, []); // EMPTY dependency - stable reference
 
   const handleToggleActive = useCallback(
     (id: number, currentStatus: boolean, name: string) => {
+      if (!isMounted.current) return;
+
       const newStatus = !currentStatus;
       const statusText = newStatus ? "aktif" : "nonaktif";
 
@@ -204,6 +228,7 @@ export default function ManagerDashboardScreen() {
                     message: `Status kelas berhasil diubah menjadi ${statusText}.`,
                     buttons: [{ text: "OK", onPress: () => {} }],
                   });
+                  // Call fetchClasses directly - stable reference
                   fetchClasses();
                 }
               } catch (error) {
@@ -222,43 +247,86 @@ export default function ManagerDashboardScreen() {
         ],
       });
     },
-    [fetchClasses]
+    [] // EMPTY dependency - fetchClasses is stable
   );
 
+  // STABLE useFocusEffect - tidak akan trigger re-render loop
   useFocusEffect(
     useCallback(() => {
-      if (isMounted.current) {
+      if (isMounted.current && !isFetchingRef.current) {
         fetchClasses();
       }
-    }, [fetchClasses])
+      // fetchClasses has STABLE reference (empty deps), so this callback is also stable
+    }, []) // EMPTY dependency - stable callback
   );
 
   const toggleMenu = useCallback(
     (open: boolean) => {
-      if (!isMounted.current) return;
+      if (!isMounted.current || isAnimatingRef.current) return;
+
+      isAnimatingRef.current = true;
       setMenuVisible(open);
+
       Animated.timing(slideAnim, {
         toValue: open ? 0 : -width * 0.75,
         duration: 250,
         useNativeDriver: true,
-      }).start();
+      }).start(({ finished }) => {
+        if (isMounted.current) {
+          isAnimatingRef.current = false;
+          // Jika menu ditutup dan animation selesai, sembunyikan modal
+          if (!open && finished) {
+            setMenuVisible(false);
+          }
+        }
+      });
     },
     [slideAnim]
   );
 
   const handleMenuNav = useCallback(
     (route: string) => {
-      if (!isMounted.current) return;
+      if (!isMounted.current || isAnimatingRef.current) return;
+
+      // Clear any existing navigation timeout
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+
       try {
+        // Tutup menu dengan animation
         toggleMenu(false);
-        setTimeout(() => {
-          if (isMounted.current) {
+
+        // Tunggu animation selesai (250ms) + buffer (100ms)
+        navigationTimeoutRef.current = setTimeout(() => {
+          if (!isMounted.current) return;
+
+          try {
+            // Navigate dengan error handling
             router.push(route as any);
+          } catch (navError) {
+            console.error("[MANAGER DASHBOARD] Navigation error:", navError);
+            if (isMounted.current) {
+              setAlertConfig({
+                visible: true,
+                title: "Error",
+                message: "Gagal membuka halaman. Silakan coba lagi.",
+                buttons: [{ text: "OK", onPress: () => {} }],
+              });
+            }
+          } finally {
+            navigationTimeoutRef.current = null;
           }
-        }, 300);
+        }, 350); // 250ms animation + 100ms buffer
       } catch (error) {
+        console.error("[MANAGER DASHBOARD] Menu toggle error:", error);
         if (isMounted.current) {
-          console.error("[MANAGER DASHBOARD] Error in handleMenuNav:", error);
+          setAlertConfig({
+            visible: true,
+            title: "Error",
+            message: "Terjadi kesalahan. Silakan coba lagi.",
+            buttons: [{ text: "OK", onPress: () => {} }],
+          });
         }
       }
     },
@@ -267,6 +335,7 @@ export default function ManagerDashboardScreen() {
 
   const handleLogout = useCallback(() => {
     if (!isMounted.current) return;
+
     setAlertConfig({
       visible: true,
       title: "Konfirmasi Logout",
@@ -277,16 +346,32 @@ export default function ManagerDashboardScreen() {
           text: "Logout",
           onPress: () => {
             if (!isMounted.current) return;
-            toggleMenu(false);
+
+            // Clear any pending navigation
+            if (navigationTimeoutRef.current) {
+              clearTimeout(navigationTimeoutRef.current);
+              navigationTimeoutRef.current = null;
+            }
+
+            // Stop animation
+            slideAnim.stopAnimation();
+
+            // Close menu immediately
+            setMenuVisible(false);
+            slideAnim.setValue(-width * 0.75);
+
+            // Logout dengan slight delay untuk UI cleanup
             setTimeout(() => {
-              if (isMounted.current) logout();
-            }, 300);
+              if (isMounted.current) {
+                logout();
+              }
+            }, 100);
           },
           style: "destructive",
         },
       ],
     });
-  }, [logout, toggleMenu]);
+  }, [logout, slideAnim]);
 
   // Optimalisasi filtering dengan useMemo
   const filteredClasses = useMemo(() => {
@@ -363,17 +448,17 @@ export default function ManagerDashboardScreen() {
             ListEmptyComponent={ListEmptyComponent}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            // RecyclerView-like optimizations
+            // RecyclerView-like optimizations - AGGRESSIVE
             removeClippedSubviews={true}
-            maxToRenderPerBatch={VIEWPORT_ITEMS}
-            updateCellsBatchingPeriod={50}
-            initialNumToRender={VIEWPORT_ITEMS}
-            windowSize={7}
+            maxToRenderPerBatch={3}
+            updateCellsBatchingPeriod={100}
+            initialNumToRender={3}
+            windowSize={5}
             // Performance optimizations
             onEndReachedThreshold={0.5}
-            maintainVisibleContentPosition={{
-              minIndexForVisible: 0,
-            }}
+            // Disable maintainVisibleContentPosition - can cause issues
+            // Disable scrolling during menu animation
+            scrollEnabled={!menuVisible}
           />
         )}
       </LinearGradient>

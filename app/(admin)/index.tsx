@@ -35,12 +35,12 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "/(admin)/ListSubjects" },
-  { id: "2", title: "Tambah Kelas", icon: "school-outline", route: "/(admin)/ListClasses" },
-  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "/(admin)/ListLecturer" },
-  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "/(admin)/ListStudent" },
-  { id: "5", title: "Tambah Manager", icon: "id-card-outline", route: "/(admin)/ListManager" },
-  { id: "6", title: "Buat Pengumuman", icon: "notifications-outline", route: "/(admin)/Notification" },
+  { id: "1", title: "Tambah Mata Kuliah", icon: "book-outline", route: "/subjects" },
+  { id: "2", title: "Tambah Kelas", icon: "school-outline", route: "/classes" },
+  { id: "3", title: "Tambah Dosen", icon: "person-add-outline", route: "/lecturers" },
+  { id: "4", title: "Tambah Mahasiswa", icon: "people-outline", route: "/students" },
+  { id: "5", title: "Tambah Manager", icon: "id-card-outline", route: "/managers" },
+  { id: "6", title: "Buat Pengumuman", icon: "notifications-outline", route: "/Notification" },
 ];
 
 const ITEM_HEIGHT = 205;
@@ -66,29 +66,69 @@ export default function AdminDashboardScreen() {
     buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
   });
 
+  // Ref untuk tracking animation state dan prevent double fetch
+  const isAnimatingRef = useRef(false);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isFetchingRef = useRef(false);
+
   React.useEffect(() => {
+    isMounted.current = true;
     return () => {
+      console.log("[ADMIN DASHBOARD] Cleanup - unmounting");
       isMounted.current = false;
+
+      // Stop animation immediately
       slideAnim.stopAnimation();
+
+      // Clear any pending navigation
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
+      }
+
+      // Abort any ongoing API calls
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
+
+      // Reset all flags
+      isFetchingRef.current = false;
+      isAnimatingRef.current = false;
     };
   }, [slideAnim]);
 
   const fetchClasses = useCallback(async () => {
     console.log("[ADMIN DASHBOARD] fetchClasses called");
 
+    // Prevent multiple simultaneous fetches with debounce protection
+    if (isFetchingRef.current) {
+      console.log("[ADMIN DASHBOARD] Fetch already in progress, skipping");
+      return;
+    }
+
+    if (!isMounted.current) {
+      console.log("[ADMIN DASHBOARD] Component unmounted, skipping fetch");
+      return;
+    }
+
+    // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
+    // Create new abort controller
     if (typeof AbortController !== "undefined") {
       abortControllerRef.current = new AbortController();
     }
 
-    setIsLoading(true);
+    isFetchingRef.current = true;
+
     try {
+      if (isMounted.current) {
+        setIsLoading(true);
+      }
+
       console.log("[ADMIN DASHBOARD] Fetching classes from API...");
       const response = await api.get("/manager/classes", {
         signal: abortControllerRef.current?.signal,
@@ -100,24 +140,39 @@ export default function AdminDashboardScreen() {
         setClasses(validClasses);
       }
     } catch (error) {
-      if (!isMounted.current || isAbortError(error)) return;
+      if (!isMounted.current || isAbortError(error)) {
+        console.log("[ADMIN DASHBOARD] Fetch cancelled or component unmounted");
+        return;
+      }
 
+      console.error("[ADMIN DASHBOARD] Fetch error:", error);
       const apiError = handleApiError(error);
-      setAlertConfig({
-        visible: true,
-        title: "Error",
-        message: apiError.message,
-        buttons: [{ text: "OK", onPress: () => {} }],
-      });
+
+      if (isMounted.current) {
+        setAlertConfig({
+          visible: true,
+          title: "Error",
+          message: apiError.message,
+          buttons: [{ text: "OK", onPress: () => {} }],
+        });
+      }
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
       }
+      // Always reset flag in finally
+      isFetchingRef.current = false;
+      console.log("[ADMIN DASHBOARD] Fetch completed, flag reset");
     }
-  }, []);
+  }, []); // EMPTY dependency - stable reference
 
   const handleToggleActive = useCallback(
     (id: number, currentStatus: boolean, name: string) => {
+      if (!isMounted.current) {
+        console.warn("[ADMIN DASHBOARD] Component unmounted, toggle cancelled");
+        return;
+      }
+
       const newStatus = !currentStatus;
       const statusText = newStatus ? "aktif" : "nonaktif";
 
@@ -141,6 +196,7 @@ export default function AdminDashboardScreen() {
                     message: `Status kelas berhasil diubah menjadi ${statusText}.`,
                     buttons: [{ text: "OK", onPress: () => {} }],
                   });
+                  // Call fetchClasses directly - stable reference
                   fetchClasses();
                 }
               } catch (error) {
@@ -159,49 +215,118 @@ export default function AdminDashboardScreen() {
         ],
       });
     },
-    [fetchClasses]
+    [] // EMPTY dependency - fetchClasses is stable
   );
 
+  // STABLE useFocusEffect - tidak akan trigger re-render loop
   useFocusEffect(
     useCallback(() => {
-      if (isMounted.current) {
+      console.log("[ADMIN DASHBOARD] useFocusEffect triggered");
+      console.log("[ADMIN DASHBOARD] isMounted:", isMounted.current, "isFetching:", isFetchingRef.current);
+
+      if (isMounted.current && !isFetchingRef.current) {
+        console.log("[ADMIN DASHBOARD] Calling fetchClasses from useFocusEffect");
         fetchClasses();
+      } else {
+        console.log("[ADMIN DASHBOARD] Skipping fetch - conditions not met");
       }
-    }, [fetchClasses])
+      // fetchClasses has STABLE reference (empty deps), so this callback is also stable
+    }, []) // EMPTY dependency - stable callback, fetchClasses is stable
   );
 
   const toggleMenu = useCallback(
     (open: boolean) => {
-      if (!isMounted.current) return;
+      if (!isMounted.current) {
+        console.warn("[ADMIN DASHBOARD] Component unmounted, toggle cancelled");
+        return;
+      }
+
+      if (isAnimatingRef.current) {
+        console.log("[ADMIN DASHBOARD] Animation already in progress, skipping");
+        return;
+      }
+
+      console.log("[ADMIN DASHBOARD] Toggle menu:", open);
+      isAnimatingRef.current = true;
       setMenuVisible(open);
+
       Animated.timing(slideAnim, {
         toValue: open ? 0 : -width * 0.75,
         duration: 250,
         useNativeDriver: true,
-      }).start();
+      }).start(({ finished }) => {
+        console.log("[ADMIN DASHBOARD] Animation finished:", finished);
+        if (isMounted.current) {
+          isAnimatingRef.current = false;
+          // Jika menu ditutup dan animation selesai, sembunyikan modal
+          if (!open && finished) {
+            setMenuVisible(false);
+          }
+        } else {
+          console.warn("[ADMIN DASHBOARD] Component unmounted during animation");
+        }
+      });
     },
     [slideAnim]
   );
 
   const handleMenuNav = useCallback(
     (route: string) => {
-      if (!isMounted.current) return;
+      if (!isMounted.current) {
+        console.warn("[ADMIN DASHBOARD] Component unmounted, navigation cancelled");
+        return;
+      }
+
+      if (isAnimatingRef.current) {
+        console.log("[ADMIN DASHBOARD] Animation in progress, navigation queued");
+      }
+
       console.log("[ADMIN DASHBOARD] Menu navigation to:", route);
 
+      // Clear any existing navigation timeout to prevent multiple navigations
+      if (navigationTimeoutRef.current) {
+        console.log("[ADMIN DASHBOARD] Clearing existing navigation timeout");
+        clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
+      }
+
       try {
+        // Tutup menu dengan animation
         toggleMenu(false);
-        setTimeout(() => {
-          if (isMounted.current) {
-            console.log("[ADMIN DASHBOARD] Pushing route:", route);
-            router.push(route as any);
-          } else {
+
+        // Tunggu animation selesai (250ms) + buffer (100ms) = 350ms
+        navigationTimeoutRef.current = setTimeout(() => {
+          if (!isMounted.current) {
             console.warn("[ADMIN DASHBOARD] Component unmounted, navigation cancelled");
+            return;
           }
-        }, 300);
+
+          try {
+            console.log("[ADMIN DASHBOARD] Executing navigation to:", route);
+            router.push(route as any);
+          } catch (navError) {
+            console.error("[ADMIN DASHBOARD] Navigation error:", navError);
+            if (isMounted.current) {
+              setAlertConfig({
+                visible: true,
+                title: "Error",
+                message: "Gagal membuka halaman. Silakan coba lagi.",
+                buttons: [{ text: "OK", onPress: () => {} }],
+              });
+            }
+          } finally {
+            navigationTimeoutRef.current = null;
+          }
+        }, 350); // 250ms animation + 100ms buffer
       } catch (error) {
+        console.error("[ADMIN DASHBOARD] Menu toggle error:", error);
         if (isMounted.current) {
-          console.error("[ADMIN DASHBOARD] Error in handleMenuNav:", error);
-          console.error("[ADMIN DASHBOARD] Failed route:", route);
+          setAlertConfig({
+            visible: true,
+            title: "Error",
+            message: "Terjadi kesalahan. Silakan coba lagi.",
+            buttons: [{ text: "OK", onPress: () => {} }],
+          });
         }
       }
     },
@@ -209,7 +334,13 @@ export default function AdminDashboardScreen() {
   );
 
   const handleLogout = useCallback(() => {
-    if (!isMounted.current) return;
+    if (!isMounted.current) {
+      console.warn("[ADMIN DASHBOARD] Component unmounted, logout cancelled");
+      return;
+    }
+
+    console.log("[ADMIN DASHBOARD] Logout initiated");
+
     setAlertConfig({
       visible: true,
       title: "Konfirmasi Logout",
@@ -219,17 +350,40 @@ export default function AdminDashboardScreen() {
         {
           text: "Logout",
           onPress: () => {
-            if (!isMounted.current) return;
-            toggleMenu(false);
+            if (!isMounted.current) {
+              console.warn("[ADMIN DASHBOARD] Component unmounted during logout");
+              return;
+            }
+
+            console.log("[ADMIN DASHBOARD] Executing logout cleanup");
+
+            // Clear any pending navigation
+            if (navigationTimeoutRef.current) {
+              clearTimeout(navigationTimeoutRef.current);
+              navigationTimeoutRef.current = null;
+            }
+
+            // Stop animation immediately
+            slideAnim.stopAnimation();
+
+            // Close menu immediately without animation
+            setMenuVisible(false);
+            slideAnim.setValue(-width * 0.75);
+            isAnimatingRef.current = false;
+
+            // Logout dengan slight delay untuk UI cleanup
             setTimeout(() => {
-              if (isMounted.current) logout();
-            }, 300);
+              if (isMounted.current) {
+                console.log("[ADMIN DASHBOARD] Calling logout");
+                logout();
+              }
+            }, 100);
           },
           style: "destructive",
         },
       ],
     });
-  }, [logout, toggleMenu]);
+  }, [logout, slideAnim]);
 
   const filteredClasses = useMemo(() => {
     if (!search.trim()) return classes;
@@ -240,7 +394,7 @@ export default function AdminDashboardScreen() {
   const renderItem = useCallback(
     ({ item }: { item: ClassItem }) => (
       <ImageBackground source={require("../../assets/images/batik.png")} style={[styles.card, CARD_STYLE]} imageStyle={styles.cardImage}>
-        <TouchableOpacity style={styles.cardContent} onPress={() => router.push(`/(admin)/${item.id_class}`)} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.cardContent} onPress={() => router.push(`/classes/${item.id_class}`)} activeOpacity={0.9}>
           <View style={styles.cardTop}>
             <View style={styles.badge}>
               <ThemedText variant="semibold" style={styles.badgeText}>
@@ -348,11 +502,19 @@ export default function AdminDashboardScreen() {
             }
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            removeClippedSubviews
-            maxToRenderPerBatch={10}
-            updateCellsBatchingPeriod={50}
-            initialNumToRender={10}
-            windowSize={10}
+            // RecyclerView-like optimizations - ULTRA AGGRESSIVE untuk menghindari force close
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={3}
+            updateCellsBatchingPeriod={100}
+            initialNumToRender={3}
+            windowSize={5}
+            // Performance optimizations
+            onEndReachedThreshold={0.5}
+            // Disable scrolling during menu animation untuk mencegah crash
+            scrollEnabled={!menuVisible}
+            // Additional optimizations
+            legacyImplementation={false}
+            disableVirtualization={false}
           />
         )}
       </LinearGradient>

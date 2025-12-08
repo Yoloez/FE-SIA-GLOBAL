@@ -1,10 +1,10 @@
+import api from "@/api/axios";
+import { handleApiError } from "@/utils/errorHandler";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { handleApiError } from "../../utils/errorHandler";
 
 export default function EditManagerScreen() {
   // Ambil data dari params

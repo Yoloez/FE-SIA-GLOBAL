@@ -1,5 +1,5 @@
 import SharedAddStudent from "@shared/AddStudent.shared";
-import { Stack, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React from "react";
 
 export default function AdminAddStudentScreen() {
@@ -7,7 +7,6 @@ export default function AdminAddStudentScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
       <SharedAddStudent viewMode="admin" onBack={() => router.back()} onSuccess={() => router.back()} />
     </>
   );

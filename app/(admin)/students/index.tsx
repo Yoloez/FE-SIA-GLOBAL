@@ -17,10 +17,10 @@ export default function AdminListStudentScreen() {
       />
       <SharedListStudent
         viewMode="admin"
-        onAddStudent={() => router.push("/(admin)/AddStudent")}
+        onAddStudent={() => router.push("/students/add")}
         onEditStudent={(studentData) =>
           router.push({
-            pathname: "/(admin)/EditStudent",
+            pathname: "/students/edit",
             params: studentData,
           })
         }

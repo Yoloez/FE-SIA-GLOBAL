@@ -5,7 +5,7 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, Modal, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Image, Modal, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
 
@@ -158,13 +158,13 @@ const ProfilDosen = () => {
     return (
       <View style={styles.container}>
         <LinearGradient colors={["#015023", "#1C352D"]} style={styles.loadingContainer}>
-          <Text style={styles.errorText}>{error || "Data tidak tersedia"}</Text>
-          <Text style={styles.errorSubtext}>Token mungkin sudah tidak valid</Text>
+          <ThemedText style={styles.errorText}>{error || "Data tidak tersedia"}</ThemedText>
+          <ThemedText style={styles.errorSubtext}>Token mungkin sudah tidak valid</ThemedText>
           <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-            <Text style={styles.retryButtonText}>Coba Lagi</Text>
+            <ThemedText style={styles.retryButtonText}>Coba Lagi</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.forceLogoutButton} onPress={() => forceLogout()}>
-            <Text style={styles.forceLogoutButtonText}>🔴 FORCE LOGOUT</Text>
+            <ThemedText style={styles.forceLogoutButtonText}>🔴 FORCE LOGOUT</ThemedText>
           </TouchableOpacity>
         </LinearGradient>
       </View>
@@ -178,7 +178,9 @@ const ProfilDosen = () => {
         <StatusBar barStyle="light-content" backgroundColor="#015023" />
         <View style={styles.content}>
           <View style={styles.profileCard}>
-            <Text style={styles.profileTitle}>Profile</Text>
+            <ThemedText variant="semibold" style={styles.profileTitle}>
+              Profile
+            </ThemedText>
 
             <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
               <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} defaultSource={require("../../assets/images/unnamed.jpg")} />
@@ -188,39 +190,43 @@ const ProfilDosen = () => {
             </TouchableOpacity>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>Name:</Text>
+              <ThemedText style={styles.label}>Name:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.full_name}</Text>
+                <ThemedText style={styles.infoText}>{profileData.full_name}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>Email:</Text>
+              <ThemedText style={styles.label}>Email:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.email}</Text>
+                <ThemedText style={styles.infoText}>{profileData.email}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>NIP:</Text>
+              <ThemedText style={styles.label}>NIP:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.employee_id_number || "Belum diisi"}</Text>
+                <ThemedText style={styles.infoText}>{profileData.employee_id_number || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
-              <Text style={styles.label}>Position:</Text>
+              <ThemedText style={styles.label}>Position:</ThemedText>
               <View style={styles.infoBox}>
-                <Text style={styles.infoText}>{profileData.position}</Text>
+                <ThemedText style={styles.infoText}>{profileData.position}</ThemedText>
               </View>
             </View>
 
             <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/EditProfilDosen")}>
-              <Text style={styles.settingButtonText}>Setting</Text>
+              <ThemedText variant="semibold" style={styles.settingButtonText}>
+                Setting
+              </ThemedText>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.9} onPress={handleLogoutConfirm} style={styles.logoutButton}>
-              <Text style={styles.logoutButtonText}>Logout</Text>
+              <ThemedText variant="semibold" style={styles.logoutButtonText}>
+                Logout
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -235,7 +241,7 @@ const ProfilDosen = () => {
                   <Ionicons name="close-circle" size={36} color="#fff" />
                 </TouchableOpacity>
                 <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.fullImage} resizeMode="contain" />
-                <Text style={styles.imageModalName}>{profileData?.full_name}</Text>
+                <ThemedText style={styles.imageModalName}>{profileData?.full_name}</ThemedText>
               </View>
             </TouchableOpacity>
           </View>
@@ -319,7 +325,7 @@ const styles = StyleSheet.create({
   profileCard: {
     borderRadius: 0,
     padding: 30,
-    paddingTop: 35,
+    paddingTop: 40,
     paddingBottom: 40,
     flex: 1,
   },

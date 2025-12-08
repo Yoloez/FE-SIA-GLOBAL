@@ -30,19 +30,36 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
 
   const isMountedRef = React.useRef(true);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const isFetchingRef = React.useRef(false);
 
   React.useEffect(() => {
     isMountedRef.current = true;
     return () => {
+      console.log("[ListSubjects] Cleanup - unmounting");
       isMountedRef.current = false;
+      isFetchingRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
 
-  // Fetch subjects list
+  // Fetch subjects list - STABLE reference with empty deps
   const fetchSubjects = useCallback(async () => {
+    console.log("[ListSubjects] fetchSubjects called");
+
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log("[ListSubjects] Fetch already in progress, skipping");
+      return;
+    }
+
+    if (!isMountedRef.current) {
+      console.log("[ListSubjects] Component unmounted, skipping fetch");
+      return;
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -51,8 +68,13 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
       abortControllerRef.current = new AbortController();
     }
 
-    setIsLoadingList(true);
+    isFetchingRef.current = true;
+
     try {
+      if (isMountedRef.current) {
+        setIsLoadingList(true);
+      }
+
       const response = await api.get("/manager/subjects", {
         signal: abortControllerRef.current?.signal,
       });
@@ -62,11 +84,11 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
       }
     } catch (error: any) {
       if (error.name === "AbortError" || error.name === "CanceledError") {
-        console.log("Fetch subjects aborted");
+        console.log("[ListSubjects] Fetch aborted");
         return;
       }
 
-      console.error("Gagal mengambil data mata kuliah:", error);
+      console.error("[ListSubjects] Fetch error:", error);
       if (isMountedRef.current) {
         Alert.alert("Error", "Gagal mengambil data mata kuliah");
       }
@@ -74,24 +96,39 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
       if (isMountedRef.current) {
         setIsLoadingList(false);
       }
+      isFetchingRef.current = false;
+      console.log("[ListSubjects] Fetch completed");
     }
-  }, []);
+  }, []); // EMPTY deps - stable reference!
 
+  // FIXED: useFocusEffect with EMPTY deps to prevent infinite loop
   useFocusEffect(
     useCallback(() => {
-      fetchSubjects();
-    }, [fetchSubjects])
+      console.log("[ListSubjects] useFocusEffect triggered");
+      if (isMountedRef.current && !isFetchingRef.current) {
+        fetchSubjects();
+      }
+      // fetchSubjects has STABLE reference, so this callback is also stable
+    }, []) // EMPTY deps - no re-creation!
   );
 
   const handleDeleteSubject = useCallback(
     (subjectId: number, subjectName: string) => {
+      if (!isMountedRef.current) {
+        console.warn("[ListSubjects] Component unmounted, delete cancelled");
+        return;
+      }
+
       Alert.alert("Konfirmasi Hapus", `Apakah Anda yakin ingin menghapus mata kuliah "${subjectName}"? Tindakan ini tidak dapat dibatalkan.`, [
         { text: "Batal", style: "cancel" },
         {
           text: "Hapus",
           style: "destructive",
           onPress: async () => {
-            if (!isMountedRef.current) return;
+            if (!isMountedRef.current) {
+              console.warn("[ListSubjects] Component unmounted during delete");
+              return;
+            }
 
             try {
               await api.delete(`/manager/subjects/${subjectId}`);

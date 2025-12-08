@@ -34,19 +34,36 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
 
   const isMountedRef = React.useRef(true);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const isFetchingRef = React.useRef(false);
 
   React.useEffect(() => {
     isMountedRef.current = true;
     return () => {
+      console.log("[ListStudent] Cleanup - unmounting");
       isMountedRef.current = false;
+      isFetchingRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
 
-  // Fetch students list
+  // Fetch students list - STABLE reference with empty deps
   const fetchStudents = useCallback(async () => {
+    console.log("[ListStudent] fetchStudents called");
+
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log("[ListStudent] Fetch already in progress, skipping");
+      return;
+    }
+
+    if (!isMountedRef.current) {
+      console.log("[ListStudent] Component unmounted, skipping fetch");
+      return;
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -55,25 +72,30 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
       abortControllerRef.current = new AbortController();
     }
 
-    setIsLoadingList(true);
+    isFetchingRef.current = true;
+
     try {
+      if (isMountedRef.current) {
+        setIsLoadingList(true);
+      }
+
       const response = await api.get("/manager/students", {
         signal: abortControllerRef.current?.signal,
       });
-      console.log("Response students:", response.data);
+      console.log("[ListStudent] Response received:", response.data?.data?.length || 0, "students");
 
       if (isMountedRef.current) {
         setStudents(response.data.data || []);
       }
     } catch (error: any) {
       if (error.name === "AbortError" || error.name === "CanceledError") {
-        console.log("Fetch students aborted");
+        console.log("[ListStudent] Fetch aborted");
         return;
       }
 
-      console.error("Gagal mengambil data mahasiswa:", error);
+      console.error("[ListStudent] Gagal mengambil data mahasiswa:", error);
       if (axios.isAxiosError(error)) {
-        console.error("Error response:", error.response?.data);
+        console.error("[ListStudent] Error response:", error.response?.data);
       }
 
       if (isMountedRef.current) {
@@ -83,16 +105,28 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
       if (isMountedRef.current) {
         setIsLoadingList(false);
       }
+      isFetchingRef.current = false;
+      console.log("[ListStudent] Fetch completed");
     }
-  }, []);
+  }, []); // EMPTY deps - stable reference!
 
+  // FIXED: useFocusEffect with EMPTY deps to prevent infinite loop
   useFocusEffect(
     useCallback(() => {
-      fetchStudents();
-    }, [fetchStudents])
+      console.log("[ListStudent] useFocusEffect triggered");
+      if (isMountedRef.current && !isFetchingRef.current) {
+        fetchStudents();
+      }
+      // fetchStudents has STABLE reference, so this callback is also stable
+    }, []) // EMPTY deps - no re-creation!
   );
 
   const handleToggleStatus = useCallback((studentId: number, studentName: string, currentStatus: boolean) => {
+    if (!isMountedRef.current) {
+      console.warn("[ListStudent] Component unmounted, toggle cancelled");
+      return;
+    }
+
     const newStatus = currentStatus ? "nonaktif" : "aktif";
     const statusMessage = currentStatus ? `Nonaktifkan mahasiswa "${studentName}"?` : `Aktifkan mahasiswa "${studentName}"?`;
 
@@ -106,7 +140,7 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
 
           setTogglingId(studentId);
           try {
-            const response = await api.patch(`/admin/managers/${studentId}/toggle-status`);
+            const response = await api.patch(`/manager/users/${studentId}/toggle-status`);
 
             if (!isMountedRef.current) return;
 

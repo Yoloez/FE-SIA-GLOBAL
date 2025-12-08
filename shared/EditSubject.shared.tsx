@@ -64,7 +64,18 @@ export default function EditSubject({ viewMode, subjectId, initialData, onBack, 
 
       console.log("Update response:", response.data);
 
-      Alert.alert("Sukses", "Mata kuliah berhasil diperbarui", [{ text: "OK", onPress: () => onSuccess?.() }]);
+      Alert.alert("Sukses", "Mata kuliah berhasil diperbarui", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Delay navigation to allow Alert to close properly
+            setTimeout(() => {
+              console.log("[EditSubject] Calling onSuccess (navigation back)");
+              onSuccess?.();
+            }, 100);
+          },
+        },
+      ]);
     } catch (err: any) {
       console.error("Error details:", err.response?.data || err);
 

@@ -20,9 +20,9 @@ export default function ClassesLayout() {
         }}
       />
       <Stack.Screen
-        name="edit"
+        name="Edit Kelas"
         options={{
-          headerShown: false,
+          headerShown: true,
         }}
       />
       <Stack.Screen

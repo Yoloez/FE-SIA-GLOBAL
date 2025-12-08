@@ -8,10 +8,10 @@ export default function ManagerListClassesScreen() {
   return (
     <SharedListClasses
       viewMode="manager"
-      onAddClass={() => router.push("/(manager)/classes/add")}
+      onAddClass={() => router.push("/classes/add")}
       onEditClass={(classData) =>
         router.push({
-          pathname: "/(manager)/classes/edit",
+          pathname: "/classes/edit",
           params: classData,
         })
       }

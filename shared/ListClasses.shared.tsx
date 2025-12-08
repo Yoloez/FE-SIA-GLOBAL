@@ -59,20 +59,36 @@ export default function ClassListScreen({ viewMode, onAddClass, onEditClass }: L
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const isFetchingRef = useRef(false);
+
   useEffect(() => {
     isMounted.current = true;
     fetchData();
     return () => {
+      console.log("[ListClasses] Cleanup - unmounting");
       isMounted.current = false;
+      isFetchingRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
 
   const fetchData = async () => {
+    console.log("[ListClasses] fetchData called");
+
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log("[ListClasses] Fetch already in progress, skipping");
+      return;
+    }
+
     // Guard: Jangan fetch jika component sudah unmount
-    if (!isMounted.current) return;
+    if (!isMounted.current) {
+      console.log("[ListClasses] Component unmounted, skipping fetch");
+      return;
+    }
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -81,6 +97,8 @@ export default function ClassListScreen({ viewMode, onAddClass, onEditClass }: L
     if (typeof AbortController !== "undefined") {
       abortControllerRef.current = new AbortController();
     }
+
+    isFetchingRef.current = true;
 
     if (!isMounted.current) return; // Double check sebelum setState
     setIsLoadingClasses(true);

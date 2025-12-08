@@ -52,9 +52,13 @@ export default function CreateSubjectScreen({ viewMode, onBack, onSuccess }: Cre
         {
           text: "OK",
           onPress: () => {
-            if (isMountedRef.current) {
-              onSuccess?.();
-            }
+            // Delay navigation to allow Alert to close properly
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                console.log("[AddSubjects] Calling onSuccess (navigation back)");
+                onSuccess?.();
+              }
+            }, 100);
           },
         },
       ]);

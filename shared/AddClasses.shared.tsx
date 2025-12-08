@@ -70,7 +70,10 @@ export default function CreateClassScreen({ viewMode, onBack, onSuccess }: Creat
   }, []);
 
   const showAlert = useCallback((title: string, message: string, type: "success" | "error" | "info" = "info", onClose?: () => void) => {
-    if (!isMounted.current) return;
+    if (!isMounted.current) {
+      console.warn("[AddClasses] Component unmounted, alert cancelled");
+      return;
+    }
 
     setAlertConfig({
       visible: true,

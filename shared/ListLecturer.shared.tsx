@@ -34,24 +34,43 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
 
   const isMountedRef = React.useRef(true);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const isFetchingRef = React.useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
     fetchLecturers();
 
     return () => {
+      console.log("[ListLecturer] Cleanup - unmounting");
       isMountedRef.current = false;
+      isFetchingRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
 
   useEffect(() => {
-    filterLecturers();
+    if (isMountedRef.current) {
+      filterLecturers();
+    }
   }, [searchQuery, lecturers]);
 
   const fetchLecturers = async () => {
+    console.log("[ListLecturer] fetchLecturers called");
+
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log("[ListLecturer] Fetch already in progress, skipping");
+      return;
+    }
+
+    if (!isMountedRef.current) {
+      console.log("[ListLecturer] Component unmounted, skipping fetch");
+      return;
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -60,23 +79,28 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
       abortControllerRef.current = new AbortController();
     }
 
+    isFetchingRef.current = true;
+
     try {
-      setIsLoading(true);
+      if (isMountedRef.current) {
+        setIsLoading(true);
+      }
+
       const response = await api.get("/manager/lecturers", {
         signal: abortControllerRef.current?.signal,
       });
-      console.log("Response lecturers:", response.data);
+      console.log("[ListLecturer] Response received:", response.data?.data?.length || 0, "lecturers");
 
       if (isMountedRef.current) {
         setLecturers(response.data.data || []);
       }
     } catch (error: any) {
       if (error.name === "AbortError" || error.name === "CanceledError") {
-        console.log("Fetch lecturers aborted");
+        console.log("[ListLecturer] Fetch aborted");
         return;
       }
 
-      console.error("Error fetching lecturers:", error);
+      console.error("[ListLecturer] Error fetching lecturers:", error);
       if (isMountedRef.current) {
         Alert.alert("Error", "Gagal memuat daftar dosen.");
       }
@@ -85,6 +109,8 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
         setIsLoading(false);
         setRefreshing(false);
       }
+      isFetchingRef.current = false;
+      console.log("[ListLecturer] Fetch completed");
     }
   };
 
@@ -140,7 +166,7 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
 
             setTogglingId(lecturer.id_user_si);
             try {
-              const response = await api.patch(`/admin/managers/${lecturer.id_user_si}/toggle-status`);
+              const response = await api.patch(`/manager/users/${lecturer.id_user_si}/toggle-status`);
 
               if (!isMountedRef.current) return;
 

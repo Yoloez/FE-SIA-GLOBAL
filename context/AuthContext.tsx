@@ -1,5 +1,4 @@
-// TEMPORARILY DISABLED: Notification service requires native modules (expo-device)
-// import notificationService from "@/utils/notificationService";
+import notificationService from "@/utils/notificationService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
@@ -103,8 +102,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const savedData = await AsyncStorage.getItem("userData");
       console.log("[INVESTIGASI] Verifikasi data tersimpan:", savedData);
 
-      // TEMPORARILY DISABLED: Register for push notifications after login
-      // await notificationService.registerForPushNotifications();
+      // Register for push notifications after login
+      try {
+        await notificationService.registerForPushNotifications();
+        console.log("✅ Push notification registration successful");
+      } catch (notifError) {
+        console.error("⚠️ Failed to register push notifications:", notifError);
+      }
     } catch (e) {
       console.error("[INVESTIGASI] GAGAL menyimpan data ke storage", e);
     }
@@ -117,11 +121,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("[LOGOUT] Menghapus state user dan token...");
 
-      // TEMPORARILY DISABLED: Remove device token from backend
-      // await notificationService.removeDeviceToken();
-
-      // TEMPORARILY DISABLED: Clear badge count
-      // await notificationService.setBadgeCount(0);
+      // Remove device token from backend
+      try {
+        await notificationService.removeDeviceToken();
+        await notificationService.setBadgeCount(0);
+        console.log("✅ Notification cleanup successful");
+      } catch (notifError) {
+        console.error("⚠️ Failed to cleanup notifications:", notifError);
+      }
 
       setUser(null);
       setToken(null);

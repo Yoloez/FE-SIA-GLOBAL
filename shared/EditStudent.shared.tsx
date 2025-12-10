@@ -19,6 +19,8 @@ interface EditStudentProps {
 }
 
 export default function EditStudent({ viewMode, studentId, initialData, onBack, onSuccess }: EditStudentProps) {
+  const isMountedRef = React.useRef(true);
+
   const [formData, setFormData] = useState({
     name: initialData.full_name || "",
     nim: initialData.nim || "",
@@ -27,6 +29,14 @@ export default function EditStudent({ viewMode, studentId, initialData, onBack, 
     password: "",
     image: initialData.image || null,
   });
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      console.log("[EditStudent] Cleanup - unmounting");
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -92,10 +102,26 @@ export default function EditStudent({ viewMode, studentId, initialData, onBack, 
 
       await api.put(`/manager/students/${studentId}`, updateData);
 
-      Alert.alert("Sukses", "Data mahasiswa berhasil diperbarui!");
-      onSuccess?.();
+      if (!isMountedRef.current) return;
+
+      Alert.alert("Sukses", "Data mahasiswa berhasil diperbarui!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Delay navigation to allow Alert to close properly
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                console.log("[EditStudent] Calling onSuccess (navigation back)");
+                onSuccess?.();
+              }
+            }, 100);
+          },
+        },
+      ]);
     } catch (error: any) {
-      console.log("ERROR SAVE:", error.response?.data || error);
+      if (!isMountedRef.current) return;
+
+      console.error("[EditStudent] ERROR SAVE:", error.response?.data || error);
       Alert.alert("Error", "Gagal menyimpan perubahan");
     }
   };

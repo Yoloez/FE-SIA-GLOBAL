@@ -142,7 +142,7 @@ export default function AttendanceDetailScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#F5EFD3" />
             <ThemedText variant="semibold" style={styles.loadingText}>
-              Loading attendance history...
+              Loading Riwayat Kehadiran
             </ThemedText>
           </View>
         </SafeAreaView>
@@ -176,7 +176,7 @@ export default function AttendanceDetailScreen() {
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <ThemedText variant="bold" style={styles.headerTitle}>
-            Attendance History
+            Riwayat Kehadiran
           </ThemedText>
           <View style={styles.headerSpacer} />
         </View>

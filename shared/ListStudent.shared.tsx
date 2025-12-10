@@ -1,10 +1,11 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Student {
@@ -194,37 +195,21 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
         </View>
 
         <View style={styles.infoContainer}>
-          <Text style={styles.name}>{item.full_name}</Text>
-          <Text style={styles.info}>Email: {item.email}</Text>
-          {item.registration_number && <Text style={styles.info}>NIM: {item.registration_number}</Text>}
-          <Text style={styles.info}>Program: {item.program_name}</Text>
+          <ThemedText variant="bold" style={styles.name}>
+            {item.full_name}
+          </ThemedText>
+          <ThemedText style={styles.info}>Email: {item.email}</ThemedText>
+          {item.registration_number && <ThemedText style={styles.info}>NIM: {item.registration_number}</ThemedText>}
+          <ThemedText style={styles.info}>Program: {item.program_name}</ThemedText>
           <View style={styles.statusContainer}>
             <View style={[styles.statusBadge, item.is_active ? styles.statusActive : styles.statusInactive]}>
               <Ionicons name={item.is_active ? "checkmark-circle" : "close-circle"} size={14} color="#fff" style={styles.statusIcon} />
-              <Text style={styles.statusText}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
+              <ThemedText style={styles.statusText}>{item.is_active ? "Aktif" : "Nonaktif"}</ThemedText>
             </View>
           </View>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => {
-              if (onEditStudent) {
-                onEditStudent({
-                  id: item.id_user_si,
-                  full_name: item.full_name,
-                  nim: item.registration_number,
-                  email: item.email,
-                  program: item.program_name,
-                  image: item.profile_image,
-                });
-              }
-            }}
-          >
-            <Ionicons name="create-outline" size={22} color="#015023" />
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.actionButton, togglingId === item.id_user_si && styles.actionButtonLoading]}
             onPress={() => handleToggleStatus(item.id_user_si, item.full_name, item.is_active)}
@@ -257,8 +242,10 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
         {/* Header list */}
         <View style={styles.listHeader}>
           <View>
-            <Text style={styles.listTitle}>Daftar Mahasiswa</Text>
-            {searchQuery.length > 0 && <Text style={styles.resultCount}>{filteredStudents.length} hasil ditemukan</Text>}
+            <ThemedText variant="bold" style={styles.listTitle}>
+              Daftar Mahasiswa
+            </ThemedText>
+            {searchQuery.length > 0 && <ThemedText style={styles.resultCount}>{filteredStudents.length} hasil ditemukan</ThemedText>}
           </View>
 
           <TouchableOpacity onPress={() => onAddStudent?.()} style={styles.addButton}>
@@ -271,7 +258,7 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
           {isLoadingList ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.loadingText}>Memuat data...</Text>
+              <ThemedText style={styles.loadingText}>Memuat data...</ThemedText>
             </View>
           ) : (
             <FlatList
@@ -281,7 +268,7 @@ export default function StudentListScreen({ viewMode, onAddStudent, onEditStuden
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Ionicons name={searchQuery ? "search-outline" : "people-outline"} size={64} color="rgba(255,255,255,0.6)" />
-                  <Text style={styles.emptyText}>{searchQuery ? `Tidak ada mahasiswa yang cocok dengan "${searchQuery}"` : "Belum ada mahasiswa yang ditambahkan."}</Text>
+                  <ThemedText style={styles.emptyText}>{searchQuery ? `Tidak ada mahasiswa yang cocok dengan "${searchQuery}"` : "Belum ada mahasiswa yang ditambahkan."}</ThemedText>
                 </View>
               }
               showsVerticalScrollIndicator={false}
@@ -318,7 +305,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.3)",
   },
-  listTitle: { fontSize: 20, fontWeight: "bold", color: "#fff" },
+  listTitle: { fontSize: 20, color: "#fff" },
   resultCount: { fontSize: 14, color: "#FFD43B", marginTop: 4 },
   addButton: { padding: 5 },
   listContainer: { flex: 1 },
@@ -346,7 +333,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   infoContainer: { flex: 1 },
-  name: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 4 },
+  name: { fontSize: 16, color: "#333", marginBottom: 4 },
   info: { fontSize: 13, color: "#555", marginBottom: 2 },
   statusContainer: { marginTop: 4 },
   statusBadge: {

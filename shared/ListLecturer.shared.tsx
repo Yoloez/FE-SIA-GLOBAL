@@ -1,8 +1,9 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ListLecturerProps {
@@ -213,24 +214,22 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
         </View>
 
         <View style={styles.lecturerInfo}>
-          <Text style={styles.lecturerName}>{item.name}</Text>
-          <Text style={styles.lecturerEmail}>{item.email}</Text>
-          {item.employee_id_number && <Text style={styles.lecturerNip}>NIP: {item.employee_id_number}</Text>}
+          <ThemedText variant="bold" style={styles.lecturerName} numberOfLines={1}>
+            {item.name}
+          </ThemedText>
+          <ThemedText style={styles.lecturerEmail}>{item.email}</ThemedText>
+          {item.employee_id_number && <ThemedText style={styles.lecturerNip}>NIP: {item.employee_id_number}</ThemedText>}
           <View style={styles.statusContainer}>
             <View style={[styles.statusBadge, item.is_active ? styles.statusActive : styles.statusInactive]}>
               <Ionicons name={item.is_active ? "checkmark-circle" : "close-circle"} size={12} color="#fff" style={styles.statusIcon} />
-              <Text style={styles.statusText}>{item.is_active ? "Aktif" : "Nonaktif"}</Text>
+              <ThemedText style={styles.statusText}>{item.is_active ? "Aktif" : "Nonaktif"}</ThemedText>
             </View>
           </View>
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => handleEditLecturer(item)}>
-            <Ionicons name="create-outline" size={26} color="#015023" />
-          </TouchableOpacity>
-
           <TouchableOpacity style={[styles.iconButton, togglingId === item.id_user_si && styles.iconButtonLoading]} onPress={() => handleToggleStatus(item)} disabled={togglingId === item.id_user_si}>
-            {togglingId === item.id_user_si ? <ActivityIndicator size="small" color="#015023" /> : <Ionicons name={item.is_active ? "power" : "power-outline"} size={26} color={item.is_active ? "#4CAF50" : "#F44336"} />}
+            {togglingId === item.id_user_si ? <ActivityIndicator size="small" color="#015023" /> : <Ionicons name={item.is_active ? "power" : "power-outline"} size={24} color={item.is_active ? "#4CAF50" : "#F44336"} />}
           </TouchableOpacity>
         </View>
       </View>
@@ -248,7 +247,7 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
 
         {/* Header list */}
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Daftar Dosen</Text>
+          <ThemedText style={styles.listTitle}>Daftar Dosen</ThemedText>
           <TouchableOpacity onPress={handleAddLecturer} style={styles.addButton}>
             <Ionicons name="add-circle" size={40} color="#ffffffff" />
           </TouchableOpacity>
@@ -261,7 +260,7 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
         {isLoading && !refreshing ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#DABC4E" />
-            <Text style={styles.loadingText}>Memuat daftar dosen...</Text>
+            <ThemedText style={styles.loadingText}>Memuat daftar dosen...</ThemedText>
           </View>
         ) : (
           <FlatList
@@ -274,7 +273,7 @@ export default function ListLecturerScreen({ viewMode, onAddLecturer, onEditLect
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="people-outline" size={64} color="rgba(255,255,255,0.4)" />
-                <Text style={styles.emptyText}>{searchQuery ? "Tidak ada dosen yang sesuai pencarian" : "Belum ada dosen. Tekan tombol + untuk menambahkan."}</Text>
+                <ThemedText style={styles.emptyText}>{searchQuery ? "Tidak ada dosen yang sesuai pencarian" : "Belum ada dosen. Tekan tombol + untuk menambahkan."}</ThemedText>
               </View>
             }
           />
@@ -324,7 +323,6 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     fontSize: 26,
-    fontWeight: "bold",
     color: "#ffffff",
   },
   addButton: {
@@ -357,8 +355,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   avatar: {
-    width: 70,
-    height: 70,
+    width: 50,
+    height: 50,
     borderRadius: 35,
   },
   avatarPlaceholder: {
@@ -370,8 +368,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   lecturerName: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 14,
     color: "#000",
     marginBottom: 4,
   },
@@ -381,7 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   lecturerNip: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
     marginBottom: 4,
   },
@@ -412,7 +409,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   actionButtons: {
-    flexDirection: "row",
+    flexDirection: "column",
     gap: 4,
     marginLeft: 8,
   },

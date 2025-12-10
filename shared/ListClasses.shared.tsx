@@ -1,8 +1,9 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ListClassesProps {
@@ -193,8 +194,10 @@ export default function ClassListScreen({ viewMode, onAddClass, onEditClass }: L
         {/* Header */}
         <View style={styles.listHeader}>
           <View>
-            <Text style={styles.listTitle}>Daftar Kelas</Text>
-            <Text style={styles.resultCount}>{filteredClasses.length} kelas ditemukan</Text>
+            <ThemedText variant="bold" style={styles.listTitle}>
+              Daftar Kelas
+            </ThemedText>
+            <ThemedText style={styles.resultCount}>{filteredClasses.length} kelas ditemukan</ThemedText>
           </View>
           <TouchableOpacity onPress={handleAddClasses} style={styles.addButton}>
             <Ionicons name="add-circle" size={36} color="#fff" />
@@ -208,22 +211,24 @@ export default function ClassListScreen({ viewMode, onAddClass, onEditClass }: L
           ) : filteredClasses.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="school-outline" size={64} color="#fff" />
-              <Text style={styles.emptyText}>{searchQuery ? "Tidak ada kelas yang ditemukan" : "Belum ada kelas. Tekan + untuk menambah kelas baru"}</Text>
+              <ThemedText style={styles.emptyText}>{searchQuery ? "Tidak ada kelas yang ditemukan" : "Belum ada kelas. Tekan + untuk menambah kelas baru"}</ThemedText>
             </View>
           ) : (
             filteredClasses.map((cls) => (
               <View key={cls.id_class} style={styles.classCard}>
                 <View style={styles.classCardContent}>
                   <View style={styles.classInfo}>
-                    <Text style={styles.className}>{cls.name_subject}</Text>
-                    <Text style={styles.classDetail}>
+                    <ThemedText variant="bold" style={styles.className}>
+                      {cls.name_subject}
+                    </ThemedText>
+                    <ThemedText style={styles.classDetail}>
                       Kode: {cls.code_subject} - Kelas: {cls.code_class}
-                    </Text>
-                    <Text style={styles.classDetail}>Periode: {cls.academic_period_name}</Text>
-                    <Text style={styles.classDetail}>{cls.schedule}</Text>
-                    <Text style={styles.classDetail}>
+                    </ThemedText>
+                    <ThemedText style={styles.classDetail}>Periode: {cls.academic_period_name}</ThemedText>
+                    <ThemedText style={styles.classDetail}>{cls.schedule}</ThemedText>
+                    <ThemedText style={styles.classDetail}>
                       Mahasiswa: {cls.total_students}/{cls.member_class}
-                    </Text>
+                    </ThemedText>
                   </View>
 
                   <View style={styles.classActions}>
@@ -264,7 +269,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     marginBottom: 20,
   },
-  listTitle: { fontSize: 22, fontWeight: "bold", color: "#fff" },
+  listTitle: { fontSize: 22, color: "#fff" },
   resultCount: { color: "#FFD43B", fontSize: 14, marginTop: 5 },
   addButton: { padding: 5 },
   listContainer: { flex: 1 },
@@ -296,7 +301,6 @@ const styles = StyleSheet.create({
   classInfo: { flex: 1 },
   className: {
     fontSize: 18,
-    fontWeight: "bold",
     color: "#015023",
     marginBottom: 5,
   },

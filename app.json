@@ -12,16 +12,16 @@
       "supportsTablet": true
     },
     "android": {
+      "icon": "./assets/images/logo-ugn.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#015023",
+        "foregroundImage": "./assets/images/logo-ugn.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
-      "package": "com.hananfijananto.cobanativewind"
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.POST_NOTIFICATIONS"],
+      "package": "com.hananfijananto.cobanativewind",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -34,10 +34,11 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/logo-ugn.png",
-          "imageWidth": 200,
+          "imageWidth": 250,
           "resizeMode": "contain",
           "backgroundColor": "#015023",
           "dark": {
+            "image": "./assets/images/logo-ugn.png",
             "backgroundColor": "#015023"
           }
         }

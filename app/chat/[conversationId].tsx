@@ -1,4 +1,5 @@
 import { ThemedText } from "@/components/ThemedText";
+import notificationService from "@/utils/notificationService";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,6 +56,8 @@ export default function ChatScreen() {
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const echoChannelRef = useRef<any>(null);
+  const processedMessageIds = useRef<Set<number>>(new Set()); // Track processed messages
+  const isSubscribedRef = useRef(false); // Prevent double subscription
 
   // Cleanup on unmount
   useEffect(() => {
@@ -69,14 +72,20 @@ export default function ChatScreen() {
       }
 
       // Leave Echo channel
-      if (echoChannelRef.current && conversationId) {
+      if (echoChannelRef.current && conversationId && isSubscribedRef.current) {
         try {
-          echo.leaveChannel(`private-chat.${conversationId}`);
-          console.log(`✅ Left channel: private-chat.${conversationId}`);
+          const channelName = `chat.${conversationId}`;
+          echo.leave(channelName);
+          console.log(`✅ Left channel: private-${channelName}`);
+          isSubscribedRef.current = false;
         } catch (error) {
-          console.error("Error leaving channel:", error);
+          console.error("❌ Error leaving channel:", error);
         }
+        echoChannelRef.current = null;
       }
+
+      // Clear processed messages
+      processedMessageIds.current.clear();
     };
   }, [conversationId]);
 
@@ -128,6 +137,13 @@ export default function ChatScreen() {
       setMessages(formattedMessages);
       setConversationData(conversation);
 
+      // Track loaded message IDs to prevent duplicates
+      formattedMessages.forEach((msg: Message) => {
+        if (msg.id_message) {
+          processedMessageIds.current.add(msg.id_message);
+        }
+      });
+
       // Set conversation name dari other participant
       if (conversation?.other_participant) {
         setConversationName(conversation.other_participant.name);
@@ -171,62 +187,115 @@ export default function ChatScreen() {
 
   // Setup Echo listener untuk real-time messages
   useEffect(() => {
-    if (!conversationId || !token) return;
-
-    fetchMessages();
-
-    try {
-      console.log(`🎧 Subscribing to channel: private-chat.${conversationId}`);
-
-      const channel = echo.private(`chat.${conversationId}`);
-      echoChannelRef.current = channel;
-
-      channel.listen("NewChatMessage", (event: { message: any }) => {
-        console.log("📨 Pesan baru diterima via WebSocket:", event.message);
-
-        if (isMounted.current) {
-          setMessages((prevMessages) => {
-            const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
-
-            const newMsg = event.message;
-            const messageId = newMsg.id_message || newMsg.id;
-
-            // Cek duplikasi berdasarkan ID (baik real ID maupun temporary ID)
-            const isDuplicate = currentMessages.some((msg) => (msg.id_message || msg.id) === messageId || (msg.isOptimistic && msg.message === newMsg.message));
-
-            if (isDuplicate) {
-              console.log("⚠️ Duplicate message, skipping...");
-              return currentMessages;
-            }
-
-            // Format message dari broadcast
-            const formattedMsg: Message = {
-              id: messageId,
-              id_message: messageId,
-              message: newMsg.message,
-              sender: newMsg.sender,
-              created_at: newMsg.created_at,
-              conversation_id: newMsg.id_conversation || newMsg.conversation_id,
-            };
-
-            return [...currentMessages, formattedMsg];
-          });
-
-          // Auto scroll to bottom saat ada pesan baru
-          setTimeout(() => {
-            flatListRef.current?.scrollToEnd({ animated: true });
-          }, 100);
-        }
-      });
-
-      channel.error((error: any) => {
-        console.error("❌ Echo channel error:", error);
-      });
-    } catch (error) {
-      console.error("❌ Error setting up Echo:", error);
+    if (!conversationId || !token) {
+      console.warn("⚠️ Cannot setup Echo: missing conversationId or token");
+      return;
     }
 
-    // Cleanup akan di-handle oleh useEffect pertama
+    // Prevent double subscription
+    if (isSubscribedRef.current) {
+      console.log("⚠️ Already subscribed to channel, skipping...");
+      return;
+    }
+
+    // Fetch initial messages
+    fetchMessages();
+
+    const channelName = `chat.${conversationId}`;
+
+    try {
+      console.log(`🎧 Subscribing to channel: private-${channelName}`);
+
+      const channel = echo.private(channelName);
+      echoChannelRef.current = channel;
+      isSubscribedRef.current = true;
+
+      // Listen for new messages - using .listen() method
+      channel.listen(".NewChatMessage", async (event: { message: any }) => {
+        console.log("📨 [LISTENER] New message received via WebSocket:", event.message);
+
+        if (!isMounted.current) {
+          console.log("⚠️ Component unmounted, ignoring message");
+          return;
+        }
+
+        const newMsg = event.message;
+        const messageId = newMsg.id_message || newMsg.id;
+
+        // Check if message already processed (strict duplicate prevention)
+        if (processedMessageIds.current.has(messageId)) {
+          console.log(`⚠️ Message ${messageId} already processed, skipping...`);
+          return;
+        }
+
+        // Mark as processed immediately
+        processedMessageIds.current.add(messageId);
+
+        setMessages((prevMessages) => {
+          const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
+
+          // Double-check for duplicates in current state
+          const isDuplicate = currentMessages.some((msg) => {
+            const msgId = msg.id_message || msg.id;
+            return msgId === messageId || (msg.isOptimistic && msg.message === newMsg.message && msg.sender?.id_user_si === newMsg.sender?.id_user_si);
+          });
+
+          if (isDuplicate) {
+            console.log(`⚠️ Duplicate message ${messageId} found in state, skipping...`);
+            return currentMessages;
+          }
+
+          // Format message from broadcast
+          const formattedMsg: Message = {
+            id: messageId,
+            id_message: messageId,
+            message: newMsg.message,
+            sender: newMsg.sender,
+            created_at: newMsg.created_at || newMsg.sent_at || new Date().toISOString(),
+            conversation_id: newMsg.id_conversation || newMsg.conversation_id,
+          };
+
+          console.log(`✅ Adding new message ${messageId} to state`);
+          return [...currentMessages, formattedMsg];
+        });
+
+        // Show popup notification if message from another user
+        if (user && newMsg.sender?.id_user_si !== user.id_user_si) {
+          try {
+            await notificationService.showLocalNotification({
+              type: "chat",
+              title: newMsg.sender?.name || "Pesan Baru",
+              message: newMsg.message,
+              sender: newMsg.sender?.name,
+              id_conversation: parseInt(conversationId),
+              id_message: messageId,
+            });
+            console.log("📬 Popup notification displayed for new chat message");
+          } catch (error) {
+            console.error("❌ Error showing popup notification:", error);
+          }
+        }
+
+        // Auto scroll to bottom when new message arrives
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      });
+
+      // Handle subscription errors
+      channel.error((error: any) => {
+        console.error("❌ Echo channel error:", error);
+        isSubscribedRef.current = false;
+      });
+
+      // Log successful subscription
+      console.log(`✅ Successfully subscribed to ${channelName}`);
+    } catch (error) {
+      console.error("❌ Error setting up Echo:", error);
+      isSubscribedRef.current = false;
+    }
+
+    // Cleanup is handled by the first useEffect
   }, [conversationId, token, fetchMessages]);
 
   // Fungsi untuk mengirim pesan baru dengan optimistic update
@@ -278,16 +347,25 @@ export default function ChatScreen() {
 
       console.log("✅ Message sent successfully:", response.data);
 
+      const serverMessage = response.data.data;
+      const realMessageId = serverMessage.id_message || serverMessage.id;
+
+      // Track the real message ID
+      if (realMessageId) {
+        processedMessageIds.current.add(realMessageId);
+      }
+
       // Replace pesan optimistic dengan pesan real dari server
       setMessages((prevMessages) => {
         const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
         return currentMessages.map((msg) =>
           msg.id === tempId
             ? {
-                id: response.data.data.id_message || response.data.data.id,
-                message: response.data.data.message,
-                sender: response.data.data.sender,
-                created_at: response.data.data.created_at,
+                id: realMessageId,
+                id_message: realMessageId,
+                message: serverMessage.message,
+                sender: serverMessage.sender,
+                created_at: serverMessage.created_at || serverMessage.sent_at || new Date().toISOString(),
                 conversation_id: parseInt(conversationId),
                 isOptimistic: false,
                 isSending: false,

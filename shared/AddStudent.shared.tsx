@@ -37,8 +37,12 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
   useEffect(() => {
     isMounted.current = true;
     return () => {
+      console.log("[AddStudent] Cleanup - unmounting");
       isMounted.current = false;
-      abortControllerRef.current?.abort();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
     };
   }, []);
 
@@ -127,9 +131,13 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
           {
             text: "OK",
             onPress: () => {
-              if (isMounted.current) {
-                onSuccess?.();
-              }
+              // Delay navigation to allow Alert to close properly
+              setTimeout(() => {
+                if (isMounted.current) {
+                  console.log("[AddStudent] Calling onSuccess (navigation back)");
+                  onSuccess?.();
+                }
+              }, 100);
             },
           },
         ]);

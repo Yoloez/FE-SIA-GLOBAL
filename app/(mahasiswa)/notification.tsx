@@ -1,8 +1,11 @@
 import api from "@/api/axios";
+import echo from "@/api/echo";
+import { useAuth } from "@/context/AuthContext";
+import notificationService from "@/utils/notificationService";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "../../components/ThemedText";
@@ -265,12 +268,16 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ visible, onClose, onConfirm
 };
 
 export default function NotificationScreen() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const echoChannelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
+  const processedNotificationIds = useRef<Set<number>>(new Set());
 
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
@@ -317,6 +324,108 @@ export default function NotificationScreen() {
       fetchNotifications();
     }, [fetchNotifications])
   );
+
+  // Setup Echo listener untuk real-time notifications
+  useEffect(() => {
+    if (!user?.id_user_si) {
+      console.warn("⚠️ Cannot setup Echo: missing user ID");
+      return;
+    }
+
+    // Prevent double subscription
+    if (isSubscribedRef.current) {
+      console.log("⚠️ Already subscribed to notification channel");
+      return;
+    }
+
+    const channelName = `user.${user.id_user_si}`;
+
+    try {
+      console.log(`🔔 Subscribing to notification channel: private-${channelName}`);
+
+      const channel = echo.private(channelName);
+      echoChannelRef.current = channel;
+      isSubscribedRef.current = true;
+
+      // Listen for new notifications
+      channel.listen(".NewNotification", async (event: { notification: NotificationItem }) => {
+        console.log("🔔 New notification received:", event.notification);
+
+        const newNotification = event.notification;
+        const notifId = newNotification.id_notification;
+
+        // Check if notification already processed
+        if (processedNotificationIds.current.has(notifId)) {
+          console.log(`⚠️ Notification ${notifId} already processed, skipping...`);
+          return;
+        }
+
+        // Mark as processed
+        processedNotificationIds.current.add(notifId);
+
+        // Add to state (prepend - newest first)
+        setNotifications((prev) => {
+          // Check for duplicates in current state
+          const isDuplicate = prev.some((n) => n.id_notification === notifId);
+          if (isDuplicate) {
+            console.log(`⚠️ Duplicate notification ${notifId} found in state`);
+            return prev;
+          }
+
+          console.log(`✅ Adding new notification ${notifId} to state`);
+          return [newNotification, ...prev];
+        });
+
+        // Update unread count
+        if (!newNotification.is_read) {
+          setUnreadCount((prev) => prev + 1);
+        }
+
+        // Show popup notification
+        try {
+          await notificationService.showLocalNotification({
+            type: newNotification.type,
+            title: newNotification.title,
+            message: newNotification.message,
+            sender: newNotification.sender,
+            id_conversation: newNotification.metadata?.id_conversation,
+            id_message: newNotification.metadata?.id_message,
+            id_announcement: newNotification.metadata?.id_announcement,
+          });
+          console.log("📬 Popup notification displayed");
+        } catch (error) {
+          console.error("❌ Error showing popup notification:", error);
+        }
+      });
+
+      // Handle subscription errors
+      channel.error((error: any) => {
+        console.error("❌ Notification channel error:", error);
+        isSubscribedRef.current = false;
+      });
+
+      console.log(`✅ Successfully subscribed to notification channel`);
+    } catch (error) {
+      console.error("❌ Error setting up notification Echo:", error);
+      isSubscribedRef.current = false;
+    }
+
+    // Cleanup
+    return () => {
+      if (echoChannelRef.current && isSubscribedRef.current) {
+        try {
+          const channelName = `user.${user.id_user_si}`;
+          echo.leave(channelName);
+          console.log(`✅ Left notification channel: private-${channelName}`);
+          isSubscribedRef.current = false;
+        } catch (error) {
+          console.error("❌ Error leaving notification channel:", error);
+        }
+        echoChannelRef.current = null;
+      }
+      processedNotificationIds.current.clear();
+    };
+  }, [user?.id_user_si]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);

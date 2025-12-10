@@ -1,10 +1,11 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ListSubjectsProps {
@@ -164,11 +165,11 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
     ({ item }: { item: Subject }) => (
       <View style={styles.subjectCard}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.subjectName} numberOfLines={1}>
+          <ThemedText variant="bold" style={styles.subjectName} numberOfLines={1}>
             {item.name_subject}
-          </Text>
-          <Text style={styles.subjectCode}>Kode: {item.code_subject}</Text>
-          <Text style={styles.subjectSks}>SKS: {item.sks}</Text>
+          </ThemedText>
+          <ThemedText style={styles.subjectCode}>Kode: {item.code_subject}</ThemedText>
+          <ThemedText style={styles.subjectSks}>SKS: {item.sks}</ThemedText>
         </View>
         <View style={styles.actions}>
           <TouchableOpacity
@@ -216,8 +217,10 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
         {/* Header List */}
         <View style={styles.listHeader}>
           <View>
-            <Text style={styles.listTitle}>Daftar Mata Kuliah</Text>
-            {searchQuery.length > 0 && <Text style={styles.resultCount}>{filteredSubjects.length} hasil ditemukan</Text>}
+            <ThemedText variant="bold" style={styles.listTitle}>
+              Daftar Mata Kuliah
+            </ThemedText>
+            {searchQuery.length > 0 && <ThemedText style={styles.resultCount}>{filteredSubjects.length} hasil ditemukan</ThemedText>}
           </View>
 
           <TouchableOpacity onPress={() => onAddSubject?.()} style={styles.addButton}>
@@ -230,7 +233,7 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
           {isLoadingList ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.loadingText}>Memuat data...</Text>
+              <ThemedText style={styles.loadingText}>Memuat data...</ThemedText>
             </View>
           ) : (
             <FlatList
@@ -240,10 +243,10 @@ export default function SubjectListScreen({ viewMode, onAddSubject, onEditSubjec
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Ionicons name={searchQuery ? "search-outline" : "book-outline"} size={64} color="rgba(255,255,255,0.6)" />
-                  <Text style={styles.emptyText}>{searchQuery ? `Tidak ada mata kuliah yang cocok dengan "${searchQuery}"` : "Belum ada mata kuliah yang ditambahkan."}</Text>
+                  <ThemedText style={styles.emptyText}>{searchQuery ? `Tidak ada mata kuliah yang cocok dengan "${searchQuery}"` : "Belum ada mata kuliah yang ditambahkan."}</ThemedText>
                   {searchQuery && (
                     <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
-                      <Text style={styles.clearSearchText}>Hapus Pencarian</Text>
+                      <ThemedText style={styles.clearSearchText}>Hapus Pencarian</ThemedText>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -309,7 +312,6 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     fontSize: 20,
-    fontWeight: "bold",
     color: "#ffffff",
   },
   resultCount: {
@@ -341,7 +343,6 @@ const styles = StyleSheet.create({
   },
   subjectName: {
     fontSize: 16,
-    fontWeight: "bold",
     color: "#333",
     marginBottom: 4,
   },

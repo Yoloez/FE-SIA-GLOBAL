@@ -17,6 +17,8 @@ interface EditLecturerProps {
 }
 
 export default function EditLecturerScreen({ viewMode, lecturerId, initialData, onBack, onSuccess }: EditLecturerProps) {
+  const isMountedRef = React.useRef(true);
+
   const [formData, setFormData] = useState({
     name: initialData.name || "",
     nip: initialData.employee_id_number || "",
@@ -25,6 +27,14 @@ export default function EditLecturerScreen({ viewMode, lecturerId, initialData, 
     image: initialData.profile_image || null,
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      console.log("[EditLecturer] Cleanup - unmounting");
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -114,19 +124,33 @@ export default function EditLecturerScreen({ viewMode, lecturerId, initialData, 
 
       await api.put(`/manager/lecturers/${lecturerId}`, updateData);
 
+      if (!isMountedRef.current) return;
+
       Alert.alert("Sukses", "Data dosen berhasil diperbarui.", [
         {
           text: "OK",
-          onPress: () => onSuccess?.(),
+          onPress: () => {
+            // Delay navigation to allow Alert to close properly
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                console.log("[EditLecturer] Calling onSuccess (navigation back)");
+                onSuccess?.();
+              }
+            }, 100);
+          },
         },
       ]);
     } catch (error: any) {
-      console.error("Error updating lecturer:", error);
-      console.error("Error response:", error.response?.data); // Debug
+      if (!isMountedRef.current) return;
+
+      console.error("[EditLecturer] Error updating lecturer:", error);
+      console.error("[EditLecturer] Error response:", error.response?.data);
       const errorMessage = error.response?.data?.message || "Gagal memperbarui data dosen.";
       Alert.alert("Error", errorMessage);
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) {
+        setIsSaving(false);
+      }
     }
   };
 

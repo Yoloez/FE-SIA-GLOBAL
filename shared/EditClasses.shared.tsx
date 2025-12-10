@@ -58,8 +58,21 @@ export default function EditClassScreen({ viewMode, classId, initialData, onBack
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
+  const isMountedRef = React.useRef(true);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   useEffect(() => {
+    isMountedRef.current = true;
     fetchInitialData();
+
+    return () => {
+      console.log("[EditClasses] Cleanup - unmounting");
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
   }, []);
 
   const fetchInitialData = async () => {
@@ -170,18 +183,32 @@ export default function EditClassScreen({ viewMode, classId, initialData, onBack
 
             await api.put(`/manager/classes/${classId}`, updateData);
 
+            if (!isMountedRef.current) return;
+
             Alert.alert("Sukses", "Data kelas berhasil diupdate", [
               {
                 text: "OK",
-                onPress: () => onSuccess?.(),
+                onPress: () => {
+                  // Delay navigation to allow Alert to close properly
+                  setTimeout(() => {
+                    if (isMountedRef.current) {
+                      console.log("[EditClasses] Calling onSuccess (navigation back)");
+                      onSuccess?.();
+                    }
+                  }, 100);
+                },
               },
             ]);
           } catch (error) {
-            console.error("Update error:", error);
+            if (!isMountedRef.current) return;
+
+            console.error("[EditClasses] Update error:", error);
             const apiError = handleApiError(error);
             Alert.alert("Gagal", apiError.message);
           } finally {
-            setIsLoading(false);
+            if (isMountedRef.current) {
+              setIsLoading(false);
+            }
           }
         },
       },

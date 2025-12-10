@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, ImageBackground, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import ContentCard from "../../components/ContentCard";
@@ -73,6 +73,27 @@ interface AcademicStats {
   currentPeriod: string;
 }
 
+interface AttendanceClass {
+  id_class: number;
+  kelas: string;
+  nama_matkul: string;
+  dosen: string;
+  attendance_stats: {
+    total_pertemuan: number;
+    sudah_presensi: number;
+    persentase_kehadiran: number;
+  };
+}
+
+interface NotificationItem {
+  id_notification: number;
+  type: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  sent_at: string;
+}
+
 export default function HomeScreen() {
   const { user } = useAuth();
   const isMounted = useRef(true);
@@ -97,6 +118,10 @@ export default function HomeScreen() {
   const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [attendanceClasses, setAttendanceClasses] = useState<AttendanceClass[]>([]);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
 
   const fetchStudentIdentity = useCallback(async () => {
     setIsLoadingProfile(true);
@@ -225,6 +250,72 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const fetchAttendanceClasses = useCallback(async () => {
+    setIsLoadingAttendance(true);
+    try {
+      const response = await api.get("/student/attendance/classes");
+      const classesData = response.data.data || [];
+
+      // Fetch attendance stats for each class (limit to 2)
+      const limitedClasses = classesData.slice(0, 2);
+      const classesWithStats = await Promise.all(
+        limitedClasses.map(async (classItem: any) => {
+          try {
+            const historyResponse = await api.get(`/student/attendance/classes/${classItem.id_class}/history`);
+            const stats = historyResponse.data.data.statistics;
+            return {
+              ...classItem,
+              attendance_stats: stats,
+            };
+          } catch (error) {
+            console.error(`Error fetching attendance for class ${classItem.id_class}:`, error);
+            return {
+              ...classItem,
+              attendance_stats: {
+                total_pertemuan: 0,
+                sudah_presensi: 0,
+                persentase_kehadiran: 0,
+              },
+            };
+          }
+        })
+      );
+
+      if (isMounted.current) {
+        setAttendanceClasses(classesWithStats);
+      }
+    } catch (error: any) {
+      console.error("[MAHASISWA HOME] Error fetching attendance classes:", error);
+      if (error.response?.status === 401) {
+        console.log("[MAHASISWA HOME] 401 in attendance - waiting for auto logout");
+      }
+    } finally {
+      if (isMounted.current) {
+        setIsLoadingAttendance(false);
+      }
+    }
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    setIsLoadingNotifications(true);
+    try {
+      const response = await api.get("/notifications", { params: { limit: 3 } });
+      if (isMounted.current && response.data.status === "success") {
+        const notificationsData = response.data.data.notifications || [];
+        setNotifications(notificationsData.slice(0, 2)); // Limit to 2
+      }
+    } catch (error: any) {
+      console.error("[MAHASISWA HOME] Error fetching notifications:", error);
+      if (error.response?.status === 401) {
+        console.log("[MAHASISWA HOME] 401 in notifications - waiting for auto logout");
+      }
+    } finally {
+      if (isMounted.current) {
+        setIsLoadingNotifications(false);
+      }
+    }
+  }, []);
+
   const fetchSchedules = useCallback(async () => {
     setIsLoadingSchedules(true);
     try {
@@ -248,7 +339,7 @@ export default function HomeScreen() {
 
           const contentItem: ContentItem = {
             id: "schedule-today",
-            label: "Your Schedule Today",
+            label: "Jadwal Anda",
             title: `${todaySchedules.length} Class${todaySchedules.length > 1 ? "es" : ""} Today`,
             contents: scheduleContents,
             route: "/jadwal",
@@ -259,7 +350,7 @@ export default function HomeScreen() {
         } else {
           const contentItem: ContentItem = {
             id: "schedule-empty",
-            label: "Your Schedule",
+            label: "Jadwal Anda",
             title: "No Classes Today",
             contents: ["Tap to view full schedule"],
             route: "/jadwal",
@@ -282,7 +373,7 @@ export default function HomeScreen() {
       // Set empty content on error
       const contentItem: ContentItem = {
         id: "schedule-error",
-        label: "Your Schedule",
+        label: "Jadwal Anda",
         title: "Unable to load schedule",
         contents: ["Tap to retry"],
         route: "/jadwal",
@@ -312,7 +403,9 @@ export default function HomeScreen() {
       fetchGrades();
       fetchSchedules();
       fetchUnreadCount();
-    }, [fetchStudentIdentity, fetchGrades, fetchSchedules, fetchUnreadCount])
+      fetchAttendanceClasses();
+      fetchNotifications();
+    }, [fetchStudentIdentity, fetchGrades, fetchSchedules, fetchUnreadCount, fetchAttendanceClasses, fetchNotifications])
   );
 
   useEffect(() => {
@@ -346,6 +439,33 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Navigation error:", error);
     }
+  };
+
+  const handleAttendancePress = (classId: number) => {
+    router.push({
+      pathname: "/(mahasiswa)/attendance-detail",
+      params: { id_class: classId },
+    } as any);
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "Baru saja";
+    if (minutes < 60) return `${minutes} menit lalu`;
+    if (hours < 24) return `${hours} jam lalu`;
+    return `${days} hari lalu`;
+  };
+
+  const getPercentageColor = (pct: number) => {
+    if (pct >= 80) return "#22c55e";
+    if (pct >= 60) return "#eab308";
+    return "#ef4444";
   };
 
   const displayName = studentIdentity?.full_name || studentIdentity?.name || user?.name || "User";
@@ -435,11 +555,109 @@ export default function HomeScreen() {
                 </View>
               </View>
             </TouchableOpacity>
-
             <View style={styles.searchContainer}>
               <TextInput placeholder="Search by title or label..." style={styles.searchInput} placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} />
               <Ionicons name="search-outline" size={20} color="#666" />
             </View>
+
+            {/* Attendance Classes Card */}
+            <ThemedText variant="bold" style={styles.cardTitle}>
+              Kehadiran Kelas
+            </ThemedText>
+
+            <ImageBackground source={require("../../assets/images/batik.png")} style={styles.dashboardCard} imageStyle={styles.cardImage} resizeMode="cover">
+              <TouchableOpacity style={styles.cardContent} onPress={() => router.push("/(mahasiswa)/grades" as any)} activeOpacity={0.7}>
+                {isLoadingAttendance ? (
+                  <View style={styles.loadingCard}>
+                    <ActivityIndicator size="small" color="#015023" />
+                  </View>
+                ) : attendanceClasses.length > 0 ? (
+                  <>
+                    {attendanceClasses.map((classItem, index) => {
+                      const percentage = classItem.attendance_stats.persentase_kehadiran || 0;
+                      return (
+                        <TouchableOpacity key={classItem.id_class} style={[styles.attendanceItem, index > 0 && styles.attendanceItemBorder]} onPress={() => handleAttendancePress(classItem.id_class)} activeOpacity={0.7}>
+                          <View style={styles.attendanceHeader}>
+                            <View style={styles.attendanceHeaderLeft}>
+                              <View style={styles.classCodeBadge}>
+                                <ThemedText variant="semibold" style={styles.classCodeText}>
+                                  {classItem.kelas}
+                                </ThemedText>
+                              </View>
+                            </View>
+                            <View style={[styles.percentageChip, { backgroundColor: getPercentageColor(percentage) }]}>
+                              <ThemedText variant="semibold" style={styles.percentageText}>
+                                {percentage.toFixed(0)}%
+                              </ThemedText>
+                            </View>
+                          </View>
+
+                          <ThemedText variant="semibold" style={styles.attendanceSubject} numberOfLines={1}>
+                            {classItem.nama_matkul}
+                          </ThemedText>
+                          <ThemedText style={styles.attendanceDosen} numberOfLines={1}>
+                            {classItem.dosen}
+                          </ThemedText>
+
+                          <View style={styles.attendanceFooter}>
+                            <View style={styles.attendanceStats}>
+                              <Ionicons name="calendar-outline" size={14} color="#8B7355" />
+                              <ThemedText style={styles.attendanceStatsText}>
+                                {classItem.attendance_stats.sudah_presensi}/{classItem.attendance_stats.total_pertemuan} Pertemuan
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="calendar-outline" size={32} color="#ccc" />
+                    <ThemedText style={styles.emptyCardText}>Belum ada data kehadiran</ThemedText>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </ImageBackground>
+
+            {/* Notifications Card */}
+            <ThemedText variant="bold" style={styles.cardTitle}>
+              Notifikasi Terbaru
+            </ThemedText>
+            <ImageBackground source={require("../../assets/images/batik.png")} style={styles.dashboardCard} imageStyle={styles.cardImage} resizeMode="cover">
+              <TouchableOpacity style={styles.cardContent} onPress={handleNotificationPress} activeOpacity={0.7}>
+                {isLoadingNotifications ? (
+                  <View style={styles.loadingCard}>
+                    <ActivityIndicator size="small" color="#015023" />
+                  </View>
+                ) : notifications.length > 0 ? (
+                  <>
+                    {notifications.map((notif, index) => (
+                      <View key={notif.id_notification} style={[styles.notifItem, index > 0 && styles.notifItemBorder]}>
+                        <View style={styles.notifHeader}>
+                          <View style={styles.notifTypeIcon}>
+                            <Ionicons name={notif.type === "chat" ? "chatbubble" : "megaphone"} size={14} color={notif.type === "chat" ? "#0EA5E9" : "#F59E0B"} />
+                          </View>
+                          <ThemedText variant="semibold" style={styles.notifTitle} numberOfLines={1}>
+                            {notif.title}
+                          </ThemedText>
+                          {!notif.is_read && <View style={styles.unreadDot} />}
+                        </View>
+                        <ThemedText style={styles.notifMessage} numberOfLines={2}>
+                          {notif.message}
+                        </ThemedText>
+                        <ThemedText style={styles.notifTime}>{formatTimeAgo(notif.sent_at)}</ThemedText>
+                      </View>
+                    ))}
+                  </>
+                ) : (
+                  <View style={styles.emptyCard}>
+                    <Ionicons name="notifications-outline" size={32} color="#ccc" />
+                    <ThemedText style={styles.emptyCardText}>Belum ada notifikasi</ThemedText>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </ImageBackground>
 
             {filteredContent.length > 0 ? (
               filteredContent.map((item) => (
@@ -624,5 +842,243 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "bold",
     textAlign: "center",
+  },
+
+  // Dashboard Cards
+  dashboardCard: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#000",
+    marginBottom: 26,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+
+  cardImage: {
+    borderRadius: 12,
+    opacity: 0.5,
+  },
+
+  cardContent: {
+    backgroundColor: "transparent",
+    borderRadius: 12,
+    padding: 18,
+  },
+
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "#000",
+  },
+
+  cardHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(1, 80, 35, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+
+  cardTitle: {
+    lineHeight: 18,
+    fontSize: 18,
+    color: "#fff",
+    marginBottom: 12,
+  },
+
+  loadingCard: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+
+  emptyCard: {
+    alignItems: "center",
+    paddingVertical: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+  },
+
+  emptyCardText: {
+    fontSize: 13,
+    color: "#9ca3af",
+    marginTop: 8,
+  },
+
+  // Attendance Items
+  attendanceItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+
+  attendanceItemBorder: {
+    marginTop: 8,
+  },
+
+  attendanceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  attendanceHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  classCodeBadge: {
+    backgroundColor: "#DABC4E",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+
+  classCodeText: {
+    fontSize: 11,
+    color: "#015023",
+  },
+
+  percentageChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 50,
+    alignItems: "center",
+  },
+
+  percentageText: {
+    fontSize: 12,
+    color: "#fff",
+  },
+
+  attendanceSubject: {
+    fontSize: 15,
+    color: "#015023",
+    marginBottom: 4,
+  },
+
+  attendanceDosen: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 8,
+  },
+
+  attendanceFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+  },
+
+  attendanceStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  attendanceStatsText: {
+    fontSize: 12,
+    color: "#8B7355",
+  },
+
+  // Notification Items
+  notifItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+
+  notifItemBorder: {
+    marginTop: 8,
+  },
+
+  notifHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+
+  notifTypeIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  notifTitle: {
+    flex: 1,
+    fontSize: 14,
+    color: "#015023",
+  },
+
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+  },
+
+  notifMessage: {
+    fontSize: 13,
+    color: "#374151",
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+
+  notifTime: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+
+  notificationBadgeSmall: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+
+  badgeTextSmall: {
+    color: "#fff",
+    fontSize: 10,
   },
 });

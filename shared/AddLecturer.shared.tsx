@@ -58,10 +58,11 @@ export default function CreateLecturerScreen({ viewMode, onBack, onSuccess }: Ad
         }
       } catch (error: any) {
         if (error.name === "AbortError" || error.name === "CanceledError") {
-          console.log("Fetch programs aborted");
+          console.log("[AddLecturer] Fetch programs aborted");
           return;
         }
 
+        console.error("[AddLecturer] Fetch programs error:", error);
         if (isMountedRef.current) {
           Alert.alert("Error", "Gagal memuat daftar program studi.");
         }
@@ -71,9 +72,11 @@ export default function CreateLecturerScreen({ viewMode, onBack, onSuccess }: Ad
     fetchPrograms();
 
     return () => {
+      console.log("[AddLecturer] Cleanup - unmounting");
       isMountedRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);
@@ -211,9 +214,13 @@ export default function CreateLecturerScreen({ viewMode, onBack, onSuccess }: Ad
         {
           text: "OK",
           onPress: () => {
-            if (isMountedRef.current) {
-              onSuccess?.();
-            }
+            // Delay navigation to allow Alert to close properly
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                console.log("[AddLecturer] Calling onSuccess (navigation back)");
+                onSuccess?.();
+              }
+            }, 100);
           },
         },
       ]);

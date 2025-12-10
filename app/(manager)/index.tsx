@@ -135,7 +135,13 @@ export default function ManagerDashboardScreen() {
 
   // Ref untuk tracking animation state
   const isAnimatingRef = useRef(false);
-  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const navigationTimeoutRef = useRef<number | null>(null);
+
+  // CRITICAL: Interaction manager untuk prevent rapid clicks
+  const isInteractingRef = useRef(false);
+  const lastInteractionTimeRef = useRef(0);
+  const menuStateRef = useRef(false); // Track menu state
+  const DEBOUNCE_DELAY = 300; // ms
 
   React.useEffect(() => {
     return () => {
@@ -151,6 +157,10 @@ export default function ManagerDashboardScreen() {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      // Reset all interaction flags
+      isAnimatingRef.current = false;
+      isInteractingRef.current = false;
+      menuStateRef.current = false;
     };
   }, [slideAnim]);
 
@@ -203,7 +213,23 @@ export default function ManagerDashboardScreen() {
 
   const handleToggleActive = useCallback(
     (id: number, currentStatus: boolean, name: string) => {
-      if (!isMounted.current) return;
+      // CRITICAL: Debounce check for rapid toggle clicks
+      const now = Date.now();
+      if (now - lastInteractionTimeRef.current < DEBOUNCE_DELAY) {
+        console.log("[MANAGER DASHBOARD] Toggle debounced - ignoring rapid click");
+        return;
+      }
+      lastInteractionTimeRef.current = now;
+
+      if (!isMounted.current) {
+        console.warn("[MANAGER DASHBOARD] Component unmounted, toggle cancelled");
+        return;
+      }
+
+      if (isInteractingRef.current) {
+        console.log("[MANAGER DASHBOARD] Interaction in progress, toggle blocked");
+        return;
+      }
 
       const newStatus = !currentStatus;
       const statusText = newStatus ? "aktif" : "nonaktif";
@@ -262,22 +288,68 @@ export default function ManagerDashboardScreen() {
 
   const toggleMenu = useCallback(
     (open: boolean) => {
-      if (!isMounted.current || isAnimatingRef.current) return;
+      // CRITICAL: Debounce check
+      const now = Date.now();
+      if (now - lastInteractionTimeRef.current < DEBOUNCE_DELAY) {
+        console.log("[MANAGER DASHBOARD] Debounced - ignoring rapid toggle");
+        return;
+      }
+      lastInteractionTimeRef.current = now;
 
+      if (!isMounted.current) {
+        console.warn("[MANAGER DASHBOARD] Component unmounted, toggle cancelled");
+        return;
+      }
+
+      // CRITICAL: Check if already in desired state
+      if (menuStateRef.current === open) {
+        console.log("[MANAGER DASHBOARD] Menu already in state:", open);
+        return;
+      }
+
+      // CRITICAL: Global interaction lock
+      if (isInteractingRef.current || isAnimatingRef.current) {
+        console.log("[MANAGER DASHBOARD] Interaction/Animation locked, skipping");
+        return;
+      }
+
+      console.log("[MANAGER DASHBOARD] Toggle menu:", open);
+
+      // Lock all interactions
+      isInteractingRef.current = true;
       isAnimatingRef.current = true;
-      setMenuVisible(open);
+      menuStateRef.current = open;
+
+      // Set modal visibility BEFORE animation for opening, AFTER for closing
+      if (open) {
+        setMenuVisible(true);
+      }
 
       Animated.timing(slideAnim, {
         toValue: open ? 0 : -width * 0.75,
         duration: 250,
         useNativeDriver: true,
       }).start(({ finished }) => {
-        if (isMounted.current) {
-          isAnimatingRef.current = false;
-          // Jika menu ditutup dan animation selesai, sembunyikan modal
-          if (!open && finished) {
-            setMenuVisible(false);
+        console.log("[MANAGER DASHBOARD] Animation finished:", finished);
+
+        if (!isMounted.current) {
+          console.warn("[MANAGER DASHBOARD] Component unmounted during animation");
+          return;
+        }
+
+        // Unlock interactions
+        isAnimatingRef.current = false;
+
+        // Small delay to prevent immediate re-trigger
+        setTimeout(() => {
+          if (isMounted.current) {
+            isInteractingRef.current = false;
           }
+        }, 10);
+
+        // Hide modal after closing animation
+        if (!open && finished) {
+          setMenuVisible(false);
         }
       });
     },
@@ -286,23 +358,33 @@ export default function ManagerDashboardScreen() {
 
   const handleMenuNav = useCallback(
     (route: string) => {
-      if (!isMounted.current || isAnimatingRef.current) return;
+      if (!isMounted.current) {
+        console.warn("[MANAGER DASHBOARD] Component unmounted, navigation cancelled");
+        return;
+      }
+
+      console.log("[MANAGER DASHBOARD] Menu navigation to:", route);
 
       // Clear any existing navigation timeout
       if (navigationTimeoutRef.current) {
+        console.log("[MANAGER DASHBOARD] Clearing existing navigation timeout");
         clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
       }
 
       try {
-        // Tutup menu dengan animation
+        // Tutup menu dengan animation (will handle locking)
         toggleMenu(false);
 
-        // Tunggu animation selesai (250ms) + buffer (100ms)
+        // CRITICAL: Wait for animation (250ms) + buffer (150ms) = 400ms
         navigationTimeoutRef.current = setTimeout(() => {
-          if (!isMounted.current) return;
+          if (!isMounted.current) {
+            console.warn("[MANAGER DASHBOARD] Component unmounted, navigation cancelled");
+            return;
+          }
 
           try {
-            // Navigate dengan error handling
+            console.log("[MANAGER DASHBOARD] Executing navigation to:", route);
             router.push(route as any);
           } catch (navError) {
             console.error("[MANAGER DASHBOARD] Navigation error:", navError);
@@ -317,7 +399,7 @@ export default function ManagerDashboardScreen() {
           } finally {
             navigationTimeoutRef.current = null;
           }
-        }, 350); // 250ms animation + 100ms buffer
+        }, 400); // Increased to 400ms for safety
       } catch (error) {
         console.error("[MANAGER DASHBOARD] Menu toggle error:", error);
         if (isMounted.current) {
@@ -416,7 +498,7 @@ export default function ManagerDashboardScreen() {
       <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => toggleMenu(true)} style={styles.menuButton}>
+          <TouchableOpacity onPress={() => toggleMenu(true)} style={styles.menuButton} activeOpacity={0.7}>
             <Ionicons name="menu" size={28} color="#fff" />
           </TouchableOpacity>
           <ThemedText variant="bold" style={styles.headerTitle}>
@@ -473,14 +555,14 @@ export default function ManagerDashboardScreen() {
                 <ThemedText variant="bold" style={styles.menuHeaderText}>
                   Menu
                 </ThemedText>
-                <TouchableOpacity onPress={() => toggleMenu(false)}>
+                <TouchableOpacity onPress={() => toggleMenu(false)} activeOpacity={0.7}>
                   <Ionicons name="close" size={28} color="#015023" />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.menuList} showsVerticalScrollIndicator={false}>
                 {MENU_ITEMS.map((item) => (
-                  <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuNav(item.route)}>
+                  <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuNav(item.route)} activeOpacity={0.7}>
                     <View style={styles.menuIconContainer}>
                       <Ionicons name={item.icon} size={24} color="#015023" />
                     </View>
@@ -492,7 +574,7 @@ export default function ManagerDashboardScreen() {
                 ))}
               </ScrollView>
 
-              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.7}>
                 <Ionicons name="log-out-outline" size={20} color="#015023" />
                 <ThemedText variant="semibold" style={styles.logoutButtonText}>
                   Logout

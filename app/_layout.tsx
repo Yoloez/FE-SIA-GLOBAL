@@ -3,8 +3,6 @@ import React, { useEffect, useState } from "react";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FontProvider } from "../context/FontContext";
-// TEMPORARILY DISABLED: useNotifications requires native modules (expo-device)
-// import { useNotifications } from "../hooks/useNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,7 +33,9 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
-  // TEMPORARILY DISABLED: Initialize notifications for logged-in user
+  // Initialize notifications for logged-in user
+  // DISABLED: Notification screens already have their own Echo listeners
+  // This prevents duplicate notifications
   // useNotifications(user?.id_user_si);
 
   // --- INI PERBAIKANNYA ---
@@ -85,7 +85,7 @@ function RootLayoutNav() {
       } else if (segments[0] !== targetGroup) {
         // Jika belum di grup yang benar dan bukan shared route, pindahkan mereka
         console.log("[ROUTE] Redirect ke:", `/${targetGroup}/`);
-        router.replace(`/${targetGroup}/`);
+        router.replace(`/${targetGroup}/` as any);
       } else {
         // Jika sudah di grup yang benar, izinkan rendering
         console.log("[ROUTE] Sudah di grup yang benar");

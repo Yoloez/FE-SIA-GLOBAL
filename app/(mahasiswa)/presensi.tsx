@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
-import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
@@ -39,6 +39,22 @@ export default function Presensi() {
     }
     console.log("========================================");
   }, [user, authLoading]);
+
+  // Reset scan state setiap kali screen difokuskan (masuk ke halaman)
+  useFocusEffect(
+    useCallback(() => {
+      console.log("[PRESENSI] Screen focused - Resetting scan state");
+      setScannedData(null);
+      setIsProcessing(false);
+      setAlertVisible(false);
+      setZoom(0);
+      translateX.value = 0;
+
+      return () => {
+        console.log("[PRESENSI] Screen unfocused - Cleanup");
+      };
+    }, [])
+  );
 
   // Shared values untuk slider zoom
   const translateX = useSharedValue(0);
@@ -114,13 +130,22 @@ export default function Presensi() {
       if (response.data.status === "success") {
         console.log("[SUBMIT PRESENSI] Presensi berhasil!");
         setAlertTitle("Presensi Berhasil!");
-        setAlertMessage(response.data.message);
+        setAlertMessage(`${response.data.message}\n\nAnda dapat scan QR Code lain untuk presensi kelas berikutnya.`);
         setAlertButtons([
           {
-            text: "OK",
+            text: "Scan Lagi",
             onPress: () => {
+              console.log("[PRESENSI] User chose to scan again");
               setAlertVisible(false);
-              // Kembali ke halaman sebelumnya atau dashboard
+              setScannedData(null);
+              setIsProcessing(false);
+            },
+          },
+          {
+            text: "Selesai",
+            onPress: () => {
+              console.log("[PRESENSI] User chose to finish");
+              setAlertVisible(false);
               router.back();
             },
           },
@@ -158,19 +183,21 @@ export default function Presensi() {
       setAlertMessage(errorMessage);
       setAlertButtons([
         {
-          text: "Batal",
-          style: "cancel",
-          onPress: () => {
-            setAlertVisible(false);
-            router.back();
-          },
-        },
-        {
           text: "Scan Ulang",
           onPress: () => {
+            console.log("[PRESENSI] User chose to retry scan");
             setAlertVisible(false);
             setScannedData(null);
             setIsProcessing(false);
+          },
+        },
+        {
+          text: "Kembali",
+          style: "cancel",
+          onPress: () => {
+            console.log("[PRESENSI] User chose to go back");
+            setAlertVisible(false);
+            router.back();
           },
         },
       ]);

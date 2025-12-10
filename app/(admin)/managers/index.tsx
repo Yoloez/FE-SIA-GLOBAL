@@ -1,10 +1,11 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
 import { handleApiError, isAbortError } from "@/utils/errorHandler";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface StaffProfile {
@@ -134,20 +135,20 @@ export default function AdminDashboardScreen() {
           {item.profile_image ? <Image source={{ uri: item.profile_image }} style={styles.avatar} /> : <Image source={require("@/assets/images/unnamed.jpg")} style={styles.avatar} />}
           <View style={{ flex: 1 }}>
             <View style={styles.nameContainer}>
-              <Text style={styles.managerName} numberOfLines={1}>
+              <ThemedText variant="bold" style={styles.managerName} numberOfLines={1}>
                 {item.name}
-              </Text>
+              </ThemedText>
               {!item.is_active && (
                 <View style={styles.inactiveBadge}>
-                  <Text style={styles.inactiveBadgeText}>Inactive</Text>
+                  <ThemedText style={styles.inactiveBadgeText}>Inactive</ThemedText>
                 </View>
               )}
             </View>
-            <Text style={styles.managerEmail} numberOfLines={1}>
+            <ThemedText style={styles.managerEmail} numberOfLines={1}>
               {item.email}
-            </Text>
-            <Text style={styles.managerEmail}>Username: {item.username || "Belum diatur"}</Text>
-            {item.staff_profile?.employee_id_number && <Text style={styles.managerEmail}>NIP: {item.staff_profile.employee_id_number}</Text>}
+            </ThemedText>
+            <ThemedText style={styles.managerEmail}>Username: {item.username || "Belum diatur"}</ThemedText>
+            {item.staff_profile?.employee_id_number && <ThemedText style={styles.managerEmail}>NIP: {item.staff_profile.employee_id_number}</ThemedText>}
           </View>
         </View>
         <View style={styles.actions}>
@@ -206,8 +207,8 @@ export default function AdminDashboardScreen() {
         <View style={styles.listContainer}>
           <View style={styles.listHeader}>
             <View>
-              <Text style={styles.listTitle}>Daftar Manajer</Text>
-              {searchQuery.length > 0 && <Text style={styles.resultCount}>{filteredManagers.length} hasil ditemukan</Text>}
+              <ThemedText style={styles.listTitle}>Daftar Manajer</ThemedText>
+              {searchQuery.length > 0 && <ThemedText style={styles.resultCount}>{filteredManagers.length} hasil ditemukan</ThemedText>}
             </View>
             <TouchableOpacity onPress={() => router.push("/managers/add")} style={styles.addButton}>
               <Ionicons name="add-circle-outline" size={28} color="white" />
@@ -217,7 +218,7 @@ export default function AdminDashboardScreen() {
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.loadingText}>Memuat data...</Text>
+              <ThemedText style={styles.loadingText}>Memuat data...</ThemedText>
             </View>
           ) : (
             <FlatList
@@ -227,10 +228,10 @@ export default function AdminDashboardScreen() {
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Ionicons name={searchQuery ? "search-outline" : "people-outline"} size={64} color="#ccc" />
-                  <Text style={styles.emptyText}>{searchQuery ? `Tidak ada manajer yang cocok dengan "${searchQuery}"` : "Belum ada manajer yang ditambahkan."}</Text>
+                  <ThemedText style={styles.emptyText}>{searchQuery ? `Tidak ada manajer yang cocok dengan "${searchQuery}"` : "Belum ada manajer yang ditambahkan."}</ThemedText>
                   {searchQuery && (
                     <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
-                      <Text style={styles.clearSearchText}>Hapus Pencarian</Text>
+                      <ThemedText style={styles.clearSearchText}>Hapus Pencarian</ThemedText>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -296,7 +297,6 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     fontSize: 20,
-    fontWeight: "bold",
     color: "#ffffff",
   },
   resultCount: {
@@ -331,7 +331,6 @@ const styles = StyleSheet.create({
   },
   managerName: {
     fontSize: 16,
-    fontWeight: "bold",
     color: "#333",
   },
   inactiveBadge: {

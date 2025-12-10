@@ -1,9 +1,9 @@
+import api from "@/api/axios";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
 
 interface LecturerClass {
   id_class: number;
@@ -43,44 +43,34 @@ export default function LecturerClassesScreen() {
   );
 
   const renderItem = ({ item }: { item: LecturerClass }) => (
-    <TouchableOpacity
-      style={styles.classCard}
-      onPress={() => router.push(`/(dosen)/class-grades/${item.id_class}`)}
-      activeOpacity={0.7}
-    >
+    <TouchableOpacity style={styles.classCard} onPress={() => router.push(`/(dosen)/class-grades/${item.id_class}`)} activeOpacity={0.7}>
       <View style={styles.cardContent}>
         <View style={styles.leftSection}>
           <View style={styles.courseBadge}>
             <Text style={styles.courseBadgeText}>Kelas</Text>
           </View>
         </View>
-        
+
         <View style={styles.rightSection}>
-          <Text style={styles.scheduleText}>
-            {item.schedule || "09:15 - 10:55"}
-          </Text>
+          <Text style={styles.scheduleText}>{item.schedule || "09:15 - 10:55"}</Text>
         </View>
       </View>
-      
+
       <View style={styles.classDetails}>
         <Text style={styles.className}>{item.subject.name_subject}</Text>
         <Text style={styles.classCode}>
           Class: {item.code_class}, SKS: {item.subject.sks || 2}
         </Text>
-        
+
         <View style={styles.infoRow}>
           <View style={styles.infoItem}>
             <Ionicons name="people" size={16} color="#8B7355" />
-            <Text style={styles.infoText}>
-              {item.student_count || 80} Student
-            </Text>
+            <Text style={styles.infoText}>{item.student_count || 80} Student</Text>
           </View>
-          
+
           <View style={styles.infoItem}>
             <Ionicons name="location" size={16} color="#8B7355" />
-            <Text style={styles.infoText}>
-              {item.room || "R.Kelas CU 207"}
-            </Text>
+            <Text style={styles.infoText}>{item.room || "R.Kelas CU 207"}</Text>
           </View>
         </View>
       </View>
@@ -88,19 +78,16 @@ export default function LecturerClassesScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <Stack.Screen 
-        options={{ 
-          headerShown: false 
-        }} 
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
       />
-      
+
       {/* Header Section */}
       <View style={styles.headerContainer}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
           <Text style={styles.backText}>Kelas</Text>
         </TouchableOpacity>
@@ -122,9 +109,7 @@ export default function LecturerClassesScreen() {
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="folder-open-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>
-                  Anda belum ditugaskan untuk mengajar di kelas manapun.
-                </Text>
+                <Text style={styles.emptyText}>Anda belum ditugaskan untuk mengajar di kelas manapun.</Text>
               </View>
             }
           />
@@ -137,7 +122,7 @@ export default function LecturerClassesScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#015023',
+    backgroundColor: "#015023",
   },
   headerContainer: {
     paddingTop: 16,
@@ -145,14 +130,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   backText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   listContainer: {
     flex: 1,
@@ -163,89 +148,89 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   classCard: {
-    backgroundColor: '#F5EFD3',
+    backgroundColor: "#F5EFD3",
     borderRadius: 16,
     padding: 16,
     marginVertical: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   cardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 12,
   },
   leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   courseBadge: {
-    backgroundColor: '#D4A574',
+    backgroundColor: "#D4A574",
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 12,
   },
   courseBadgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   rightSection: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   scheduleText: {
     fontSize: 13,
-    color: '#8B7355',
-    fontWeight: '500',
+    color: "#8B7355",
+    fontWeight: "500",
   },
   classDetails: {
     marginTop: 4,
   },
   className: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#2d2d2d',
+    fontWeight: "700",
+    color: "#2d2d2d",
     marginBottom: 4,
   },
   classCode: {
     fontSize: 13,
-    color: '#8B7355',
+    color: "#8B7355",
     marginBottom: 12,
   },
   infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   infoText: {
     fontSize: 13,
-    color: '#8B7355',
+    color: "#8B7355",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 40,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
     paddingHorizontal: 40,
   },
   emptyText: {
-    textAlign: 'center',
-    color: '#fff',
+    textAlign: "center",
+    color: "#fff",
     fontSize: 15,
     marginTop: 16,
     lineHeight: 22,

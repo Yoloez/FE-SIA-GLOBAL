@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, ImageBackground, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -197,7 +197,14 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/getNotification")}>
-                <Ionicons name="notifications-outline" size={24} color="white" />
+                <View>
+                  <Ionicons name="notifications-outline" size={24} color="white" />
+                  {unreadCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -212,7 +219,7 @@ export default function HomeScreen() {
             ) : (
               <>
                 {/* Today's Schedule Card */}
-                <View style={styles.card}>
+                <ImageBackground source={require("../../assets/images/batik.png")} style={styles.card} imageStyle={styles.cardImage} resizeMode="cover">
                   <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/jadwal")} activeOpacity={0.7}>
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
@@ -236,7 +243,7 @@ export default function HomeScreen() {
                                 {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                               </ThemedText>
                             </View>
-                            <ThemedText style={styles.scheduleSubject} numberOfLines={1}>
+                            <ThemedText variant="semibold" style={styles.scheduleSubject} numberOfLines={1}>
                               {schedule.subject.name_subject}
                             </ThemedText>
                             <View style={styles.scheduleInfo}>
@@ -262,10 +269,10 @@ export default function HomeScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                </View>
+                </ImageBackground>
 
                 {/* Notifications Card */}
-                <View style={styles.card}>
+                <ImageBackground source={require("../../assets/images/batik.png")} style={styles.card} imageStyle={styles.cardImage} resizeMode="cover">
                   <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/getNotification")} activeOpacity={0.7}>
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
@@ -292,7 +299,7 @@ export default function HomeScreen() {
                               <View style={styles.notifTypeIcon}>
                                 <Ionicons name={notif.type === "chat" ? "chatbubble" : "megaphone"} size={14} color={notif.type === "chat" ? "#0EA5E9" : "#F59E0B"} />
                               </View>
-                              <ThemedText style={styles.notifTitle} numberOfLines={1}>
+                              <ThemedText variant="bold" style={styles.notifTitle} numberOfLines={1}>
                                 {notif.title}
                               </ThemedText>
                               {!notif.is_read && <View style={styles.unreadDot} />}
@@ -312,11 +319,11 @@ export default function HomeScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                </View>
+                </ImageBackground>
 
                 {/* Classes Card */}
-                <View style={styles.card}>
-                  <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/grades")} activeOpacity={0.7}>
+                <ImageBackground source={require("../../assets/images/batik.png")} style={styles.card} imageStyle={styles.cardImage} resizeMode="cover">
+                  <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/class-grades/grades")} activeOpacity={0.7}>
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
                         <View style={[styles.iconCircle, { backgroundColor: "rgba(34, 197, 94, 0.1)" }]}>
@@ -361,7 +368,7 @@ export default function HomeScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
-                </View>
+                </ImageBackground>
               </>
             )}
           </ScrollView>
@@ -474,6 +481,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+
+  cardImage: {
+    borderRadius: 12,
+    opacity: 0.6,
   },
 
   dashboardCard: {
@@ -726,5 +738,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+  notificationBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });

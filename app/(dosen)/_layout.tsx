@@ -91,14 +91,14 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="grades"
         options={{
           href: null,
           tabBarStyle: { display: "none" },
         }}
-      />
-      <Tabs.Screen
+      /> */}
+      {/* <Tabs.Screen
         name="_manualAttendance"
         options={{
           href: null,
@@ -111,7 +111,7 @@ export default function TabLayout() {
           href: null,
           tabBarStyle: { display: "none" },
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="EditProfilDosen"
         options={{

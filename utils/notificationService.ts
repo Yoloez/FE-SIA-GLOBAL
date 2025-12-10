@@ -13,7 +13,7 @@ Notifications.setNotificationHandler({
 });
 
 export interface NotificationData {
-  type: "chat" | "announcement";
+  type: string;
   id_conversation?: number;
   id_message?: number;
   id_announcement?: number;
@@ -24,6 +24,7 @@ export interface NotificationData {
 
 class NotificationService {
   private expoPushToken: string | null = null;
+  private displayedNotifications: Set<string> = new Set();
 
   /**
    * Register for push notifications and get token
@@ -50,13 +51,22 @@ class NotificationService {
         return null;
       }
 
-      // Get Expo push token
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: "your-project-id", // Ganti dengan project ID dari app.json
-      });
+      // Get Expo push token (skip if Firebase not configured)
+      try {
+        const token = await Notifications.getExpoPushTokenAsync({
+          projectId: "e1d2b90f-3cad-4f8a-bb98-ecff8f68a39f", // From app.json
+        });
 
-      this.expoPushToken = token.data;
-      console.log("🔑 Expo Push Token:", this.expoPushToken);
+        this.expoPushToken = token.data;
+        console.log("🔑 Expo Push Token:", this.expoPushToken);
+      } catch (tokenError: any) {
+        if (tokenError.message?.includes("FirebaseApp")) {
+          console.log("⚠️ Firebase not configured - using local notifications only");
+          console.log("💡 To enable remote push: https://docs.expo.dev/push-notifications/fcm-credentials/");
+        } else {
+          throw tokenError;
+        }
+      }
 
       // Set notification channel for Android
       if (Platform.OS === "android") {
@@ -85,8 +95,10 @@ class NotificationService {
         });
       }
 
-      // Save token to backend
-      await this.sendTokenToBackend(this.expoPushToken);
+      // Save token to backend (only if token was successfully obtained)
+      if (this.expoPushToken) {
+        await this.sendTokenToBackend(this.expoPushToken);
+      }
 
       return this.expoPushToken;
     } catch (error) {
@@ -98,7 +110,12 @@ class NotificationService {
   /**
    * Send push token to backend
    */
-  async sendTokenToBackend(token: string): Promise<void> {
+  async sendTokenToBackend(token: string | null): Promise<void> {
+    if (!token) {
+      console.log("⚠️ No token available to send to backend");
+      return;
+    }
+
     try {
       await api.post("/notifications/register-device", {
         device_token: token,
@@ -115,13 +132,31 @@ class NotificationService {
    */
   async showLocalNotification(data: NotificationData): Promise<void> {
     try {
+      // Create unique ID for this notification to prevent duplicates
+      const notificationKey = `${data.type}_${data.id_message || data.id_announcement}_${data.title}_${Date.now()}`;
+      const baseKey = `${data.type}_${data.id_message || data.id_announcement}`;
+
+      // Check if this exact notification was already displayed recently (within 2 seconds)
+      if (this.displayedNotifications.has(baseKey)) {
+        console.log("⚠️ Duplicate notification prevented:", baseKey);
+        return;
+      }
+
+      // Mark as displayed
+      this.displayedNotifications.add(baseKey);
+
+      // Remove from set after 2 seconds to allow same notification later
+      setTimeout(() => {
+        this.displayedNotifications.delete(baseKey);
+      }, 2000);
+
       const channelId = data.type === "chat" ? "chat" : "announcement";
 
       await Notifications.scheduleNotificationAsync({
         content: {
           title: data.title,
           body: data.message,
-          data: data,
+          data: data as any,
           sound: "default",
           priority: Notifications.AndroidNotificationPriority.HIGH,
           badge: 1,
@@ -129,7 +164,7 @@ class NotificationService {
         trigger: null, // Show immediately
       });
 
-      console.log("📬 Local notification displayed");
+      console.log("📬 Local notification displayed:", baseKey);
     } catch (error) {
       console.error("❌ Error showing local notification:", error);
     }

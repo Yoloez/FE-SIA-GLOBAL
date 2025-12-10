@@ -33,13 +33,19 @@ export function useNotifications(userId?: number) {
     const subscription = AppState.addEventListener("change", handleAppStateChange);
 
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+      try {
+        if (notificationListener.current && notificationListener.current.remove) {
+          notificationListener.current.remove();
+        }
+        if (responseListener.current && responseListener.current.remove) {
+          responseListener.current.remove();
+        }
+        if (subscription && subscription.remove) {
+          subscription.remove();
+        }
+      } catch (error) {
+        console.error("⚠️ Error cleaning up notification listeners:", error);
       }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
-      subscription.remove();
     };
   }, []);
 
@@ -56,8 +62,13 @@ export function useNotifications(userId?: number) {
   }, [userId]);
 
   const registerForPushNotifications = async () => {
-    const token = await notificationService.registerForPushNotifications();
-    setExpoPushToken(token);
+    try {
+      const token = await notificationService.registerForPushNotifications();
+      setExpoPushToken(token);
+    } catch (error) {
+      console.error("⚠️ Push notification registration failed:", error);
+      // Continue without push notifications - local notifications will still work
+    }
   };
 
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -70,22 +81,25 @@ export function useNotifications(userId?: number) {
   };
 
   const subscribeToUserNotifications = (userId: number) => {
-    const channelName = `private-user.${userId}`;
-    console.log(`🎧 Subscribing to notifications channel: ${channelName}`);
+    const channelName = `user.${userId}`; // Changed from private-user to match notification screens
+    console.log(`🎧 Subscribing to notifications channel: private-${channelName}`);
 
     echo
       .private(channelName)
-      .listen(".notification.sent", (event: any) => {
+      .listen(".NewNotification", (event: any) => {
         console.log("🔔 New notification received via Echo:", event);
 
+        // Handle both direct notification and wrapped notification
+        const notif = event.notification || event;
+
         const notificationData: NotificationData = {
-          type: event.type || "announcement",
-          id_conversation: event.metadata?.id_conversation,
-          id_message: event.metadata?.id_message,
-          id_announcement: event.metadata?.id_announcement,
-          title: event.title || "Notifikasi Baru",
-          message: event.message || "",
-          sender: event.sender || "System",
+          type: notif.type || "announcement",
+          id_conversation: notif.metadata?.id_conversation,
+          id_message: notif.metadata?.id_message,
+          id_announcement: notif.metadata?.id_announcement,
+          title: notif.title || "Notifikasi Baru",
+          message: notif.message || "",
+          sender: notif.sender || "System",
         };
 
         // Show local notification
@@ -95,14 +109,14 @@ export function useNotifications(userId?: number) {
         updateBadgeCount();
       })
       .error((error: any) => {
-        console.error(`❌ Error subscribing to ${channelName}:`, error);
+        console.error(`❌ Error subscribing to private-${channelName}:`, error);
       });
   };
 
   const unsubscribeFromUserNotifications = (userId: number) => {
-    const channelName = `private-user.${userId}`;
+    const channelName = `user.${userId}`;
     echo.leave(channelName);
-    console.log(`👋 Unsubscribed from ${channelName}`);
+    console.log(`👋 Unsubscribed from private-${channelName}`);
   };
 
   const handleNotificationResponse = (notification: Notifications.Notification) => {

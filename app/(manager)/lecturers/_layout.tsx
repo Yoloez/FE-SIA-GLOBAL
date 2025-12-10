@@ -16,13 +16,20 @@ export default function LecturersLayout() {
       <Stack.Screen
         name="add"
         options={{
-          headerShown: false,
+          headerShown: true,
+          title: "Tambah Dosen",
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
         }}
       />
       <Stack.Screen
-        name="edit"
+        name="Edit Dosen"
         options={{
-          headerShown: false,
+          headerShown: true,
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
         }}
       />
     </Stack>

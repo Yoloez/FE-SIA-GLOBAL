@@ -171,7 +171,7 @@ export default function GradeInputScreen() {
 
       setAlertConfig({
         visible: true,
-        title: "Sukses! ✓",
+        title: "Sukses!",
         message: `${studentsToSave.length} nilai berhasil disimpan.`,
         buttons: [{ text: "OK", onPress: () => {} }],
       });
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     borderRadius: 16,
-    opacity: 1,
+    opacity: 0.7,
   },
   cardContent: {
     flexDirection: "row",

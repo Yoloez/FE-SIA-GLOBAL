@@ -1,40 +1,55 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { Stack, router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-interface LecturerClass {
+interface ClassItem {
+  no: number;
   id_class: number;
-  code_class: string;
-  subject: {
-    name_subject: string;
-    sks: number;
-  };
-  academic_period: {
-    name: string;
-  };
-  room?: string;
-  schedule?: string;
-  student_count?: number;
+  kode_matkul: string;
+  nama_matkul: string;
+  sks: number;
+  kelas: string;
+  dosen: string;
+  jumlah_pertemuan: number;
+  id_academic_period: number;
+  academic_period_name: string;
+}
+
+interface AcademicPeriod {
+  id: number;
+  name: string;
 }
 
 export default function LecturerClassesScreen() {
-  const [classes, setClasses] = useState<LecturerClass[]>([]);
+  const [classes, setClasses] = useState<ClassItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState<number | null>(null);
+  const [showPeriodModal, setShowPeriodModal] = useState(false);
 
+  // Fetch classes for grades
   const fetchClasses = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("/lecturer/classes");
-      setClasses(response.data.data);
-    } catch (error) {
-      alert("Gagal memuat daftar kelas Anda.");
+      const response = await api.get("/lecturer/attendance/classes");
+      const fetchedClasses = response.data.data || [];
+      setClasses(fetchedClasses);
+
+      // Set default selected period to the first one if available
+      if (fetchedClasses.length > 0 && selectedPeriod === null) {
+        setSelectedPeriod(fetchedClasses[0].id_academic_period);
+      }
+    } catch (error: any) {
+      console.error("Error fetching classes:", error);
+      console.error("Error details:", error.response?.data);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedPeriod]);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,197 +57,370 @@ export default function LecturerClassesScreen() {
     }, [fetchClasses])
   );
 
-  const renderItem = ({ item }: { item: LecturerClass }) => (
-    <TouchableOpacity style={styles.classCard} onPress={() => router.push(`/(dosen)/class-grades/${item.id_class}`)} activeOpacity={0.7}>
-      <View style={styles.cardContent}>
-        <View style={styles.leftSection}>
-          <View style={styles.courseBadge}>
-            <Text style={styles.courseBadgeText}>Kelas</Text>
-          </View>
-        </View>
+  // Get unique academic periods
+  const academicPeriods = useMemo<AcademicPeriod[]>(() => {
+    const periodsMap = new Map<number, string>();
+    classes.forEach((item) => {
+      if (!periodsMap.has(item.id_academic_period)) {
+        periodsMap.set(item.id_academic_period, item.academic_period_name);
+      }
+    });
+    return Array.from(periodsMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [classes]);
 
-        <View style={styles.rightSection}>
-          <Text style={styles.scheduleText}>{item.schedule || "09:15 - 10:55"}</Text>
+  // Filter classes by selected academic period
+  const filteredClasses = useMemo(() => {
+    if (selectedPeriod === null) return classes;
+    return classes.filter((item) => item.id_academic_period === selectedPeriod);
+  }, [classes, selectedPeriod]);
+
+  // Get selected period name
+  const selectedPeriodName = useMemo(() => {
+    const period = academicPeriods.find((p) => p.id === selectedPeriod);
+    return period ? period.name : "Pilih Periode";
+  }, [academicPeriods, selectedPeriod]);
+
+  // Navigate to class grades detail
+  const handleClassPress = (classItem: ClassItem) => {
+    router.push(`/(dosen)/class-grades/${classItem.id_class}`);
+  };
+
+  // Handle period selection
+  const handlePeriodSelect = (periodId: number) => {
+    setSelectedPeriod(periodId);
+    setShowPeriodModal(false);
+  };
+
+  const renderClassCard = ({ item }: { item: ClassItem }) => (
+    <TouchableOpacity style={styles.classCard} onPress={() => handleClassPress(item)} activeOpacity={0.7}>
+      {/* Header Card */}
+      <View style={styles.cardHeader}>
+        <View style={styles.codeChip}>
+          <ThemedText variant="bold" style={styles.codeChipText}>
+            {item.kode_matkul}
+          </ThemedText>
+        </View>
+        <View style={styles.sksChip}>
+          <ThemedText variant="bold" style={styles.sksChipText}>
+            {item.sks} SKS
+          </ThemedText>
         </View>
       </View>
 
-      <View style={styles.classDetails}>
-        <Text style={styles.className}>{item.subject.name_subject}</Text>
-        <Text style={styles.classCode}>
-          Class: {item.code_class}, SKS: {item.subject.sks || 2}
-        </Text>
+      {/* Course Name */}
+      <ThemedText variant="bold" style={styles.courseName} numberOfLines={2}>
+        {item.nama_matkul}
+      </ThemedText>
 
-        <View style={styles.infoRow}>
-          <View style={styles.infoItem}>
-            <Ionicons name="people" size={16} color="#8B7355" />
-            <Text style={styles.infoText}>{item.student_count || 80} Student</Text>
-          </View>
+      {/* Class Code */}
+      <View style={styles.infoRow}>
+        <Ionicons name="people-outline" size={16} color="#666" />
+        <ThemedText style={styles.infoText}>Kelas {item.kelas}</ThemedText>
+      </View>
 
-          <View style={styles.infoItem}>
-            <Ionicons name="location" size={16} color="#8B7355" />
-            <Text style={styles.infoText}>{item.room || "R.Kelas CU 207"}</Text>
-          </View>
-        </View>
+      {/* Meeting Count */}
+      <View style={styles.infoRow}>
+        <Ionicons name="calendar-outline" size={16} color="#666" />
+        <ThemedText style={styles.infoText}>{item.jumlah_pertemuan} Pertemuan</ThemedText>
+      </View>
+
+      {/* Arrow Icon */}
+      <View style={styles.arrowIcon}>
+        <Ionicons name="chevron-forward" size={24} color="#015023" />
       </View>
     </TouchableOpacity>
   );
 
+  const renderPeriodModal = () => (
+    <Modal visible={showPeriodModal} transparent={true} animationType="fade" onRequestClose={() => setShowPeriodModal(false)}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPeriodModal(false)}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <ThemedText variant="bold" style={styles.modalTitle}>
+              Pilih Periode Akademik
+            </ThemedText>
+            <TouchableOpacity onPress={() => setShowPeriodModal(false)}>
+              <Ionicons name="close" size={24} color="#015023" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.periodList}>
+            {academicPeriods.map((period) => (
+              <TouchableOpacity key={period.id} style={[styles.periodItem, selectedPeriod === period.id && styles.periodItemSelected]} onPress={() => handlePeriodSelect(period.id)}>
+                <ThemedText variant={selectedPeriod === period.id ? "bold" : "regular"} style={[styles.periodItemText, selectedPeriod === period.id && styles.periodItemTextSelected]}>
+                  {period.name}
+                </ThemedText>
+                {selectedPeriod === period.id && <Ionicons name="checkmark-circle" size={20} color="#015023" />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
+    <LinearGradient colors={["#015023", "#1C352D"]} style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <Stack.Screen
+          options={{
+            headerShown: false,
+          }}
+        />
 
-      {/* Header Section */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-          <Text style={styles.backText}>Kelas</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Nilai Kelas
+          </ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
 
-      {/* Class List Section */}
-      <View style={styles.listContainer}>
+        {/* Academic Period Filter */}
+        {!isLoading && academicPeriods.length > 0 && (
+          <View style={styles.filterContainer}>
+            <TouchableOpacity style={styles.periodSelector} onPress={() => setShowPeriodModal(true)}>
+              <View style={styles.periodSelectorContent}>
+                <Ionicons name="calendar" size={18} color="#F5EFD3" />
+                <ThemedText variant="semibold" style={styles.periodSelectorText} numberOfLines={1}>
+                  {selectedPeriodName}
+                </ThemedText>
+              </View>
+              <Ionicons name="chevron-down" size={20} color="#F5EFD3" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Loading State */}
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2d5f3f" />
+            <ActivityIndicator size="large" color="#F5EFD3" />
+            <ThemedText variant="semibold" style={styles.loadingText}>
+              Memuat data kelas...
+            </ThemedText>
           </View>
         ) : (
-          <FlatList
-            data={classes}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id_class.toString()}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
+          <>
+            {/* Class List */}
+            {filteredClasses.length > 0 ? (
+              <FlatList data={filteredClasses} renderItem={renderClassCard} keyExtractor={(item) => item.id_class.toString()} contentContainerStyle={styles.listContentContainer} showsVerticalScrollIndicator={false} />
+            ) : (
               <View style={styles.emptyContainer}>
-                <Ionicons name="folder-open-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>Anda belum ditugaskan untuk mengajar di kelas manapun.</Text>
+                <Ionicons name="folder-open-outline" size={64} color="rgba(255,255,255,0.5)" />
+                <ThemedText variant="semibold" style={styles.emptyText}>
+                  Tidak ada kelas
+                </ThemedText>
+                <ThemedText style={styles.emptySubtext}>{selectedPeriod ? "Tidak ada kelas pada periode ini" : "Belum ada kelas yang tersedia"}</ThemedText>
               </View>
-            }
-          />
+            )}
+          </>
         )}
-      </View>
-    </SafeAreaView>
+
+        {/* Period Modal */}
+        {renderPeriodModal()}
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: "#015023",
   },
-  headerContainer: {
-    paddingTop: 16,
-    paddingBottom: 16,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  backText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "500",
-  },
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  listContent: {
-    paddingVertical: 8,
-    flexGrow: 1,
-  },
-  classCard: {
-    backgroundColor: "#F5EFD3",
-    borderRadius: 16,
-    padding: 16,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    width: 40,
+    height: 40,
+    justifyContent: "center",
     alignItems: "flex-start",
-    marginBottom: 12,
   },
-  leftSection: {
-    flexDirection: "row",
-    alignItems: "center",
+  headerTitle: {
+    fontSize: 18,
+    color: "#ffffff",
+    flex: 1,
+    textAlign: "center",
   },
-  courseBadge: {
-    backgroundColor: "#D4A574",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+  headerSpacer: {
+    width: 40,
+  },
+  filterContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  periodSelector: {
+    backgroundColor: "rgba(245, 239, 211, 0.15)",
     borderRadius: 12,
-  },
-  courseBadgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  rightSection: {
-    alignItems: "flex-end",
-  },
-  scheduleText: {
-    fontSize: 13,
-    color: "#8B7355",
-    fontWeight: "500",
-  },
-  classDetails: {
-    marginTop: 4,
-  },
-  className: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#2d2d2d",
-    marginBottom: 4,
-  },
-  classCode: {
-    fontSize: 13,
-    color: "#8B7355",
-    marginBottom: 12,
-  },
-  infoRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "rgba(245, 239, 211, 0.3)",
   },
-  infoItem: {
+  periodSelectorContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 10,
+    flex: 1,
   },
-  infoText: {
-    fontSize: 13,
-    color: "#8B7355",
+  periodSelectorText: {
+    fontSize: 14,
+    color: "#F5EFD3",
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#F5EFD3",
+  },
+  listContentContainer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  classCard: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    position: "relative",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  codeChip: {
+    backgroundColor: "#DABC4E",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  codeChipText: {
+    fontSize: 12,
+    color: "#015023",
+  },
+  sksChip: {
+    backgroundColor: "#015023",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  sksChipText: {
+    fontSize: 12,
+    color: "#F5EFD3",
+  },
+  courseName: {
+    fontSize: 16,
+    color: "#015023",
+    marginBottom: 12,
+    lineHeight: 22,
+    paddingRight: 30,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  infoText: {
+    fontSize: 13,
+    color: "#666",
+  },
+  arrowIcon: {
+    position: "absolute",
+    right: 18,
+    top: "65%",
+    marginTop: -12,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
+    justifyContent: "center",
+    paddingVertical: 80,
   },
   emptyText: {
-    textAlign: "center",
-    color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
+    color: "rgba(255,255,255,0.9)",
     marginTop: 16,
-    lineHeight: 22,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 8,
+    textAlign: "center",
+    paddingHorizontal: 40,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#F5EFD3",
+    borderRadius: 20,
+    width: "85%",
+    maxHeight: "70%",
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(1, 80, 35, 0.1)",
+  },
+  modalTitle: {
+    fontSize: 18,
+    color: "#015023",
+  },
+  periodList: {
+    maxHeight: 400,
+  },
+  periodItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(1, 80, 35, 0.05)",
+  },
+  periodItemSelected: {
+    backgroundColor: "rgba(1, 80, 35, 0.08)",
+  },
+  periodItemText: {
+    fontSize: 15,
+    color: "#374151",
+    flex: 1,
+  },
+  periodItemTextSelected: {
+    color: "#015023",
   },
 });

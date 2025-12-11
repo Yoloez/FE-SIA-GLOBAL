@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import api from "../api/axios";
+import echo from "../api/echo";
 import { useAuth } from "./AuthContext";
 
 interface LecturerProfileData {
@@ -157,6 +158,45 @@ export const LecturerDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setUnreadCount(0);
     }
   }, [isLoggedIn, user, refreshAllData]);
+
+  // Real-time notification listener via Echo
+  useEffect(() => {
+    if (!isLoggedIn || !user?.id_user_si) return;
+
+    const channelName = `user.${user.id_user_si}`;
+    console.log(`[LecturerData] 🎧 Subscribing to notifications: private-${channelName}`);
+
+    const channel = echo.private(channelName);
+
+    channel
+      .listen(".NewNotification", (event: any) => {
+        console.log("[LecturerData] 🔔 New notification received:", event);
+
+        const notif = event.notification || event;
+
+        // Add notification to recent list
+        const newNotification: NotificationItem = {
+          id_notification: notif.id_notification,
+          type: notif.type || "announcement",
+          title: notif.title || "Notifikasi Baru",
+          message: notif.message || "",
+          is_read: false,
+          sent_at: notif.sent_at || new Date().toISOString(),
+        };
+
+        setRecentNotifications((prev) => [newNotification, ...prev.slice(0, 2)]);
+        setUnreadCount((prev) => prev + 1);
+      })
+      .error((error: any) => {
+        console.error(`[LecturerData] ❌ Error subscribing to private-${channelName}:`, error);
+      });
+
+    // Cleanup on unmount or user change
+    return () => {
+      console.log(`[LecturerData] 👋 Unsubscribing from private-${channelName}`);
+      echo.leave(`private-${channelName}`);
+    };
+  }, [isLoggedIn, user?.id_user_si]);
 
   return (
     <LecturerDataContext.Provider

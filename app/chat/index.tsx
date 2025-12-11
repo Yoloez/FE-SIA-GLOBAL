@@ -99,6 +99,7 @@ const ChatListApp = () => {
       setConversations(conversationsData);
 
       // Map conversations to contacts for last message info (with null check)
+      // Prioritize last_message.sent_at, fallback to updated_at
       const conversationMap = new Map(
         conversationsData
           .filter((conv) => conv.other_participant && conv.other_participant.id_user_si) // Filter out invalid conversations
@@ -111,7 +112,7 @@ const ChatListApp = () => {
           ])
       );
 
-      // Merge contact data with conversation data and sort by last message
+      // Merge contact data with conversation data
       const mergeLecturers = (lecturersData || []).map((contact: Contact) => ({
         ...contact,
         last_message_at: conversationMap.get(contact.id_user_si)?.last_message_at,
@@ -124,17 +125,22 @@ const ChatListApp = () => {
         id_conversation: conversationMap.get(contact.id_user_si)?.id_conversation,
       }));
 
-      // Sort: Contacts with recent messages first, then alphabetically
+      // Sort function: Prioritize contacts with recent chats
       const sortContacts = (contacts: Contact[]) => {
         return contacts.sort((a, b) => {
-          // If both have messages, sort by most recent
-          if (a.last_message_at && b.last_message_at) {
-            return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+          const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+          const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+
+          // If both have chat history, sort by most recent first
+          if (timeA > 0 && timeB > 0) {
+            return timeB - timeA; // Descending: newest first
           }
-          // Contacts with messages come first
-          if (a.last_message_at) return -1;
-          if (b.last_message_at) return 1;
-          // Both without messages, sort alphabetically
+
+          // Contacts with chat history appear before those without
+          if (timeA > 0) return -1;
+          if (timeB > 0) return 1;
+
+          // Both without chat history, sort alphabetically
           return a.name.localeCompare(b.name);
         });
       };
@@ -254,7 +260,7 @@ const ChatListApp = () => {
           <Image source={{ uri: avatarUri }} style={styles.avatarImage} defaultSource={require("../../assets/images/react-logo.png")} />
 
           <View style={styles.contactInfo}>
-            <ThemedText style={styles.contactName} numberOfLines={1}>
+            <ThemedText style={styles.contactName} numberOfLines={1} variant="semibold">
               {item.name}
             </ThemedText>
             <ThemedText style={styles.contactId} numberOfLines={1}>
@@ -327,7 +333,9 @@ const ChatListApp = () => {
                     <View style={styles.sectionContainer}>
                       <View style={styles.badgeContainer}>
                         <View style={styles.badge}>
-                          <ThemedText style={styles.badgeText}>Mahasiswa</ThemedText>
+                          <ThemedText variant="bold" style={styles.badgeText}>
+                            Mahasiswa
+                          </ThemedText>
                         </View>
                       </View>
                       {classmates.map((item) => (
@@ -395,7 +403,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "700",
     flex: 1,
     textAlign: "center",
   },
@@ -434,7 +441,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 16,
-    fontWeight: "bold",
+
     color: "white",
   },
   contactCard: {
@@ -488,7 +495,7 @@ const styles = StyleSheet.create({
   },
   contactName: {
     fontSize: 16,
-    fontWeight: "bold",
+
     color: "#333",
     marginBottom: 2,
   },

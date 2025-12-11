@@ -1,16 +1,18 @@
 import api from "@/api/axios";
 import echo from "@/api/echo";
+import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { NotificationActionMenu } from "@/components/NotificationActionMenu";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
+import { useStudentData } from "@/context/StudentDataContext";
 import notificationService from "@/utils/notificationService";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, Stack, useFocusEffect } from "expo-router";
+import { router, Stack } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ConfirmDeleteModal } from "../../../components/ConfirmDeleteModal";
-import { NotificationActionMenu } from "../../../components/NotificationActionMenu";
-import { ThemedText } from "../../../components/ThemedText";
 
 const { width } = Dimensions.get("window");
 
@@ -29,7 +31,7 @@ interface NotificationMetadata {
 
 interface NotificationItem {
   id_notification: number;
-  type: "chat" | "announcement";
+  type: string;
   title: string;
   message: string;
   sender: string;
@@ -48,233 +50,10 @@ interface NotificationResponse {
 type FilterType = "all" | "chat" | "announcement";
 type FilterStatus = "all" | "read" | "unread";
 
-interface CustomModalProps {
-  visible: boolean;
-  onClose: () => void;
-  title: string;
-  message: string;
-  type?: "success" | "error" | "info" | "announcement";
-  metadata?: NotificationMetadata;
-}
-
-const CustomModal: React.FC<CustomModalProps> = ({ visible, onClose, title, message, type = "info", metadata }) => {
-  const [scaleAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
-
-  React.useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
-  const getIconConfig = () => {
-    switch (type) {
-      case "success":
-        return { name: "checkmark-circle", color: "#10B981", bgColor: "rgba(16, 185, 129, 0.1)" };
-      case "error":
-        return { name: "close-circle", color: "#EF4444", bgColor: "rgba(239, 68, 68, 0.1)" };
-      case "announcement":
-        return { name: "megaphone", color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.1)" };
-      default:
-        return { name: "information-circle", color: "#0EA5E9", bgColor: "rgba(14, 165, 233, 0.1)" };
-    }
-  };
-
-  const iconConfig = getIconConfig();
-
-  return (
-    <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
-      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
-
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <View style={styles.modalContent}>
-            {/* Icon Header */}
-            <View style={[styles.iconHeader, { backgroundColor: iconConfig.bgColor }]}>
-              <Ionicons name={iconConfig.name as any} size={28} color={iconConfig.color} />
-            </View>
-
-            {/* Title */}
-            <ThemedText variant="bold" style={styles.modalTitle}>
-              {title}
-            </ThemedText>
-
-            {/* Message */}
-            <ScrollView style={styles.messageScrollView} showsVerticalScrollIndicator={false}>
-              <ThemedText style={styles.modalMessage}>{message}</ThemedText>
-
-              {/* Metadata Info */}
-              {metadata && (
-                <View style={styles.metadataContainer}>
-                  {metadata.class_code && (
-                    <View style={styles.metadataRow}>
-                      <Ionicons name="school-outline" size={16} color="#6B7280" />
-                      <ThemedText variant="semibold" style={styles.metadataText}>
-                        Kelas: {metadata.class_code}
-                      </ThemedText>
-                    </View>
-                  )}
-                  {metadata.subject_name && (
-                    <View style={styles.metadataRow}>
-                      <Ionicons name="book-outline" size={16} color="#6B7280" />
-                      <ThemedText variant="semibold" style={styles.metadataText}>
-                        {metadata.subject_name}
-                      </ThemedText>
-                    </View>
-                  )}
-                  {metadata.lecturer_name && (
-                    <View style={styles.metadataRow}>
-                      <Ionicons name="person-outline" size={16} color="#6B7280" />
-                      <ThemedText variant="semibold" style={styles.metadataText}>
-                        Dosen: {metadata.lecturer_name}
-                      </ThemedText>
-                    </View>
-                  )}
-                </View>
-              )}
-            </ScrollView>
-
-            {/* Action Button */}
-            <TouchableOpacity style={[styles.modalButton, { backgroundColor: iconConfig.color }]} onPress={onClose} activeOpacity={0.8}>
-              <ThemedText variant="semibold" style={styles.modalButtonText}>
-                Tutup
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
-};
-
-interface ConfirmModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-}
-
-const ConfirmModal: React.FC<ConfirmModalProps> = ({ visible, onClose, onConfirm, title, message, confirmText = "Ya", cancelText = "Batal" }) => {
-  const [scaleAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
-
-  React.useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      scaleAnim.setValue(0);
-      fadeAnim.setValue(0);
-    }
-  }, [visible]);
-
-  return (
-    <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
-      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
-
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <View style={styles.modalContent}>
-            {/* Icon Header */}
-            <View style={[styles.iconHeader, { backgroundColor: "rgba(14, 165, 233, 0.1)" }]}>
-              <Ionicons name="help-circle" size={48} color="#0EA5E9" />
-            </View>
-
-            {/* Title */}
-            <ThemedText variant="bold" style={styles.modalTitle}>
-              {title}
-            </ThemedText>
-
-            {/* Message */}
-            <ThemedText style={styles.modalMessage}>{message}</ThemedText>
-
-            {/* Action Buttons */}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={[styles.halfButton, styles.cancelButton]} onPress={onClose} activeOpacity={0.8}>
-                <ThemedText variant="semibold" style={styles.cancelButtonText}>
-                  {cancelText}
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.halfButton, styles.confirmButton]}
-                onPress={() => {
-                  onConfirm();
-                  onClose();
-                }}
-                activeOpacity={0.8}
-              >
-                <ThemedText variant="semibold" style={styles.confirmButtonText}>
-                  {confirmText}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
-};
-
 export default function NotificationScreen() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { notifications, unreadCount, isLoadingNotifications, refreshNotifications, updateNotification: updateNotificationContext, removeNotification: removeNotificationContext } = useStudentData();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const echoChannelRef = useRef<any>(null);
@@ -285,34 +64,6 @@ export default function NotificationScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showMarkAllConfirm, setShowMarkAllConfirm] = useState(false);
   const [showAnnouncementDetail, setShowAnnouncementDetail] = useState(false);
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const params: any = {};
-      if (filterType !== "all") params.type = filterType;
-      if (filterStatus !== "all") params.status = filterStatus;
-
-      const response = await api.get("/notifications", { params });
-
-      if (response.data.status === "success") {
-        const data: NotificationResponse = response.data.data;
-        setNotifications(data.notifications);
-        setUnreadCount(data.unread_count);
-      }
-    } catch (error: any) {
-      console.error("Gagal memuat notifikasi:", error);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [filterType, filterStatus]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsLoading(true);
-      fetchNotifications();
-    }, [fetchNotifications])
-  );
 
   // Setup Echo listener untuk real-time notifications
   useEffect(() => {
@@ -352,23 +103,8 @@ export default function NotificationScreen() {
         // Mark as processed
         processedNotificationIds.current.add(notifId);
 
-        // Add to state (prepend - newest first)
-        setNotifications((prev) => {
-          // Check for duplicates in current state
-          const isDuplicate = prev.some((n) => n.id_notification === notifId);
-          if (isDuplicate) {
-            console.log(`⚠️ Duplicate notification ${notifId} found in state`);
-            return prev;
-          }
-
-          console.log(`✅ Adding new notification ${notifId} to state`);
-          return [newNotification, ...prev];
-        });
-
-        // Update unread count
-        if (!newNotification.is_read) {
-          setUnreadCount((prev) => prev + 1);
-        }
+        // Refresh notifications from context
+        await refreshNotifications();
 
         // Show popup notification
         try {
@@ -416,48 +152,51 @@ export default function NotificationScreen() {
     };
   }, [user?.id_user_si]);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    fetchNotifications();
-  }, [fetchNotifications]);
+    await refreshNotifications();
+    setIsRefreshing(false);
+  };
 
-  const handleMarkAllAsRead = useCallback(async () => {
+  const handleMarkAllAsRead = async () => {
     try {
       await api.put("/notifications/read-all");
-      fetchNotifications();
+      await refreshNotifications();
     } catch (error: any) {
       console.error("Gagal menandai notifikasi:", error);
     }
-  }, [fetchNotifications]);
+  };
 
-  const handleMarkAsRead = useCallback(async (notificationId: number) => {
-    try {
-      const response = await api.put(`/notifications/${notificationId}/read`);
-      if (response.data.status === "success") {
-        setNotifications((prev) => prev.map((n) => (n.id_notification === notificationId ? { ...n, is_read: true, read_at: response.data.data.read_at } : n)));
-        setUnreadCount((prev) => Math.max(0, prev - 1));
+  const handleMarkAsRead = useCallback(
+    async (notificationId: number) => {
+      try {
+        const response = await api.put(`/notifications/${notificationId}/read`);
+        if (response.data.status === "success") {
+          updateNotificationContext(notificationId, { is_read: true, read_at: response.data.data.read_at });
+        }
+      } catch (error: any) {
+        console.error("Gagal menandai notifikasi:", error);
       }
-    } catch (error: any) {
-      console.error("Gagal menandai notifikasi:", error);
-    }
-  }, []);
+    },
+    [updateNotificationContext]
+  );
 
-  const handleDeleteNotification = useCallback(async (notificationId: number) => {
-    try {
-      const response = await api.delete(`/notifications/${notificationId}`);
-      if (response.data.status === "success") {
-        setNotifications((prev) => {
-          const deletedNotif = prev.find((n) => n.id_notification === notificationId);
-          if (deletedNotif && !deletedNotif.is_read) {
-            setUnreadCount((count) => Math.max(0, count - 1));
-          }
-          return prev.filter((n) => n.id_notification !== notificationId);
-        });
+  const handleDeleteNotification = useCallback(
+    async (notificationId: number) => {
+      try {
+        const response = await api.delete(`/notifications/${notificationId}`);
+        if (response.data.status === "success") {
+          removeNotificationContext(notificationId);
+          setShowActionMenu(false);
+          setShowDeleteConfirm(false);
+          setSelectedNotif(null);
+        }
+      } catch (error: any) {
+        console.error("Gagal menghapus notifikasi:", error);
       }
-    } catch (error: any) {
-      console.error("Gagal menghapus notifikasi:", error);
-    }
-  }, []);
+    },
+    [removeNotificationContext]
+  );
 
   const handleNotificationPress = useCallback(
     (item: NotificationItem) => {
@@ -479,6 +218,25 @@ export default function NotificationScreen() {
     setSelectedNotif(item);
     setShowActionMenu(true);
   }, []);
+
+  // Filter notifications based on selected filters
+  const filteredNotifications = React.useMemo(() => {
+    let filtered = notifications;
+
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter((n) => n.type === filterType);
+    }
+
+    // Filter by status
+    if (filterStatus === "read") {
+      filtered = filtered.filter((n) => n.is_read);
+    } else if (filterStatus === "unread") {
+      filtered = filtered.filter((n) => !n.is_read);
+    }
+
+    return filtered;
+  }, [notifications, filterType, filterStatus]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -565,7 +323,7 @@ export default function NotificationScreen() {
           </ThemedText>
           <TouchableOpacity onPress={() => router.push("/notifikasi/notification")} style={styles.backButton}>
             <Ionicons name="add-circle-outline" size={24} color="#ffffff" />
-          </TouchableOpacity>
+          </TouchableOpacity> 
           {unreadCount > 0 && (
             <TouchableOpacity onPress={() => setShowMarkAllConfirm(true)} style={styles.markAllButton}>
               <Ionicons name="checkmark-done" size={20} color="#DABC4E" />
@@ -632,14 +390,14 @@ export default function NotificationScreen() {
         </View>
 
         {/* Content */}
-        {isLoading ? (
+        {isLoadingNotifications ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#DABC4E" />
             <ThemedText variant="semibold" style={styles.loadingText}>
               Memuat notifikasi...
             </ThemedText>
           </View>
-        ) : notifications.length === 0 ? (
+        ) : filteredNotifications.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={64} color="rgba(255,255,255,0.5)" />
             <ThemedText variant="semibold" style={styles.emptyText}>
@@ -649,7 +407,7 @@ export default function NotificationScreen() {
           </View>
         ) : (
           <FlatList
-            data={notifications}
+            data={filteredNotifications}
             renderItem={renderNotificationItem}
             keyExtractor={(item) => item.id_notification.toString()}
             contentContainerStyle={styles.listContent}
@@ -676,16 +434,36 @@ export default function NotificationScreen() {
           }}
         />
 
-        <ConfirmDeleteModal
+        <ConfirmModal
           visible={showMarkAllConfirm}
           onClose={() => setShowMarkAllConfirm(false)}
           onConfirm={() => {
             handleMarkAllAsRead();
             setShowMarkAllConfirm(false);
           }}
+          title="Tandai Semua Dibaca?"
+          message="Semua notifikasi akan ditandai sebagai sudah dibaca."
+          confirmText="Tandai Dibaca"
+          iconName="checkmark-done-circle"
+          iconColor="#10B981"
+          confirmButtonColor="#10B981"
         />
 
-        <CustomModal visible={showAnnouncementDetail} onClose={() => setShowAnnouncementDetail(false)} title={selectedNotif?.title || ""} message={selectedNotif?.message || ""} type="announcement" metadata={selectedNotif?.metadata} />
+        {/* Announcement Detail Modal */}
+        {selectedNotif && (
+          <ConfirmModal
+            visible={showAnnouncementDetail}
+            onClose={() => setShowAnnouncementDetail(false)}
+            onConfirm={() => setShowAnnouncementDetail(false)}
+            title={selectedNotif.title}
+            message={selectedNotif.message}
+            confirmText="Tutup"
+            cancelText=""
+            iconName="megaphone"
+            iconColor="#F59E0B"
+            confirmButtonColor="#F59E0B"
+          />
+        )}
       </SafeAreaView>
     </LinearGradient>
   );
@@ -720,6 +498,9 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: "center",
     alignItems: "flex-end",
+  },
+  headerSpacer: {
+    width: 40,
   },
   unreadBadgeContainer: {
     paddingHorizontal: 20,

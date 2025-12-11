@@ -257,18 +257,42 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => router.push("/(mahasiswa)/kehadiran/" as any)} activeOpacity={0.7}>
               <View style={styles.achievementContainer}>
                 <View style={styles.achievementCard}>
-                  <ThemedText style={styles.achievementLabel}>Total SKS</ThemedText>
-                  {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats?.totalSks || 0}</Text>}
+                  <ThemedText variant="semibold" style={styles.achievementLabel}>
+                    Total SKS
+                  </ThemedText>
+                  {isLoadingGrades ? (
+                    <ActivityIndicator size="small" color="#015023" />
+                  ) : (
+                    <ThemedText variant="bold" style={styles.achievementValue}>
+                      {academicStats?.totalSks || 0}
+                    </ThemedText>
+                  )}
                 </View>
 
                 <View style={styles.achievementCard}>
-                  <ThemedText style={styles.achievementLabel}>IPK</ThemedText>
-                  {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats?.ipk || "0.00"}</Text>}
+                  <ThemedText variant="semibold" style={styles.achievementLabel}>
+                    IPK
+                  </ThemedText>
+                  {isLoadingGrades ? (
+                    <ActivityIndicator size="small" color="#015023" />
+                  ) : (
+                    <ThemedText variant="bold" style={styles.achievementValue}>
+                      {academicStats?.ipk || "0.00"}
+                    </ThemedText>
+                  )}
                 </View>
 
                 <View style={styles.achievementCard}>
-                  <ThemedText style={styles.achievementLabel}>IPS</ThemedText>
-                  {isLoadingGrades ? <ActivityIndicator size="small" color="#015023" /> : <Text style={styles.achievementValue}>{academicStats?.currentIps || "0.00"}</Text>}
+                  <ThemedText variant="semibold" style={styles.achievementLabel}>
+                    IPS
+                  </ThemedText>
+                  {isLoadingGrades ? (
+                    <ActivityIndicator size="small" color="#015023" />
+                  ) : (
+                    <ThemedText variant="bold" style={styles.achievementValue}>
+                      {academicStats?.currentIps || "0.00"}
+                    </ThemedText>
+                  )}
                 </View>
               </View>
             </TouchableOpacity>
@@ -454,14 +478,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontFamily: "Urbanist_600SemiBold",
-    fontWeight: "600",
     color: "white",
     marginBottom: 2,
   },
   userId: {
     fontSize: 12,
     color: "rgba(255, 255, 255, 0.8)",
-    fontWeight: "400",
   },
   iconsSection: {
     flexDirection: "row",
@@ -517,15 +539,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   achievementLabel: {
-    fontFamily: "Urbanist_400Regular",
     fontSize: 14,
-    fontWeight: "800",
     color: "#333",
     marginBottom: 4,
   },
   achievementValue: {
     fontSize: 18,
-    fontWeight: "bold",
     color: "#015023",
   },
   searchContainer: {
@@ -549,7 +568,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     fontFamily: "Urbanist_400Regular",
-    fontWeight: "400",
   },
   loader: {
     marginTop: 30,
@@ -583,7 +601,6 @@ const styles = StyleSheet.create({
   notificationBadgeText: {
     color: "#fff",
     fontSize: 10,
-    fontWeight: "bold",
     textAlign: "center",
   },
   dashboardCard: {
@@ -622,7 +639,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 24,
     backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 8,
+    borderRadius: 12,
     marginTop: 8,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.05)",
@@ -636,7 +653,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     backgroundColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: 8,
+    borderRadius: 12,
     marginTop: 8,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",

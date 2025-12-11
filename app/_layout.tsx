@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FontProvider } from "../context/FontContext";
+import { LecturerDataProvider } from "../context/LecturerDataContext";
 import { StudentDataProvider } from "../context/StudentDataContext";
 import { useNotifications } from "../hooks/useNotifications";
 
@@ -132,7 +133,9 @@ export default function RootLayout() {
       <FontProvider>
         <AuthProvider>
           <StudentDataProvider>
-            <RootLayoutNav />
+            <LecturerDataProvider>
+              <RootLayoutNav />
+            </LecturerDataProvider>
           </StudentDataProvider>
         </AuthProvider>
       </FontProvider>

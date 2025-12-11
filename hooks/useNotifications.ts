@@ -8,8 +8,8 @@ import { AppState, AppStateStatus } from "react-native";
 export function useNotifications(userId?: number) {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
   const [notification, setNotification] = useState<Notifications.Notification | null>(null);
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
   const appState = useRef(AppState.currentState);
   const router = useRouter();
 
@@ -121,7 +121,7 @@ export function useNotifications(userId?: number) {
   };
 
   const handleNotificationResponse = (notification: Notifications.Notification) => {
-    const data = notification.request.content.data as NotificationData;
+    const data = notification.request.content.data as unknown as NotificationData;
 
     console.log("📱 Handling notification tap:", data);
 

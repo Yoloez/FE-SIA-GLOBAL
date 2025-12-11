@@ -30,6 +30,7 @@ interface Message {
   isOptimistic?: boolean; // Flag untuk pesan yang belum terkirim
   isSending?: boolean; // Flag untuk status pengiriman
   sendFailed?: boolean; // Flag jika pengiriman gagal
+  is_read?: boolean; // Flag untuk status sudah dibaca atau belum
 }
 
 interface OtherParticipant {
@@ -132,6 +133,7 @@ export default function ChatScreen() {
         sender: msg.sender,
         created_at: msg.sent_at || msg.created_at,
         conversation_id: msg.id_conversation,
+        is_read: msg.is_read || false,
       }));
 
       setMessages(formattedMessages);
@@ -253,6 +255,7 @@ export default function ChatScreen() {
             sender: newMsg.sender,
             created_at: newMsg.created_at || newMsg.sent_at || new Date().toISOString(),
             conversation_id: newMsg.id_conversation || newMsg.conversation_id,
+            is_read: newMsg.is_read || false,
           };
 
           console.log(`✅ Adding new message ${messageId} to state`);
@@ -280,6 +283,25 @@ export default function ChatScreen() {
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }, 100);
+      });
+
+      // Listen for message read events
+      channel.listen(".MessageRead", (event: { message_id: number; read_by: number }) => {
+        console.log("👁️ Message read event:", event);
+
+        if (!isMounted.current) return;
+
+        // Update message status to read
+        setMessages((prevMessages) => {
+          const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
+          return currentMessages.map((msg) => {
+            const msgId = msg.id_message || msg.id;
+            if (msgId === event.message_id) {
+              return { ...msg, is_read: true };
+            }
+            return msg;
+          });
+        });
       });
 
       // Handle subscription errors
@@ -369,6 +391,7 @@ export default function ChatScreen() {
                 conversation_id: parseInt(conversationId),
                 isOptimistic: false,
                 isSending: false,
+                is_read: serverMessage.is_read || false,
               }
             : msg
         );
@@ -458,8 +481,12 @@ export default function ChatScreen() {
           statusIcon = <ActivityIndicator size={12} color="#667781" style={{ marginLeft: 4 }} />;
         } else if (item.isOptimistic) {
           statusIcon = <Ionicons name="checkmark" size={14} color="#667781" style={{ marginLeft: 4 }} />;
-        } else {
+        } else if (item.is_read) {
+          // Sudah dibaca: centang dua biru
           statusIcon = <Ionicons name="checkmark-done" size={14} color="#4FC3F7" style={{ marginLeft: 4 }} />;
+        } else {
+          // Terkirim tapi belum dibaca: centang dua abu-abu
+          statusIcon = <Ionicons name="checkmark-done" size={14} color="#667781" style={{ marginLeft: 4 }} />;
         }
       }
 

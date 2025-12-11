@@ -13,17 +13,26 @@ interface ClassScheduleItem {
   day_of_week: number;
   start_time: string;
   end_time: string;
-  room: string | null;
+  member_class: number;
+  is_active: boolean;
   subject: {
     id_subject: number;
     name_subject: string;
+    code_subject: string;
+    sks: number;
   };
-  academic_period?: {
-    id: number;
+  dosen: string; // String gabungan nama dosen
+  academic_period: {
+    id_academic_period: number;
     name: string;
-  };
-  // Untuk data dosen, tambahkan jika ada
-  lecturer_name?: string;
+    is_active: boolean;
+  } | null;
+  total_meetings: number;
+  schedules: Array<{
+    pertemuan: string;
+    id_schedule: number;
+    date: string;
+  }>;
 }
 
 export default function ScheduleScreen() {
@@ -68,10 +77,22 @@ export default function ScheduleScreen() {
     setIsLoading(true);
     try {
       const response = await api.get("/lecturer/schedules");
-      setSchedules(response.data.data || []);
+      console.log("[JADWAL] Response:", response.data);
+
+      if (response.data.status === "success") {
+        setSchedules(response.data.data || []);
+      } else {
+        console.error("[JADWAL] Response status bukan success:", response.data);
+        setSchedules([]);
+      }
     } catch (error: any) {
-      console.error("Gagal memuat jadwal:", error.response?.data);
-      alert("Gagal memuat jadwal Anda.");
+      console.error("[JADWAL] Error fetching schedules:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      // Set empty array instead of showing alert
+      setSchedules([]);
     } finally {
       setIsLoading(false);
     }
@@ -248,11 +269,15 @@ export default function ScheduleScreen() {
                       <View style={styles.scheduleInfo}>
                         <View style={styles.infoRow}>
                           <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <Text style={styles.infoText}>{schedule.lecturer_name || user?.name || "Lecturer Name"}</Text>
+                          <Text style={styles.infoText}>{schedule.dosen || user?.name || "Lecturer Name"}</Text>
                         </View>
                         <View style={styles.infoRow}>
-                          <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <Text style={styles.infoText}>{schedule.room || "Room"}</Text>
+                          <Ionicons name="people-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                          <Text style={styles.infoText}>{schedule.member_class} Mahasiswa</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                          <Ionicons name="calendar-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                          <Text style={styles.infoText}>{schedule.total_meetings} Pertemuan</Text>
                         </View>
                       </View>
                     </View>

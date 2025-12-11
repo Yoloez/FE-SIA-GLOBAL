@@ -471,16 +471,10 @@ export default function NotificationScreen() {
 
       if (response.data.status === "success") {
         // Update local state
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id_notification === notificationId
-              ? { ...n, is_read: true, read_at: response.data.data.read_at }
-              : n
-          )
-        );
+        setNotifications((prev) => prev.map((n) => (n.id_notification === notificationId ? { ...n, is_read: true, read_at: response.data.data.read_at } : n)));
         setUnreadCount((prev) => Math.max(0, prev - 1));
         setActionMenuVisible(false);
-        
+
         setModalConfig({
           title: "Berhasil!",
           message: "Notifikasi telah ditandai sebagai dibaca",
@@ -514,10 +508,10 @@ export default function NotificationScreen() {
           }
           return prev.filter((n) => n.id_notification !== notificationId);
         });
-        
+
         setDeleteConfirmVisible(false);
         setActionMenuVisible(false);
-        
+
         setModalConfig({
           title: "Berhasil!",
           message: "Notifikasi telah dihapus",
@@ -578,12 +572,7 @@ export default function NotificationScreen() {
   };
 
   const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
-    <TouchableOpacity 
-      onPress={() => handleNotificationPress(item)} 
-      onLongPress={() => handleNotificationLongPress(item)}
-      activeOpacity={0.7}
-      delayLongPress={500}
-    >
+    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={500}>
       <View style={[styles.notificationCard, !item.is_read && styles.unreadCard]}>
         <View style={styles.iconContainer}>
           <View style={[styles.iconCircle, item.type === "chat" ? styles.chatIcon : styles.announcementIcon]}>
@@ -757,7 +746,7 @@ export default function NotificationScreen() {
         <Modal transparent visible={actionMenuVisible} onRequestClose={() => setActionMenuVisible(false)} animationType="fade">
           <View style={styles.modalOverlay}>
             <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setActionMenuVisible(false)} />
-            
+
             <View style={styles.actionMenuContainer}>
               <View style={styles.actionMenuContent}>
                 <ThemedText variant="bold" style={styles.actionMenuTitle}>
@@ -765,11 +754,7 @@ export default function NotificationScreen() {
                 </ThemedText>
 
                 {selectedNotification && !selectedNotification.is_read && (
-                  <TouchableOpacity
-                    style={styles.actionMenuItem}
-                    onPress={() => handleMarkAsRead(selectedNotification.id_notification)}
-                    activeOpacity={0.7}
-                  >
+                  <TouchableOpacity style={styles.actionMenuItem} onPress={() => handleMarkAsRead(selectedNotification.id_notification)} activeOpacity={0.7}>
                     <Ionicons name="checkmark-circle-outline" size={22} color="#10B981" />
                     <ThemedText style={styles.actionMenuItemText}>Tandai Dibaca</ThemedText>
                   </TouchableOpacity>
@@ -787,11 +772,7 @@ export default function NotificationScreen() {
                   <ThemedText style={[styles.actionMenuItemText, styles.deleteMenuItemText]}>Hapus Notifikasi</ThemedText>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.actionMenuItem, styles.cancelMenuItem]}
-                  onPress={() => setActionMenuVisible(false)}
-                  activeOpacity={0.7}
-                >
+                <TouchableOpacity style={[styles.actionMenuItem, styles.cancelMenuItem]} onPress={() => setActionMenuVisible(false)} activeOpacity={0.7}>
                   <Ionicons name="close-circle-outline" size={22} color="#6B7280" />
                   <ThemedText style={styles.actionMenuItemText}>Batal</ThemedText>
                 </TouchableOpacity>

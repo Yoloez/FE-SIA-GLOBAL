@@ -6,9 +6,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, FlatList, Modal, RefreshControl, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "../../components/ThemedText";
+import { NotificationActionMenu } from "../../components/NotificationActionMenu";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 
 const { width } = Dimensions.get("window");
 
@@ -46,227 +48,6 @@ interface NotificationResponse {
 type FilterType = "all" | "chat" | "announcement";
 type FilterStatus = "all" | "read" | "unread";
 
-interface CustomModalProps {
-  visible: boolean;
-  onClose: () => void;
-  title: string;
-  message: string;
-  type?: "success" | "error" | "info" | "announcement";
-  metadata?: NotificationMetadata;
-}
-
-const CustomModal: React.FC<CustomModalProps> = ({ visible, onClose, title, message, type = "info", metadata }) => {
-  const [scaleAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
-
-  React.useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
-  const getIconConfig = () => {
-    switch (type) {
-      case "success":
-        return { name: "checkmark-circle", color: "#10B981", bgColor: "rgba(16, 185, 129, 0.1)" };
-      case "error":
-        return { name: "close-circle", color: "#EF4444", bgColor: "rgba(239, 68, 68, 0.1)" };
-      case "announcement":
-        return { name: "megaphone", color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.1)" };
-      default:
-        return { name: "information-circle", color: "#0EA5E9", bgColor: "rgba(14, 165, 233, 0.1)" };
-    }
-  };
-
-  const iconConfig = getIconConfig();
-
-  return (
-    <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
-      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
-
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <View style={styles.modalContent}>
-            {/* Icon Header */}
-            <View style={[styles.iconHeader, { backgroundColor: iconConfig.bgColor }]}>
-              <Ionicons name={iconConfig.name as any} size={28} color={iconConfig.color} />
-            </View>
-
-            {/* Title */}
-            <ThemedText variant="bold" style={styles.modalTitle}>
-              {title}
-            </ThemedText>
-
-            {/* Message */}
-            <ScrollView style={styles.messageScrollView} showsVerticalScrollIndicator={false}>
-              <ThemedText style={styles.modalMessage}>{message}</ThemedText>
-
-              {/* Metadata Info */}
-              {metadata && (
-                <View style={styles.metadataContainer}>
-                  {metadata.class_code && (
-                    <View style={styles.metadataRow}>
-                      <Ionicons name="school-outline" size={16} color="#6B7280" />
-                      <ThemedText variant="semibold" style={styles.metadataText}>
-                        Kelas: {metadata.class_code}
-                      </ThemedText>
-                    </View>
-                  )}
-                  {metadata.subject_name && (
-                    <View style={styles.metadataRow}>
-                      <Ionicons name="book-outline" size={16} color="#6B7280" />
-                      <ThemedText variant="semibold" style={styles.metadataText}>
-                        {metadata.subject_name}
-                      </ThemedText>
-                    </View>
-                  )}
-                  {metadata.lecturer_name && (
-                    <View style={styles.metadataRow}>
-                      <Ionicons name="person-outline" size={16} color="#6B7280" />
-                      <ThemedText variant="semibold" style={styles.metadataText}>
-                        Dosen: {metadata.lecturer_name}
-                      </ThemedText>
-                    </View>
-                  )}
-                </View>
-              )}
-            </ScrollView>
-
-            {/* Action Button */}
-            <TouchableOpacity style={[styles.modalButton, { backgroundColor: iconConfig.color }]} onPress={onClose} activeOpacity={0.8}>
-              <ThemedText variant="semibold" style={styles.modalButtonText}>
-                Tutup
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
-};
-
-interface ConfirmModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-}
-
-const ConfirmModal: React.FC<ConfirmModalProps> = ({ visible, onClose, onConfirm, title, message, confirmText = "Ya", cancelText = "Batal" }) => {
-  const [scaleAnim] = useState(new Animated.Value(0));
-  const [fadeAnim] = useState(new Animated.Value(0));
-
-  React.useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      scaleAnim.setValue(0);
-      fadeAnim.setValue(0);
-    }
-  }, [visible]);
-
-  return (
-    <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
-      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
-
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          <View style={styles.modalContent}>
-            {/* Icon Header */}
-            <View style={[styles.iconHeader, { backgroundColor: "rgba(14, 165, 233, 0.1)" }]}>
-              <Ionicons name="help-circle" size={48} color="#0EA5E9" />
-            </View>
-
-            {/* Title */}
-            <ThemedText variant="bold" style={styles.modalTitle}>
-              {title}
-            </ThemedText>
-
-            {/* Message */}
-            <ThemedText style={styles.modalMessage}>{message}</ThemedText>
-
-            {/* Action Buttons */}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={[styles.halfButton, styles.cancelButton]} onPress={onClose} activeOpacity={0.8}>
-                <ThemedText variant="semibold" style={styles.cancelButtonText}>
-                  {cancelText}
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.halfButton, styles.confirmButton]}
-                onPress={() => {
-                  onConfirm();
-                  onClose();
-                }}
-                activeOpacity={0.8}
-              >
-                <ThemedText variant="semibold" style={styles.confirmButtonText}>
-                  {confirmText}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
-};
-
 export default function NotificationScreen() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -278,20 +59,10 @@ export default function NotificationScreen() {
   const echoChannelRef = useRef<any>(null);
   const isSubscribedRef = useRef(false);
   const processedNotificationIds = useRef<Set<number>>(new Set());
-  const [actionMenuVisible, setActionMenuVisible] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
-  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
-
-  // Modal states
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalConfig, setModalConfig] = useState({
-    title: "",
-    message: "",
-    type: "info" as "success" | "error" | "info" | "announcement",
-    metadata: undefined as NotificationMetadata | undefined,
-  });
-
-  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showMarkAllConfirm, setShowMarkAllConfirm] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -308,13 +79,6 @@ export default function NotificationScreen() {
       }
     } catch (error: any) {
       console.error("Gagal memuat notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal memuat notifikasi. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -437,72 +201,29 @@ export default function NotificationScreen() {
 
   const handleMarkAllAsRead = useCallback(async () => {
     try {
-      const response = await api.put("/notifications/read-all");
-
-      if (response.data.status === "success") {
-        setModalConfig({
-          title: "Berhasil!",
-          message: "Semua notifikasi telah ditandai sebagai dibaca",
-          type: "success",
-          metadata: undefined,
-        });
-        setModalVisible(true);
-        fetchNotifications();
-      }
+      await api.put("/notifications/read-all");
+      fetchNotifications();
     } catch (error: any) {
       console.error("Gagal menandai notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal menandai notifikasi sebagai dibaca. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     }
   }, [fetchNotifications]);
 
   const handleMarkAsRead = useCallback(async (notificationId: number) => {
     try {
       const response = await api.put(`/notifications/${notificationId}/read`);
-
       if (response.data.status === "success") {
-        // Update local state
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id_notification === notificationId
-              ? { ...n, is_read: true, read_at: response.data.data.read_at }
-              : n
-          )
-        );
+        setNotifications((prev) => prev.map((n) => (n.id_notification === notificationId ? { ...n, is_read: true, read_at: response.data.data.read_at } : n)));
         setUnreadCount((prev) => Math.max(0, prev - 1));
-        setActionMenuVisible(false);
-        
-        setModalConfig({
-          title: "Berhasil!",
-          message: "Notifikasi telah ditandai sebagai dibaca",
-          type: "success",
-          metadata: undefined,
-        });
-        setModalVisible(true);
       }
     } catch (error: any) {
       console.error("Gagal menandai notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal menandai notifikasi. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     }
   }, []);
 
   const handleDeleteNotification = useCallback(async (notificationId: number) => {
     try {
       const response = await api.delete(`/notifications/${notificationId}`);
-
       if (response.data.status === "success") {
-        // Remove from local state
         setNotifications((prev) => {
           const deletedNotif = prev.find((n) => n.id_notification === notificationId);
           if (deletedNotif && !deletedNotif.is_read) {
@@ -510,51 +231,22 @@ export default function NotificationScreen() {
           }
           return prev.filter((n) => n.id_notification !== notificationId);
         });
-        
-        setDeleteConfirmVisible(false);
-        setActionMenuVisible(false);
-        
-        setModalConfig({
-          title: "Berhasil!",
-          message: "Notifikasi telah dihapus",
-          type: "success",
-          metadata: undefined,
-        });
-        setModalVisible(true);
       }
     } catch (error: any) {
       console.error("Gagal menghapus notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal menghapus notifikasi. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     }
   }, []);
-
-  const showMarkAllConfirmation = () => {
-    setConfirmModalVisible(true);
-  };
 
   const handleNotificationPress = useCallback((item: NotificationItem) => {
     if (item.type === "chat" && item.metadata.id_conversation) {
       router.push(`/chat/${item.metadata.id_conversation}`);
-    } else if (item.type === "announcement") {
-      setModalConfig({
-        title: item.title,
-        message: item.message,
-        type: "announcement",
-        metadata: item.metadata,
-      });
-      setModalVisible(true);
     }
+    // Announcement will be viewed through long press menu or just marking as read
   }, []);
 
   const handleNotificationLongPress = useCallback((item: NotificationItem) => {
-    setSelectedNotification(item);
-    setActionMenuVisible(true);
+    setSelectedNotif(item);
+    setShowActionMenu(true);
   }, []);
 
   const formatTime = (dateString: string) => {
@@ -578,12 +270,7 @@ export default function NotificationScreen() {
   };
 
   const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
-    <TouchableOpacity 
-      onPress={() => handleNotificationPress(item)} 
-      onLongPress={() => handleNotificationLongPress(item)}
-      activeOpacity={0.7}
-      delayLongPress={500}
-    >
+    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={300}>
       <View style={[styles.notificationCard, !item.is_read && styles.unreadCard]}>
         <View style={styles.iconContainer}>
           <View style={[styles.iconCircle, item.type === "chat" ? styles.chatIcon : styles.announcementIcon]}>
@@ -646,7 +333,7 @@ export default function NotificationScreen() {
             Notifikasi
           </ThemedText>
           {unreadCount > 0 && (
-            <TouchableOpacity onPress={showMarkAllConfirmation} style={styles.markAllButton}>
+            <TouchableOpacity onPress={() => setShowMarkAllConfirm(true)} style={styles.markAllButton}>
               <Ionicons name="checkmark-done" size={20} color="#DABC4E" />
             </TouchableOpacity>
           )}
@@ -738,81 +425,36 @@ export default function NotificationScreen() {
           />
         )}
 
-        {/* Custom Modals */}
-        <CustomModal visible={modalVisible} onClose={() => setModalVisible(false)} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} metadata={modalConfig.metadata} />
-
-        <ConfirmModal
-          visible={confirmModalVisible}
-          onClose={() => setConfirmModalVisible(false)}
-          onConfirm={handleMarkAllAsRead}
-          title="Tandai Semua Sebagai Dibaca?"
-          message="Semua notifikasi akan ditandai sebagai sudah dibaca. Apakah Anda yakin?"
-          confirmText="Ya, Tandai"
-          cancelText="Batal"
+        {/* Reusable Components */}
+        <NotificationActionMenu
+          visible={showActionMenu}
+          onClose={() => setShowActionMenu(false)}
+          onMarkAsRead={() => selectedNotif && handleMarkAsRead(selectedNotif.id_notification)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          isRead={selectedNotif?.is_read || false}
         />
 
-        {/* Action Menu Modal */}
-        <Modal transparent visible={actionMenuVisible} onRequestClose={() => setActionMenuVisible(false)} animationType="fade">
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setActionMenuVisible(false)} />
-            
-            <View style={styles.actionMenuContainer}>
-              <View style={styles.actionMenuContent}>
-                <ThemedText variant="bold" style={styles.actionMenuTitle}>
-                  Pilih Aksi
-                </ThemedText>
+        <ConfirmDeleteModal
+          visible={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={() => {
+            if (selectedNotif) handleDeleteNotification(selectedNotif.id_notification);
+            setShowDeleteConfirm(false);
+          }}
+        />
 
-                {selectedNotification && !selectedNotification.is_read && (
-                  <TouchableOpacity
-                    style={styles.actionMenuItem}
-                    onPress={() => handleMarkAsRead(selectedNotification.id_notification)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="checkmark-circle-outline" size={22} color="#10B981" />
-                    <ThemedText style={styles.actionMenuItemText}>Tandai Dibaca</ThemedText>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  style={[styles.actionMenuItem, styles.deleteMenuItem]}
-                  onPress={() => {
-                    setActionMenuVisible(false);
-                    setDeleteConfirmVisible(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="trash-outline" size={22} color="#EF4444" />
-                  <ThemedText style={[styles.actionMenuItemText, styles.deleteMenuItemText]}>Hapus Notifikasi</ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionMenuItem, styles.cancelMenuItem]}
-                  onPress={() => setActionMenuVisible(false)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close-circle-outline" size={22} color="#6B7280" />
-                  <ThemedText style={styles.actionMenuItemText}>Batal</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Delete Confirmation Modal */}
-        <ConfirmModal
-          visible={deleteConfirmVisible}
-          onClose={() => setDeleteConfirmVisible(false)}
-          onConfirm={() => selectedNotification && handleDeleteNotification(selectedNotification.id_notification)}
-          title="Hapus Notifikasi?"
-          message="Notifikasi ini akan dihapus secara permanen. Apakah Anda yakin?"
-          confirmText="Ya, Hapus"
-          cancelText="Batal"
+        <ConfirmDeleteModal
+          visible={showMarkAllConfirm}
+          onClose={() => setShowMarkAllConfirm(false)}
+          onConfirm={() => {
+            handleMarkAllAsRead();
+            setShowMarkAllConfirm(false);
+          }}
         />
       </SafeAreaView>
     </LinearGradient>
   );
 }
-        
 
 const styles = StyleSheet.create({
   safeArea: {

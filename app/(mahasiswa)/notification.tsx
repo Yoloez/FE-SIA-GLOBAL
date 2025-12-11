@@ -278,6 +278,9 @@ export default function NotificationScreen() {
   const echoChannelRef = useRef<any>(null);
   const isSubscribedRef = useRef(false);
   const processedNotificationIds = useRef<Set<number>>(new Set());
+  const [actionMenuVisible, setActionMenuVisible] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
 
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
@@ -458,6 +461,79 @@ export default function NotificationScreen() {
     }
   }, [fetchNotifications]);
 
+  const handleMarkAsRead = useCallback(async (notificationId: number) => {
+    try {
+      const response = await api.put(`/notifications/${notificationId}/read`);
+
+      if (response.data.status === "success") {
+        // Update local state
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id_notification === notificationId
+              ? { ...n, is_read: true, read_at: response.data.data.read_at }
+              : n
+          )
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+        setActionMenuVisible(false);
+        
+        setModalConfig({
+          title: "Berhasil!",
+          message: "Notifikasi telah ditandai sebagai dibaca",
+          type: "success",
+          metadata: undefined,
+        });
+        setModalVisible(true);
+      }
+    } catch (error: any) {
+      console.error("Gagal menandai notifikasi:", error);
+      setModalConfig({
+        title: "Terjadi Kesalahan",
+        message: "Gagal menandai notifikasi. Silakan coba lagi.",
+        type: "error",
+        metadata: undefined,
+      });
+      setModalVisible(true);
+    }
+  }, []);
+
+  const handleDeleteNotification = useCallback(async (notificationId: number) => {
+    try {
+      const response = await api.delete(`/notifications/${notificationId}`);
+
+      if (response.data.status === "success") {
+        // Remove from local state
+        setNotifications((prev) => {
+          const deletedNotif = prev.find((n) => n.id_notification === notificationId);
+          if (deletedNotif && !deletedNotif.is_read) {
+            setUnreadCount((count) => Math.max(0, count - 1));
+          }
+          return prev.filter((n) => n.id_notification !== notificationId);
+        });
+        
+        setDeleteConfirmVisible(false);
+        setActionMenuVisible(false);
+        
+        setModalConfig({
+          title: "Berhasil!",
+          message: "Notifikasi telah dihapus",
+          type: "success",
+          metadata: undefined,
+        });
+        setModalVisible(true);
+      }
+    } catch (error: any) {
+      console.error("Gagal menghapus notifikasi:", error);
+      setModalConfig({
+        title: "Terjadi Kesalahan",
+        message: "Gagal menghapus notifikasi. Silakan coba lagi.",
+        type: "error",
+        metadata: undefined,
+      });
+      setModalVisible(true);
+    }
+  }, []);
+
   const showMarkAllConfirmation = () => {
     setConfirmModalVisible(true);
   };
@@ -474,6 +550,11 @@ export default function NotificationScreen() {
       });
       setModalVisible(true);
     }
+  }, []);
+
+  const handleNotificationLongPress = useCallback((item: NotificationItem) => {
+    setSelectedNotification(item);
+    setActionMenuVisible(true);
   }, []);
 
   const formatTime = (dateString: string) => {
@@ -497,7 +578,12 @@ export default function NotificationScreen() {
   };
 
   const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
-    <TouchableOpacity onPress={() => handleNotificationPress(item)} activeOpacity={0.7}>
+    <TouchableOpacity 
+      onPress={() => handleNotificationPress(item)} 
+      onLongPress={() => handleNotificationLongPress(item)}
+      activeOpacity={0.7}
+      delayLongPress={500}
+    >
       <View style={[styles.notificationCard, !item.is_read && styles.unreadCard]}>
         <View style={styles.iconContainer}>
           <View style={[styles.iconCircle, item.type === "chat" ? styles.chatIcon : styles.announcementIcon]}>
@@ -664,10 +750,69 @@ export default function NotificationScreen() {
           confirmText="Ya, Tandai"
           cancelText="Batal"
         />
+
+        {/* Action Menu Modal */}
+        <Modal transparent visible={actionMenuVisible} onRequestClose={() => setActionMenuVisible(false)} animationType="fade">
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setActionMenuVisible(false)} />
+            
+            <View style={styles.actionMenuContainer}>
+              <View style={styles.actionMenuContent}>
+                <ThemedText variant="bold" style={styles.actionMenuTitle}>
+                  Pilih Aksi
+                </ThemedText>
+
+                {selectedNotification && !selectedNotification.is_read && (
+                  <TouchableOpacity
+                    style={styles.actionMenuItem}
+                    onPress={() => handleMarkAsRead(selectedNotification.id_notification)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="checkmark-circle-outline" size={22} color="#10B981" />
+                    <ThemedText style={styles.actionMenuItemText}>Tandai Dibaca</ThemedText>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.actionMenuItem, styles.deleteMenuItem]}
+                  onPress={() => {
+                    setActionMenuVisible(false);
+                    setDeleteConfirmVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={22} color="#EF4444" />
+                  <ThemedText style={[styles.actionMenuItemText, styles.deleteMenuItemText]}>Hapus Notifikasi</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionMenuItem, styles.cancelMenuItem]}
+                  onPress={() => setActionMenuVisible(false)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close-circle-outline" size={22} color="#6B7280" />
+                  <ThemedText style={styles.actionMenuItemText}>Batal</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          visible={deleteConfirmVisible}
+          onClose={() => setDeleteConfirmVisible(false)}
+          onConfirm={() => selectedNotification && handleDeleteNotification(selectedNotification.id_notification)}
+          title="Hapus Notifikasi?"
+          message="Notifikasi ini akan dihapus secara permanen. Apakah Anda yakin?"
+          confirmText="Ya, Hapus"
+          cancelText="Batal"
+        />
       </SafeAreaView>
     </LinearGradient>
   );
 }
+        
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -1017,5 +1162,56 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 15,
     color: "#FFFFFF",
+  },
+  actionMenuContainer: {
+    justifyContent: "flex-end",
+    alignItems: "center",
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+  },
+  actionMenuContent: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  actionMenuTitle: {
+    fontSize: 16,
+    color: "#1F2937",
+    textAlign: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    marginBottom: 4,
+  },
+  actionMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  deleteMenuItem: {
+    backgroundColor: "rgba(239, 68, 68, 0.05)",
+  },
+  cancelMenuItem: {
+    backgroundColor: "rgba(107, 114, 128, 0.05)",
+    marginTop: 4,
+  },
+  actionMenuItemText: {
+    fontSize: 15,
+    color: "#374151",
+    flex: 1,
+  },
+  deleteMenuItemText: {
+    color: "#EF4444",
   },
 });

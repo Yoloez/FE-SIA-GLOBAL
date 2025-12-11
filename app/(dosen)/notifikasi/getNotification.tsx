@@ -9,6 +9,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "../../../components/ThemedText";
+import { NotificationActionMenu } from "../../../components/NotificationActionMenu";
+import { ConfirmDeleteModal } from "../../../components/ConfirmDeleteModal";
 
 const { width } = Dimensions.get("window");
 
@@ -278,20 +280,10 @@ export default function NotificationScreen() {
   const echoChannelRef = useRef<any>(null);
   const isSubscribedRef = useRef(false);
   const processedNotificationIds = useRef<Set<number>>(new Set());
-
-  // Modal states
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalConfig, setModalConfig] = useState({
-    title: "",
-    message: "",
-    type: "info" as "success" | "error" | "info" | "announcement",
-    metadata: undefined as NotificationMetadata | undefined,
-  });
-
-  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [actionMenuVisible, setActionMenuVisible] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
-  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showMarkAllConfirm, setShowMarkAllConfirm] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -308,13 +300,6 @@ export default function NotificationScreen() {
       }
     } catch (error: any) {
       console.error("Gagal memuat notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal memuat notifikasi. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -437,70 +422,29 @@ export default function NotificationScreen() {
 
   const handleMarkAllAsRead = useCallback(async () => {
     try {
-      const response = await api.put("/notifications/read-all");
-
-      if (response.data.status === "success") {
-        setModalConfig({
-          title: "Berhasil!",
-          message: "Semua notifikasi telah ditandai sebagai dibaca",
-          type: "success",
-          metadata: undefined,
-        });
-        setModalVisible(true);
-        fetchNotifications();
-      }
+      await api.put("/notifications/read-all");
+      fetchNotifications();
     } catch (error: any) {
       console.error("Gagal menandai notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal menandai notifikasi sebagai dibaca. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     }
   }, [fetchNotifications]);
-
-  const showMarkAllConfirmation = () => {
-    setConfirmModalVisible(true);
-  };
 
   const handleMarkAsRead = useCallback(async (notificationId: number) => {
     try {
       const response = await api.put(`/notifications/${notificationId}/read`);
-
       if (response.data.status === "success") {
-        // Update local state
         setNotifications((prev) => prev.map((n) => (n.id_notification === notificationId ? { ...n, is_read: true, read_at: response.data.data.read_at } : n)));
         setUnreadCount((prev) => Math.max(0, prev - 1));
-        setActionMenuVisible(false);
-
-        setModalConfig({
-          title: "Berhasil!",
-          message: "Notifikasi telah ditandai sebagai dibaca",
-          type: "success",
-          metadata: undefined,
-        });
-        setModalVisible(true);
       }
     } catch (error: any) {
       console.error("Gagal menandai notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal menandai notifikasi. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     }
   }, []);
 
   const handleDeleteNotification = useCallback(async (notificationId: number) => {
     try {
       const response = await api.delete(`/notifications/${notificationId}`);
-
       if (response.data.status === "success") {
-        // Remove from local state
         setNotifications((prev) => {
           const deletedNotif = prev.find((n) => n.id_notification === notificationId);
           if (deletedNotif && !deletedNotif.is_read) {
@@ -508,47 +452,22 @@ export default function NotificationScreen() {
           }
           return prev.filter((n) => n.id_notification !== notificationId);
         });
-
-        setDeleteConfirmVisible(false);
-        setActionMenuVisible(false);
-
-        setModalConfig({
-          title: "Berhasil!",
-          message: "Notifikasi telah dihapus",
-          type: "success",
-          metadata: undefined,
-        });
-        setModalVisible(true);
       }
     } catch (error: any) {
       console.error("Gagal menghapus notifikasi:", error);
-      setModalConfig({
-        title: "Terjadi Kesalahan",
-        message: "Gagal menghapus notifikasi. Silakan coba lagi.",
-        type: "error",
-        metadata: undefined,
-      });
-      setModalVisible(true);
     }
   }, []);
 
   const handleNotificationPress = useCallback((item: NotificationItem) => {
     if (item.type === "chat" && item.metadata.id_conversation) {
       router.push(`/chat/${item.metadata.id_conversation}`);
-    } else if (item.type === "announcement") {
-      setModalConfig({
-        title: item.title,
-        message: item.message,
-        type: "announcement",
-        metadata: item.metadata,
-      });
-      setModalVisible(true);
     }
+    // Announcement will be viewed through long press menu or just marking as read
   }, []);
 
   const handleNotificationLongPress = useCallback((item: NotificationItem) => {
-    setSelectedNotification(item);
-    setActionMenuVisible(true);
+    setSelectedNotif(item);
+    setShowActionMenu(true);
   }, []);
 
   const formatTime = (dateString: string) => {
@@ -572,7 +491,7 @@ export default function NotificationScreen() {
   };
 
   const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
-    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={500}>
+    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={300}>
       <View style={[styles.notificationCard, !item.is_read && styles.unreadCard]}>
         <View style={styles.iconContainer}>
           <View style={[styles.iconCircle, item.type === "chat" ? styles.chatIcon : styles.announcementIcon]}>
@@ -638,7 +557,7 @@ export default function NotificationScreen() {
             <Ionicons name="add-circle-outline" size={24} color="#ffffff" />
           </TouchableOpacity>
           {unreadCount > 0 && (
-            <TouchableOpacity onPress={showMarkAllConfirmation} style={styles.markAllButton}>
+            <TouchableOpacity onPress={() => setShowMarkAllConfirm(true)} style={styles.markAllButton}>
               <Ionicons name="checkmark-done" size={20} color="#DABC4E" />
             </TouchableOpacity>
           )}
@@ -729,67 +648,31 @@ export default function NotificationScreen() {
           />
         )}
 
-        {/* Custom Modals */}
-        <CustomModal visible={modalVisible} onClose={() => setModalVisible(false)} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} metadata={modalConfig.metadata} />
-
-        <ConfirmModal
-          visible={confirmModalVisible}
-          onClose={() => setConfirmModalVisible(false)}
-          onConfirm={handleMarkAllAsRead}
-          title="Tandai Semua Sebagai Dibaca?"
-          message="Semua notifikasi akan ditandai sebagai sudah dibaca. Apakah Anda yakin?"
-          confirmText="Ya, Tandai"
-          cancelText="Batal"
+        {/* Reusable Components */}
+        <NotificationActionMenu
+          visible={showActionMenu}
+          onClose={() => setShowActionMenu(false)}
+          onMarkAsRead={() => selectedNotif && handleMarkAsRead(selectedNotif.id_notification)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          isRead={selectedNotif?.is_read || false}
         />
 
-        {/* Action Menu Modal */}
-        <Modal transparent visible={actionMenuVisible} onRequestClose={() => setActionMenuVisible(false)} animationType="fade">
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setActionMenuVisible(false)} />
+        <ConfirmDeleteModal
+          visible={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={() => {
+            if (selectedNotif) handleDeleteNotification(selectedNotif.id_notification);
+            setShowDeleteConfirm(false);
+          }}
+        />
 
-            <View style={styles.actionMenuContainer}>
-              <View style={styles.actionMenuContent}>
-                <ThemedText variant="bold" style={styles.actionMenuTitle}>
-                  Pilih Aksi
-                </ThemedText>
-
-                {selectedNotification && !selectedNotification.is_read && (
-                  <TouchableOpacity style={styles.actionMenuItem} onPress={() => handleMarkAsRead(selectedNotification.id_notification)} activeOpacity={0.7}>
-                    <Ionicons name="checkmark-circle-outline" size={22} color="#10B981" />
-                    <ThemedText style={styles.actionMenuItemText}>Tandai Dibaca</ThemedText>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  style={[styles.actionMenuItem, styles.deleteMenuItem]}
-                  onPress={() => {
-                    setActionMenuVisible(false);
-                    setDeleteConfirmVisible(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="trash-outline" size={22} color="#EF4444" />
-                  <ThemedText style={[styles.actionMenuItemText, styles.deleteMenuItemText]}>Hapus Notifikasi</ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.actionMenuItem, styles.cancelMenuItem]} onPress={() => setActionMenuVisible(false)} activeOpacity={0.7}>
-                  <Ionicons name="close-circle-outline" size={22} color="#6B7280" />
-                  <ThemedText style={styles.actionMenuItemText}>Batal</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Delete Confirmation Modal */}
-        <ConfirmModal
-          visible={deleteConfirmVisible}
-          onClose={() => setDeleteConfirmVisible(false)}
-          onConfirm={() => selectedNotification && handleDeleteNotification(selectedNotification.id_notification)}
-          title="Hapus Notifikasi?"
-          message="Notifikasi ini akan dihapus secara permanen. Apakah Anda yakin?"
-          confirmText="Ya, Hapus"
-          cancelText="Batal"
+        <ConfirmDeleteModal
+          visible={showMarkAllConfirm}
+          onClose={() => setShowMarkAllConfirm(false)}
+          onConfirm={() => {
+            handleMarkAllAsRead();
+            setShowMarkAllConfirm(false);
+          }}
         />
       </SafeAreaView>
     </LinearGradient>

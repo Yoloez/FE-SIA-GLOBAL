@@ -6,11 +6,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, FlatList, Modal, RefreshControl, StyleSheet, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText } from "../../components/ThemedText";
-import { NotificationActionMenu } from "../../components/NotificationActionMenu";
 import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
+import { NotificationActionMenu } from "../../components/NotificationActionMenu";
+import { ThemedText } from "../../components/ThemedText";
 
 const { width } = Dimensions.get("window");
 
@@ -270,7 +270,7 @@ export default function NotificationScreen() {
   };
 
   const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
-    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={300}>
+    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={100}>
       <View style={[styles.notificationCard, !item.is_read && styles.unreadCard]}>
         <View style={styles.iconContainer}>
           <View style={[styles.iconCircle, item.type === "chat" ? styles.chatIcon : styles.announcementIcon]}>

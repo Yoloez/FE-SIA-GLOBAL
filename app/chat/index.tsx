@@ -15,6 +15,22 @@ interface Contact {
   email: string;
   profile_image: string | null;
   role: string;
+  last_message_at?: string;
+  id_conversation?: number;
+}
+
+interface Conversation {
+  id_conversation: number;
+  type: string;
+  other_participant: {
+    id_user_si: number;
+    name: string;
+  };
+  last_message: {
+    message: string;
+    sent_at: string;
+  } | null;
+  updated_at: string;
 }
 
 interface Section {
@@ -27,6 +43,7 @@ const ChatListApp = () => {
   const { token, user } = useAuth();
   const [lecturers, setLecturers] = useState<Contact[]>([]);
   const [classmates, setClassmates] = useState<Contact[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isMounted = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -64,16 +81,66 @@ const ChatListApp = () => {
     }
 
     try {
-      const response = await api.get("/chat/contacts", {
-        signal: abortControllerRef.current.signal,
-      });
+      // Fetch conversations and contacts in parallel
+      const [conversationsResponse, contactsResponse] = await Promise.all([
+        api.get("/chat/conversations", {
+          signal: abortControllerRef.current.signal,
+        }),
+        api.get("/chat/contacts", {
+          signal: abortControllerRef.current.signal,
+        }),
+      ]);
 
       if (!isMounted.current) return;
 
-      const { lecturers: lecturersData, classmates: classmatesData } = response.data.data;
+      const conversationsData: Conversation[] = conversationsResponse.data.data || [];
+      const { lecturers: lecturersData, classmates: classmatesData } = contactsResponse.data.data;
 
-      setLecturers(lecturersData || []);
-      setClassmates(classmatesData || []);
+      setConversations(conversationsData);
+
+      // Map conversations to contacts for last message info (with null check)
+      const conversationMap = new Map(
+        conversationsData
+          .filter((conv) => conv.other_participant && conv.other_participant.id_user_si) // Filter out invalid conversations
+          .map((conv) => [
+            conv.other_participant.id_user_si,
+            {
+              last_message_at: conv.last_message?.sent_at || conv.updated_at,
+              id_conversation: conv.id_conversation,
+            },
+          ])
+      );
+
+      // Merge contact data with conversation data and sort by last message
+      const mergeLecturers = (lecturersData || []).map((contact: Contact) => ({
+        ...contact,
+        last_message_at: conversationMap.get(contact.id_user_si)?.last_message_at,
+        id_conversation: conversationMap.get(contact.id_user_si)?.id_conversation,
+      }));
+
+      const mergeClassmates = (classmatesData || []).map((contact: Contact) => ({
+        ...contact,
+        last_message_at: conversationMap.get(contact.id_user_si)?.last_message_at,
+        id_conversation: conversationMap.get(contact.id_user_si)?.id_conversation,
+      }));
+
+      // Sort: Contacts with recent messages first, then alphabetically
+      const sortContacts = (contacts: Contact[]) => {
+        return contacts.sort((a, b) => {
+          // If both have messages, sort by most recent
+          if (a.last_message_at && b.last_message_at) {
+            return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+          }
+          // Contacts with messages come first
+          if (a.last_message_at) return -1;
+          if (b.last_message_at) return 1;
+          // Both without messages, sort alphabetically
+          return a.name.localeCompare(b.name);
+        });
+      };
+
+      setLecturers(sortContacts(mergeLecturers));
+      setClassmates(sortContacts(mergeClassmates));
     } catch (error: any) {
       // Ignore abort errors
       if (error.name === "AbortError" || error.name === "CanceledError") {
@@ -126,8 +193,14 @@ const ChatListApp = () => {
 
   // Fungsi untuk memulai percakapan privat
   const handleStartPrivateChat = useCallback(
-    async (recipientId: number) => {
+    async (recipientId: number, existingConversationId?: number) => {
       if (!token || !isMounted.current) return;
+
+      // If conversation already exists, navigate directly
+      if (existingConversationId) {
+        router.push(`/chat/${existingConversationId}` as any);
+        return;
+      }
 
       try {
         console.log(`📤 Starting private chat with user ${recipientId}...`);
@@ -176,7 +249,7 @@ const ChatListApp = () => {
     const avatarUri = item.profile_image ? `${process.env.EXPO_PUBLIC_BUAT_FOTO}/${item.profile_image}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=015023&color=fff&size=150`;
 
     return (
-      <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      <TouchableOpacity onPress={() => handleStartPrivateChat(item.id_user_si, item.id_conversation)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <View style={styles.contactCard}>
           <Image source={{ uri: avatarUri }} style={styles.avatarImage} defaultSource={require("../../assets/images/react-logo.png")} />
 

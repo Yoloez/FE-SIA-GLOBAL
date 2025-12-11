@@ -84,7 +84,7 @@ export default function NotificationScreen() {
 
   const handleClassPress = (classItem: ClassItem) => {
     router.push({
-      pathname: "/(dosen)/buatNotif",
+      pathname: "/(dosen)/notifikasi/buatNotif",
       params: {
         id_class: classItem.id_class,
         code_class: classItem.code_class,

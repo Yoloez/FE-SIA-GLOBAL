@@ -120,20 +120,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="notification"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" },
-        }}
-      />
-      <Tabs.Screen
-        name="buatNotif"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" },
-        }}
-      />
-      <Tabs.Screen
         name="getNotification"
         options={{
           href: null,
@@ -142,6 +128,13 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="presensi"
+        options={{
+          href: null,
+          tabBarStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="notifikasi"
         options={{
           href: null,
           tabBarStyle: { display: "none" },

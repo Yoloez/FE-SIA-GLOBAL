@@ -42,7 +42,5 @@ app-example
 /ios
 /android
 
-./google-services.json
-
-google-services.json
-./sia-ugn-mobile-firebase-adminsdk-fbsvc-a2bbedddca.json
+# Firebase service account (sensitive - keep ignored)
+sia-ugn-mobile-firebase-adminsdk-*.json

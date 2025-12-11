@@ -49,17 +49,18 @@ export function useNotifications(userId?: number) {
     };
   }, []);
 
-  useEffect(() => {
-    if (userId) {
-      subscribeToUserNotifications(userId);
-    }
-
-    return () => {
-      if (userId) {
-        unsubscribeFromUserNotifications(userId);
-      }
-    };
-  }, [userId]);
+  // Note: Individual screens subscribe to their own channels
+  // This hook only handles push notification registration and tap handling
+  // useEffect(() => {
+  //   if (userId) {
+  //     subscribeToUserNotifications(userId);
+  //   }
+  //   return () => {
+  //     if (userId) {
+  //       unsubscribeFromUserNotifications(userId);
+  //     }
+  //   };
+  // }, [userId]);
 
   const registerForPushNotifications = async () => {
     try {
@@ -122,12 +123,18 @@ export function useNotifications(userId?: number) {
   const handleNotificationResponse = (notification: Notifications.Notification) => {
     const data = notification.request.content.data as NotificationData;
 
+    console.log("📱 Handling notification tap:", data);
+
     if (data.type === "chat" && data.id_conversation) {
       // Navigate to chat conversation
-      router.push(`/chat/${data.id_conversation}`);
+      console.log(`🚀 Navigating to chat: /chat/${data.id_conversation}`);
+      router.push(`/chat/${data.id_conversation}` as any);
     } else if (data.type === "announcement") {
       // Navigate to notification screen
-      router.push("/(mahasiswa)/notification");
+      console.log("🚀 Navigating to notifications");
+      router.push("/(mahasiswa)/notification" as any);
+    } else {
+      console.log("ℹ️ Unknown notification type:", data.type);
     }
   };
 

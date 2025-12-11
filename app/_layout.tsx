@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FontProvider } from "../context/FontContext";
+import { useNotifications } from "../hooks/useNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,9 +35,9 @@ function RootLayoutNav() {
   const router = useRouter();
 
   // Initialize notifications for logged-in user
-  // DISABLED: Notification screens already have their own Echo listeners
-  // This prevents duplicate notifications
-  // useNotifications(user?.id_user_si);
+  // This handles push notification registration and tap navigation
+  // Individual screens still have their own Echo listeners for real-time updates
+  useNotifications(user?.id_user_si);
 
   // --- INI PERBAIKANNYA ---
   // State baru untuk memastikan kita tidak merender <Slot> terlalu cepat

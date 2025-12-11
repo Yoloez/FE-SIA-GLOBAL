@@ -559,7 +559,7 @@ export default function NotificationScreen() {
           <ThemedText variant="bold" style={styles.headerTitle}>
             Notifikasi
           </ThemedText>
-          <TouchableOpacity onPress={() => router.push("/notification")} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.push("/notifikasi/notification")} style={styles.backButton}>
             <Ionicons name="add-circle-outline" size={24} color="#ffffff" />
           </TouchableOpacity>
           {unreadCount > 0 && (

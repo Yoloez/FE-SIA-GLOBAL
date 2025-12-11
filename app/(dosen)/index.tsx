@@ -196,7 +196,7 @@ export default function HomeScreen() {
                 <Ionicons name="chatbox-ellipses-outline" size={24} color="white" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/getNotification")}>
+              <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/notifikasi/getNotification")}>
                 <View>
                   <Ionicons name="notifications-outline" size={24} color="white" />
                   {unreadCount > 0 && (
@@ -273,7 +273,7 @@ export default function HomeScreen() {
 
                 {/* Notifications Card */}
                 <ImageBackground source={require("../../assets/images/batik.png")} style={styles.card} imageStyle={styles.cardImage} resizeMode="cover">
-                  <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/getNotification")} activeOpacity={0.7}>
+                  <TouchableOpacity style={styles.dashboardCard} onPress={() => router.push("/notifikasi/getNotification")} activeOpacity={0.7}>
                     <View style={styles.cardHeader}>
                       <View style={styles.cardHeaderLeft}>
                         <View style={[styles.iconCircle, { backgroundColor: "rgba(239, 68, 68, 0.1)" }]}>

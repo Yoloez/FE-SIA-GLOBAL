@@ -5,57 +5,18 @@ import { useFonts } from "@expo-google-fonts/urbanist/useFonts";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, ImageBackground, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
+import { useLecturerData } from "../../context/LecturerDataContext";
 
 const { width } = Dimensions.get("window");
-
-interface LecturerProfileData {
-  name: string;
-  full_name: string;
-  email: string;
-  employee_id_number: string | null;
-  position: string;
-  profile_image: string | null;
-}
-
-interface ClassScheduleItem {
-  id_class: number;
-  code_class: string;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-  room: string | null;
-  subject: {
-    name_subject: string;
-  };
-}
-
-interface LecturerClass {
-  id_class: number;
-  code_class: string;
-  subject: {
-    name_subject: string;
-    sks: number;
-  };
-  student_count?: number;
-}
-
-interface NotificationItem {
-  id_notification: number;
-  type: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  sent_at: string;
-}
 
 export default function HomeScreen() {
   const isMounted = useRef(true);
   const { forceLogout } = useAuth();
+  const { lecturerProfile, todaySchedules, recentNotifications, classes, unreadCount, isLoadingProfile, isLoadingDashboard, refreshProfile, refreshDashboard } = useLecturerData();
 
   let [fontsLoaded] = useFonts({
     Urbanist_400Regular,
@@ -64,78 +25,12 @@ export default function HomeScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-
-  // Dashboard data states
-  const [todaySchedules, setTodaySchedules] = useState<ClassScheduleItem[]>([]);
-  const [recentNotifications, setRecentNotifications] = useState<NotificationItem[]>([]);
-  const [classes, setClasses] = useState<LecturerClass[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoadingDashboard, setIsLoadingDashboard] = useState(true);
-
-  const fetchProfile = useCallback(async () => {
-    setIsLoadingProfile(true);
-    try {
-      const response = await api.get("/lecturer/profile");
-      if (isMounted.current && response.data.status === "success") {
-        setProfileData(response.data.data);
-      }
-    } catch (error: any) {
-      console.error("Gagal memuat profil dosen:", error);
-
-      // Auto logout jika Unauthenticated
-      if (error.response?.status === 401 || error.response?.data?.message === "Unauthenticated.") {
-        console.log("[INDEX] Token invalid/expired, auto force logout...");
-        await forceLogout();
-        return;
-      }
-    } finally {
-      if (isMounted.current) {
-        setIsLoadingProfile(false);
-      }
-    }
-  }, [forceLogout]);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  const fetchDashboardData = useCallback(async () => {
-    setIsLoadingDashboard(true);
-    try {
-      // Fetch schedules, notifications, and classes in parallel
-      const [schedulesRes, notificationsRes, classesRes] = await Promise.all([api.get("/lecturer/schedules"), api.get("/notifications", { params: { limit: 3 } }), api.get("/lecturer/classes")]);
-
-      // Filter today's schedules
-      const today = new Date().getDay();
-      const apiDayOfWeek = today === 0 ? 7 : today;
-      const todaySchedule = (schedulesRes.data.data || []).filter((schedule: ClassScheduleItem) => schedule.day_of_week === apiDayOfWeek);
-      setTodaySchedules(todaySchedule.slice(0, 2)); // Limit to 2
-
-      // Get recent notifications
-      if (notificationsRes.data.status === "success") {
-        setRecentNotifications(notificationsRes.data.data.notifications.slice(0, 2));
-        setUnreadCount(notificationsRes.data.data.unread_count);
-      }
-
-      // Get classes
-      setClasses((classesRes.data.data || []).slice(0, 2)); // Limit to 2
-    } catch (error: any) {
-      console.error("Gagal memuat data dashboard:", error);
-    } finally {
-      setIsLoadingDashboard(false);
-    }
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      fetchProfile();
-      fetchDashboardData();
-    }, [fetchProfile, fetchDashboardData])
+      // Data sudah di-fetch otomatis oleh context saat login
+      // Tidak perlu fetch ulang setiap kali focus
+    }, [])
   );
 
   const formatTime = (time: string) => {
@@ -178,13 +73,13 @@ export default function HomeScreen() {
                 </>
               ) : (
                 <>
-                  <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} defaultSource={require("../../assets/images/kairi.png")} />
+                  <Image source={lecturerProfile?.profile_image ? { uri: lecturerProfile.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} defaultSource={require("../../assets/images/kairi.png")} />
                   <View style={styles.profileInfo}>
                     <ThemedText style={styles.userName} numberOfLines={1}>
-                      {profileData?.full_name || profileData?.name || "Dosen"}
+                      {lecturerProfile?.full_name || lecturerProfile?.name || "Dosen"}
                     </ThemedText>
                     <ThemedText style={styles.userId} numberOfLines={1}>
-                      {profileData?.employee_id_number || "NIP belum diisi"}
+                      {lecturerProfile?.employee_id_number || "NIP belum diisi"}
                     </ThemedText>
                   </View>
                 </>

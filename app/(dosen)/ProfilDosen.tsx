@@ -1,30 +1,19 @@
-import api from "@/api/axios";
 import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, Modal, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
 import CustomAlert from "../../components/CustomAlert";
 import { useAuth } from "../../context/AuthContext";
+import { useLecturerData } from "../../context/LecturerDataContext";
 
 const { width } = Dimensions.get("window");
 
-interface LecturerProfileData {
-  name: string;
-  full_name: string;
-  email: string;
-  employee_id_number: string | null;
-  position: string;
-  profile_image: string | null;
-}
-
 const ProfilDosen = () => {
   const { logout, forceLogout, user } = useAuth();
+  const { lecturerProfile, isLoadingProfile, refreshProfile } = useLecturerData();
 
-  const [profileData, setProfileData] = useState<LecturerProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -48,72 +37,11 @@ const ProfilDosen = () => {
     });
   };
 
-  // --- Fungsi untuk mengambil data profil dari API ---
-  const fetchProfile = useCallback(async () => {
-    // Jangan fetch jika sedang logout
-    if (isLoggingOut) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await api.get("/lecturer/profile");
-
-      if (response.data.status === "success" && response.data.data) {
-        setProfileData(response.data.data);
-      } else {
-        throw new Error(response.data.message || "Gagal memuat profil");
-      }
-    } catch (error) {
-      // Jangan tampilkan error jika sedang logout
-      if (isLoggingOut) return;
-
-      let errorMessage = "Gagal memuat data profil";
-
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const message = error.response?.data?.message;
-
-        // Auto logout jika Unauthenticated
-        if (status === 401 || message === "Unauthenticated.") {
-          console.log("[PROFILE] Token invalid/expired, auto logout...");
-          await forceLogout();
-          return; // Stop execution
-        }
-
-        if (status === 403) {
-          errorMessage = message || "Akses ditolak. Anda bukan dosen.";
-          setAlertConfig({
-            visible: true,
-            title: "Akses Ditolak",
-            message: errorMessage,
-            buttons: [{ text: "OK", onPress: () => forceLogout() }],
-          });
-        } else if (status === 404) {
-          errorMessage = message || "Data profil tidak ditemukan";
-        } else {
-          errorMessage = message || errorMessage;
-        }
-
-        console.error("Gagal memuat profil:", error.response?.data);
-      }
-
-      setError(errorMessage);
-      setAlertConfig({
-        visible: true,
-        title: "Error",
-        message: errorMessage,
-        buttons: [{ text: "OK", onPress: () => {} }],
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [logout, isLoggingOut]);
-
   useFocusEffect(
     useCallback(() => {
-      fetchProfile();
-    }, [fetchProfile])
+      // Data sudah di-fetch otomatis oleh context saat login
+      // Tidak perlu fetch ulang setiap kali focus
+    }, [])
   );
 
   const handleLogout = useCallback(() => {
@@ -138,11 +66,11 @@ const ProfilDosen = () => {
   }, [forceLogout, scaleAnim]);
 
   const handleRetry = useCallback(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    refreshProfile();
+  }, [refreshProfile]);
 
   // Loading state
-  if (isLoading) {
+  if (isLoadingProfile) {
     return (
       <View style={styles.container}>
         <LinearGradient colors={["#015023", "#1C352D"]} style={styles.loadingContainer}>
@@ -154,7 +82,7 @@ const ProfilDosen = () => {
   }
 
   // Error state
-  if (error || !profileData) {
+  if (error || !lecturerProfile) {
     return (
       <View style={styles.container}>
         <LinearGradient colors={["#015023", "#1C352D"]} style={styles.loadingContainer}>
@@ -183,7 +111,7 @@ const ProfilDosen = () => {
             </ThemedText>
 
             <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
-              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} defaultSource={require("../../assets/images/unnamed.jpg")} />
+              <Image source={lecturerProfile.profile_image ? { uri: lecturerProfile.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} defaultSource={require("../../assets/images/unnamed.jpg")} />
               <View style={styles.avatarOverlay}>
                 <Ionicons name="expand-outline" size={24} color="#fff" />
               </View>
@@ -192,28 +120,28 @@ const ProfilDosen = () => {
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>Name:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.full_name}</ThemedText>
+                <ThemedText style={styles.infoText}>{lecturerProfile.full_name}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>Email:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.email}</ThemedText>
+                <ThemedText style={styles.infoText}>{lecturerProfile.email}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>NIP:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.employee_id_number || "Belum diisi"}</ThemedText>
+                <ThemedText style={styles.infoText}>{lecturerProfile.employee_id_number || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>Position:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.position}</ThemedText>
+                <ThemedText style={styles.infoText}>{lecturerProfile.position}</ThemedText>
               </View>
             </View>
 
@@ -240,8 +168,8 @@ const ProfilDosen = () => {
                 <TouchableOpacity style={styles.closeButton} onPress={() => setShowImageModal(false)}>
                   <Ionicons name="close-circle" size={36} color="#fff" />
                 </TouchableOpacity>
-                <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/kairi.png")} style={styles.fullImage} resizeMode="contain" />
-                <ThemedText style={styles.imageModalName}>{profileData?.full_name}</ThemedText>
+                <Image source={lecturerProfile?.profile_image ? { uri: lecturerProfile.profile_image } : require("../../assets/images/kairi.png")} style={styles.fullImage} resizeMode="contain" />
+                <ThemedText style={styles.imageModalName}>{lecturerProfile?.full_name}</ThemedText>
               </View>
             </TouchableOpacity>
           </View>

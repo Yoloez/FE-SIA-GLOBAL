@@ -19,14 +19,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.POST_NOTIFICATIONS"
-      ],
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.POST_NOTIFICATIONS"],
       "package": "com.hananfijananto.cobanativewind",
       "googleServicesFile": "./google-services.json"
     },
@@ -41,7 +34,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/logo-ugn.png",
-          "imageWidth": 250,
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#015023",
           "dark": {
@@ -94,7 +87,10 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/e1d2b90f-3cad-4f8a-bb98-ecff8f68a39f"
+      "url": "https://u.expo.dev/e1d2b90f-3cad-4f8a-bb98-ecff8f68a39f",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

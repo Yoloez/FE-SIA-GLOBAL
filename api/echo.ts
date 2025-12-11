@@ -2,9 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js/react-native";
+import { Platform } from "react-native";
 
-// Set Pusher globally untuk Laravel Echo
-(window as any).Pusher = Pusher;
+// Set Pusher globally untuk Laravel Echo (only in native/client environments)
+if (typeof window !== "undefined") {
+  (window as any).Pusher = Pusher;
+}
 
 // Enable logging untuk debugging (disable di production)
 const isDevelopment = __DEV__;
@@ -156,74 +159,81 @@ const echoConfig: any =
         },
       };
 
-// Initialize Echo
-const echo = new Echo(echoConfig);
+// Initialize Echo only in native/client environments
+let echo: Echo;
 
-// Log connection status with enhanced monitoring
-if (echo.connector && (echo.connector as any).pusher) {
-  const pusherConnection = (echo.connector as any).pusher.connection;
-  const pusherInstance = (echo.connector as any).pusher;
+if (typeof window !== "undefined" && Platform.OS !== "web") {
+  // Only initialize for React Native
+  echo = new Echo(echoConfig);
 
-  // Log Pusher config untuk debugging
-  console.log("🔍 [DEBUG] Pusher Instance Config:", {
-    key: pusherInstance.key,
-    cluster: pusherInstance.config.cluster,
-    encrypted: pusherInstance.config.encrypted,
-    forceTLS: pusherInstance.config.forceTLS,
-    authEndpoint: pusherInstance.config.authEndpoint,
-    wsHost: pusherInstance.config.wsHost,
-    wsPort: pusherInstance.config.wsPort,
-    wssPort: pusherInstance.config.wssPort,
-  });
+  // Log connection status with enhanced monitoring
+  if (echo.connector && (echo.connector as any).pusher) {
+    const pusherConnection = (echo.connector as any).pusher.connection;
+    const pusherInstance = (echo.connector as any).pusher;
 
-  pusherConnection.bind("connected", () => {
-    console.log("🟢 WebSocket Connected:", BROADCAST_PROVIDER.toUpperCase());
-    console.log("🆔 Socket ID:", pusherConnection.socket_id);
-  });
-
-  pusherConnection.bind("connecting", () => {
-    console.log("🔄 WebSocket Connecting...");
-  });
-
-  pusherConnection.bind("disconnected", () => {
-    console.log("🔴 WebSocket Disconnected:", BROADCAST_PROVIDER.toUpperCase());
-  });
-
-  pusherConnection.bind("unavailable", () => {
-    console.warn("⚠️ WebSocket Unavailable - will retry");
-  });
-
-  pusherConnection.bind("failed", () => {
-    console.error("❌ WebSocket Connection Failed");
-    console.error("🔍 [DEBUG] Connection Error Details:", {
-      state: pusherConnection.state,
-      socketId: pusherConnection.socket_id,
-      activityTimeout: pusherConnection.activityTimeout,
+    // Log Pusher config untuk debugging
+    console.log("🔍 [DEBUG] Pusher Instance Config:", {
+      key: pusherInstance.key,
+      cluster: pusherInstance.config.cluster,
+      encrypted: pusherInstance.config.encrypted,
+      forceTLS: pusherInstance.config.forceTLS,
+      authEndpoint: pusherInstance.config.authEndpoint,
+      wsHost: pusherInstance.config.wsHost,
+      wsPort: pusherInstance.config.wsPort,
+      wssPort: pusherInstance.config.wssPort,
     });
-  });
 
-  pusherConnection.bind("error", (error: any) => {
-    console.error("❌ WebSocket Error:", JSON.stringify(error, null, 2));
-    console.error("🔍 [DEBUG] Error Type:", error?.type || "unknown");
-    console.error("🔍 [DEBUG] Error Data:", error?.data || "no data");
-    console.error("🔍 [DEBUG] Error Error:", error?.error || "no error object");
-  });
+    pusherConnection.bind("connected", () => {
+      console.log("🟢 WebSocket Connected:", BROADCAST_PROVIDER.toUpperCase());
+      console.log("🆔 Socket ID:", pusherConnection.socket_id);
+    });
 
-  pusherConnection.bind("state_change", (states: any) => {
-    console.log(`🔄 WebSocket State: ${states.previous} → ${states.current}`);
-    if (states.current === "failed") {
-      console.error("🔍 [DEBUG] Failed State Info:", {
-        previous: states.previous,
-        current: states.current,
-        key: PUSHER_KEY.substring(0, 10) + "...",
-        cluster: PUSHER_CLUSTER,
-        endpoint: `${BASE_URL}/broadcasting/auth`,
+    pusherConnection.bind("connecting", () => {
+      console.log("🔄 WebSocket Connecting...");
+    });
+
+    pusherConnection.bind("disconnected", () => {
+      console.log("🔴 WebSocket Disconnected:", BROADCAST_PROVIDER.toUpperCase());
+    });
+
+    pusherConnection.bind("unavailable", () => {
+      console.warn("⚠️ WebSocket Unavailable - will retry");
+    });
+
+    pusherConnection.bind("failed", () => {
+      console.error("❌ WebSocket Connection Failed");
+      console.error("🔍 [DEBUG] Connection Error Details:", {
+        state: pusherConnection.state,
+        socketId: pusherConnection.socket_id,
+        activityTimeout: pusherConnection.activityTimeout,
       });
-    }
-  });
+    });
 
-  // Log initial connection state
-  console.log("📡 Initial WebSocket State:", pusherConnection.state);
+    pusherConnection.bind("error", (error: any) => {
+      console.error("❌ WebSocket Error:", JSON.stringify(error, null, 2));
+      console.error("🔍 [DEBUG] Error Type:", error?.type || "unknown");
+      console.error("🔍 [DEBUG] Error Data:", error?.data || "no data");
+      console.error("🔍 [DEBUG] Error Error:", error?.error || "no error object");
+    });
+
+    pusherConnection.bind("state_change", (states: any) => {
+      console.log(`🔄 WebSocket State: ${states.previous} → ${states.current}`);
+      if (states.current === "failed") {
+        console.error("🔍 [DEBUG] Failed State Info:", {
+          previous: states.previous,
+          current: states.current,
+          key: PUSHER_KEY.substring(0, 10) + "...",
+          cluster: PUSHER_CLUSTER,
+          endpoint: `${BASE_URL}/broadcasting/auth`,
+        });
+      }
+    });
+
+    // Log initial connection state
+    console.log("📡 Initial WebSocket State:", pusherConnection.state);
+  }
+} else {
+  console.log("⚠️ Echo not initialized - running in web/SSR environment");
 }
 
-export default echo;
+export default echo!;

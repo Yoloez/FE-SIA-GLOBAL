@@ -1,14 +1,16 @@
 import api from "@/api/axios";
 import echo from "@/api/echo";
 import { useAuth } from "@/context/AuthContext";
+import { useStudentData } from "@/context/StudentDataContext";
 import notificationService from "@/utils/notificationService";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, Stack, useFocusEffect } from "expo-router";
+import { router, Stack } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { NotificationActionMenu } from "../../components/NotificationActionMenu";
 import { ThemedText } from "../../components/ThemedText";
 
@@ -29,7 +31,7 @@ interface NotificationMetadata {
 
 interface NotificationItem {
   id_notification: number;
-  type: "chat" | "announcement";
+  type: string;
   title: string;
   message: string;
   sender: string;
@@ -50,10 +52,8 @@ type FilterStatus = "all" | "read" | "unread";
 
 export default function NotificationScreen() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { notifications, unreadCount, isLoadingNotifications, refreshNotifications, updateNotification: updateNotificationContext, removeNotification: removeNotificationContext } = useStudentData();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const echoChannelRef = useRef<any>(null);
@@ -63,34 +63,7 @@ export default function NotificationScreen() {
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showMarkAllConfirm, setShowMarkAllConfirm] = useState(false);
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const params: any = {};
-      if (filterType !== "all") params.type = filterType;
-      if (filterStatus !== "all") params.status = filterStatus;
-
-      const response = await api.get("/notifications", { params });
-
-      if (response.data.status === "success") {
-        const data: NotificationResponse = response.data.data;
-        setNotifications(data.notifications);
-        setUnreadCount(data.unread_count);
-      }
-    } catch (error: any) {
-      console.error("Gagal memuat notifikasi:", error);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [filterType, filterStatus]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsLoading(true);
-      fetchNotifications();
-    }, [fetchNotifications])
-  );
+  const [showAnnouncementDetail, setShowAnnouncementDetail] = useState(false);
 
   // Setup Echo listener untuk real-time notifications
   useEffect(() => {
@@ -130,23 +103,8 @@ export default function NotificationScreen() {
         // Mark as processed
         processedNotificationIds.current.add(notifId);
 
-        // Add to state (prepend - newest first)
-        setNotifications((prev) => {
-          // Check for duplicates in current state
-          const isDuplicate = prev.some((n) => n.id_notification === notifId);
-          if (isDuplicate) {
-            console.log(`⚠️ Duplicate notification ${notifId} found in state`);
-            return prev;
-          }
-
-          console.log(`✅ Adding new notification ${notifId} to state`);
-          return [newNotification, ...prev];
-        });
-
-        // Update unread count
-        if (!newNotification.is_read) {
-          setUnreadCount((prev) => prev + 1);
-        }
+        // Refresh notifications from context
+        await refreshNotifications();
 
         // Show popup notification
         try {
@@ -194,60 +152,91 @@ export default function NotificationScreen() {
     };
   }, [user?.id_user_si]);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    fetchNotifications();
-  }, [fetchNotifications]);
+    await refreshNotifications();
+    setIsRefreshing(false);
+  };
 
-  const handleMarkAllAsRead = useCallback(async () => {
+  const handleMarkAllAsRead = async () => {
     try {
       await api.put("/notifications/read-all");
-      fetchNotifications();
+      await refreshNotifications();
     } catch (error: any) {
       console.error("Gagal menandai notifikasi:", error);
     }
-  }, [fetchNotifications]);
+  };
 
-  const handleMarkAsRead = useCallback(async (notificationId: number) => {
-    try {
-      const response = await api.put(`/notifications/${notificationId}/read`);
-      if (response.data.status === "success") {
-        setNotifications((prev) => prev.map((n) => (n.id_notification === notificationId ? { ...n, is_read: true, read_at: response.data.data.read_at } : n)));
-        setUnreadCount((prev) => Math.max(0, prev - 1));
+  const handleMarkAsRead = useCallback(
+    async (notificationId: number) => {
+      try {
+        const response = await api.put(`/notifications/${notificationId}/read`);
+        if (response.data.status === "success") {
+          updateNotificationContext(notificationId, { is_read: true, read_at: response.data.data.read_at });
+        }
+      } catch (error: any) {
+        console.error("Gagal menandai notifikasi:", error);
       }
-    } catch (error: any) {
-      console.error("Gagal menandai notifikasi:", error);
-    }
-  }, []);
+    },
+    [updateNotificationContext]
+  );
 
-  const handleDeleteNotification = useCallback(async (notificationId: number) => {
-    try {
-      const response = await api.delete(`/notifications/${notificationId}`);
-      if (response.data.status === "success") {
-        setNotifications((prev) => {
-          const deletedNotif = prev.find((n) => n.id_notification === notificationId);
-          if (deletedNotif && !deletedNotif.is_read) {
-            setUnreadCount((count) => Math.max(0, count - 1));
-          }
-          return prev.filter((n) => n.id_notification !== notificationId);
-        });
+  const handleDeleteNotification = useCallback(
+    async (notificationId: number) => {
+      try {
+        const response = await api.delete(`/notifications/${notificationId}`);
+        if (response.data.status === "success") {
+          removeNotificationContext(notificationId);
+          setShowActionMenu(false);
+          setShowDeleteConfirm(false);
+          setSelectedNotif(null);
+        }
+      } catch (error: any) {
+        console.error("Gagal menghapus notifikasi:", error);
       }
-    } catch (error: any) {
-      console.error("Gagal menghapus notifikasi:", error);
-    }
-  }, []);
+    },
+    [removeNotificationContext]
+  );
 
-  const handleNotificationPress = useCallback((item: NotificationItem) => {
-    if (item.type === "chat" && item.metadata.id_conversation) {
-      router.push(`/chat/${item.metadata.id_conversation}`);
-    }
-    // Announcement will be viewed through long press menu or just marking as read
-  }, []);
+  const handleNotificationPress = useCallback(
+    (item: NotificationItem) => {
+      if (item.type === "chat" && item.metadata.id_conversation) {
+        router.push(`/chat/${item.metadata.id_conversation}`);
+      } else if (item.type === "announcement") {
+        // Show announcement detail and mark as read
+        setSelectedNotif(item);
+        setShowAnnouncementDetail(true);
+        if (!item.is_read) {
+          handleMarkAsRead(item.id_notification);
+        }
+      }
+    },
+    [handleMarkAsRead]
+  );
 
   const handleNotificationLongPress = useCallback((item: NotificationItem) => {
     setSelectedNotif(item);
     setShowActionMenu(true);
   }, []);
+
+  // Filter notifications based on selected filters
+  const filteredNotifications = React.useMemo(() => {
+    let filtered = notifications;
+
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter((n) => n.type === filterType);
+    }
+
+    // Filter by status
+    if (filterStatus === "read") {
+      filtered = filtered.filter((n) => n.is_read);
+    } else if (filterStatus === "unread") {
+      filtered = filtered.filter((n) => !n.is_read);
+    }
+
+    return filtered;
+  }, [notifications, filterType, filterStatus]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -399,14 +388,14 @@ export default function NotificationScreen() {
         </View>
 
         {/* Content */}
-        {isLoading ? (
+        {isLoadingNotifications ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#DABC4E" />
             <ThemedText variant="semibold" style={styles.loadingText}>
               Memuat notifikasi...
             </ThemedText>
           </View>
-        ) : notifications.length === 0 ? (
+        ) : filteredNotifications.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-off-outline" size={64} color="rgba(255,255,255,0.5)" />
             <ThemedText variant="semibold" style={styles.emptyText}>
@@ -416,7 +405,7 @@ export default function NotificationScreen() {
           </View>
         ) : (
           <FlatList
-            data={notifications}
+            data={filteredNotifications}
             renderItem={renderNotificationItem}
             keyExtractor={(item) => item.id_notification.toString()}
             contentContainerStyle={styles.listContent}
@@ -443,14 +432,36 @@ export default function NotificationScreen() {
           }}
         />
 
-        <ConfirmDeleteModal
+        <ConfirmModal
           visible={showMarkAllConfirm}
           onClose={() => setShowMarkAllConfirm(false)}
           onConfirm={() => {
             handleMarkAllAsRead();
             setShowMarkAllConfirm(false);
           }}
+          title="Tandai Semua Dibaca?"
+          message="Semua notifikasi akan ditandai sebagai sudah dibaca."
+          confirmText="Tandai Dibaca"
+          iconName="checkmark-done-circle"
+          iconColor="#10B981"
+          confirmButtonColor="#10B981"
         />
+
+        {/* Announcement Detail Modal */}
+        {selectedNotif && (
+          <ConfirmModal
+            visible={showAnnouncementDetail}
+            onClose={() => setShowAnnouncementDetail(false)}
+            onConfirm={() => setShowAnnouncementDetail(false)}
+            title={selectedNotif.title}
+            message={selectedNotif.message}
+            confirmText="Tutup"
+            cancelText=""
+            iconName="megaphone"
+            iconColor="#F59E0B"
+            confirmButtonColor="#F59E0B"
+          />
+        )}
       </SafeAreaView>
     </LinearGradient>
   );

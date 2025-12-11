@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { FontProvider } from "../context/FontContext";
+import { StudentDataProvider } from "../context/StudentDataContext";
 import { useNotifications } from "../hooks/useNotifications";
 
 SplashScreen.preventAutoHideAsync();
@@ -130,7 +131,9 @@ export default function RootLayout() {
     <ErrorBoundary>
       <FontProvider>
         <AuthProvider>
-          <RootLayoutNav />
+          <StudentDataProvider>
+            <RootLayoutNav />
+          </StudentDataProvider>
         </AuthProvider>
       </FontProvider>
     </ErrorBoundary>

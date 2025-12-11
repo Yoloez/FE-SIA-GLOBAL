@@ -4,9 +4,9 @@ import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { ThemedText } from "../../components/ThemedText";
-import { useAuth } from "../../context/AuthContext";
+import api from "../../../api/axios";
+import { ThemedText } from "../../../components/ThemedText";
+import { useAuth } from "../../../context/AuthContext";
 
 interface GradeItem {
   id_class: number;
@@ -185,7 +185,7 @@ export default function GradesScreen() {
 
   const handleClassPress = (classId: number) => {
     router.push({
-      pathname: "/(mahasiswa)/attendance-detail",
+      pathname: "/(mahasiswa)/kehadiran/attendance-detail",
       params: { id_class: classId },
     });
   };

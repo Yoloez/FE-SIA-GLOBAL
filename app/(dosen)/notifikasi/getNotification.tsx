@@ -8,9 +8,9 @@ import { router, Stack, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText } from "../../../components/ThemedText";
-import { NotificationActionMenu } from "../../../components/NotificationActionMenu";
 import { ConfirmDeleteModal } from "../../../components/ConfirmDeleteModal";
+import { NotificationActionMenu } from "../../../components/NotificationActionMenu";
+import { ThemedText } from "../../../components/ThemedText";
 
 const { width } = Dimensions.get("window");
 
@@ -284,6 +284,7 @@ export default function NotificationScreen() {
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showMarkAllConfirm, setShowMarkAllConfirm] = useState(false);
+  const [showAnnouncementDetail, setShowAnnouncementDetail] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -458,12 +459,21 @@ export default function NotificationScreen() {
     }
   }, []);
 
-  const handleNotificationPress = useCallback((item: NotificationItem) => {
-    if (item.type === "chat" && item.metadata.id_conversation) {
-      router.push(`/chat/${item.metadata.id_conversation}`);
-    }
-    // Announcement will be viewed through long press menu or just marking as read
-  }, []);
+  const handleNotificationPress = useCallback(
+    (item: NotificationItem) => {
+      if (item.type === "chat" && item.metadata.id_conversation) {
+        router.push(`/chat/${item.metadata.id_conversation}`);
+      } else if (item.type === "announcement") {
+        // Show announcement detail and mark as read
+        setSelectedNotif(item);
+        setShowAnnouncementDetail(true);
+        if (!item.is_read) {
+          handleMarkAsRead(item.id_notification);
+        }
+      }
+    },
+    [handleMarkAsRead]
+  );
 
   const handleNotificationLongPress = useCallback((item: NotificationItem) => {
     setSelectedNotif(item);
@@ -491,7 +501,7 @@ export default function NotificationScreen() {
   };
 
   const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
-    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={300}>
+    <TouchableOpacity onPress={() => handleNotificationPress(item)} onLongPress={() => handleNotificationLongPress(item)} activeOpacity={0.7} delayLongPress={100}>
       <View style={[styles.notificationCard, !item.is_read && styles.unreadCard]}>
         <View style={styles.iconContainer}>
           <View style={[styles.iconCircle, item.type === "chat" ? styles.chatIcon : styles.announcementIcon]}>
@@ -674,6 +684,8 @@ export default function NotificationScreen() {
             setShowMarkAllConfirm(false);
           }}
         />
+
+        <CustomModal visible={showAnnouncementDetail} onClose={() => setShowAnnouncementDetail(false)} title={selectedNotif?.title || ""} message={selectedNotif?.message || ""} type="announcement" metadata={selectedNotif?.metadata} />
       </SafeAreaView>
     </LinearGradient>
   );

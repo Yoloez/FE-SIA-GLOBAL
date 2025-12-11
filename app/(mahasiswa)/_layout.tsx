@@ -76,13 +76,6 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="EditProfil"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" }, // Ini adalah kuncinya!
-        }}
-      />
-      <Tabs.Screen
         name="jadwal"
         options={{
           href: null,
@@ -104,7 +97,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="attendance-detail"
+        name="kehadiran"
         options={{
           href: null,
           tabBarStyle: { display: "none" }, // Sembunyikan tab bar

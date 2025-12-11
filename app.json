@@ -19,7 +19,14 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.POST_NOTIFICATIONS"],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
       "package": "com.hananfijananto.cobanativewind",
       "googleServicesFile": "./google-services.json"
     },
@@ -49,7 +56,6 @@
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
-
       [
         "expo-camera",
         {
@@ -83,6 +89,12 @@
       "color": "#015023",
       "androidMode": "default",
       "androidCollapsedTitle": "#{unread_notif_count} notifikasi baru"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e1d2b90f-3cad-4f8a-bb98-ecff8f68a39f"
     }
   }
 }

@@ -3,15 +3,44 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { Stack, useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { Stack, useFocusEffect, useNavigation, useRouter } from "expo-router";
+import React, { useCallback, useLayoutEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
-import { ThemedText } from "../../components/ThemedText";
-import { useAuth } from "../../context/AuthContext";
+import { ThemedText } from "../../../components/ThemedText";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function EditProfilScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
+
+  // Hide tab bar when this screen is focused
+  useLayoutEffect(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.setOptions({
+        tabBarStyle: { display: "none" },
+      });
+    }
+    return () => {
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: {
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            borderColor: "#DABC4E",
+            elevation: 0,
+            borderTopWidth: 0,
+            backgroundColor: "transparent",
+            height: 75,
+            paddingTop: 10,
+          },
+        });
+      }
+    };
+  }, [navigation]);
 
   // State untuk form
   const [fullName, setFullName] = useState("");
@@ -148,7 +177,7 @@ export default function EditProfilScreen() {
             </ThemedText>
 
             <View style={styles.avatarContainer}>
-              <Image source={profileImage ? { uri: profileImage } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} />
+              <Image source={profileImage ? { uri: profileImage } : require("@/assets/images/unnamed.jpg")} style={styles.avatar} />
               <TouchableOpacity style={styles.editImageButton} onPress={pickImage}>
                 <Ionicons name="camera" size={20} color="#fff" />
               </TouchableOpacity>

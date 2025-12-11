@@ -1,30 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, Modal, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
-import api from "../../api/axios";
-import CustomAlert from "../../components/CustomAlert";
-import { ThemedText } from "../../components/ThemedText";
-import { useAuth } from "../../context/AuthContext";
+import CustomAlert from "../../../components/CustomAlert";
+import { ThemedText } from "../../../components/ThemedText";
+import { useAuth } from "../../../context/AuthContext";
+import { useStudentData } from "../../../context/StudentDataContext";
 
 const { width } = Dimensions.get("window");
 
-interface ProfileData {
-  name: string;
-  email: string;
-  program_name: string | null;
-  registration_number: string | null;
-  full_name: string;
-  generation: string | null;
-  profile_image: string | null;
-}
-
 const Profil = () => {
-  const { logout, user } = useAuth();
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { logout } = useAuth();
+  const { studentIdentity, isLoadingProfile } = useStudentData();
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
     title: "",
@@ -47,33 +35,6 @@ const Profil = () => {
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const fetchProfile = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get("/student/profile/identity");
-      setProfileData(response.data.data);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Gagal memuat profil:", error.response?.data);
-        setAlertConfig({
-          visible: true,
-          title: "Error",
-          message: "Gagal memuat data profil.",
-          buttons: [{ text: "OK", onPress: () => {} }],
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Gunakan useFocusEffect agar data di-refresh setiap kali kembali ke halaman ini
-  useFocusEffect(
-    useCallback(() => {
-      fetchProfile();
-    }, [fetchProfile])
-  );
-
   const handleLogout = useCallback(() => {
     Animated.sequence([Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }), Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })]).start(() => {
       logout();
@@ -81,7 +42,7 @@ const Profil = () => {
   }, [logout, scaleAnim]);
 
   // Tampilkan loading indicator saat data sedang diambil
-  if (isLoading || !profileData) {
+  if (isLoadingProfile || !studentIdentity) {
     return (
       <View style={[styles.container]}>
         <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -102,40 +63,40 @@ const Profil = () => {
             </ThemedText>
 
             <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
-              <Image source={profileData.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} />
+              <Image source={studentIdentity.profile_image ? { uri: studentIdentity.profile_image } : require("@/assets/images/unnamed.jpg")} style={styles.avatar} />
             </TouchableOpacity>
 
             {/* --- DATA SEKARANG DINAMIS --- */}
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>Name:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.full_name}</ThemedText>
+                <ThemedText style={styles.infoText}>{studentIdentity.full_name}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>NIM:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.registration_number || "Belum diisi"}</ThemedText>
+                <ThemedText style={styles.infoText}>{studentIdentity.registration_number || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>Major:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.program_name || "Belum diisi"}</ThemedText>
+                <ThemedText style={styles.infoText}>{studentIdentity.program_name || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoContainer}>
               <ThemedText style={styles.label}>Generation:</ThemedText>
               <View style={styles.infoBox}>
-                <ThemedText style={styles.infoText}>{profileData.generation || "Belum diisi"}</ThemedText>
+                <ThemedText style={styles.infoText}>{studentIdentity.generation || "Belum diisi"}</ThemedText>
               </View>
             </View>
 
             {/* Tombol-tombol tidak berubah */}
-            <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/EditProfil")}>
+            <TouchableOpacity style={styles.settingButton} onPress={() => router.push("/(mahasiswa)/profil/EditProfil")} activeOpacity={0.9}>
               <ThemedText variant="semibold" style={styles.settingButtonText}>
                 Setting
               </ThemedText>
@@ -160,9 +121,9 @@ const Profil = () => {
               <TouchableOpacity style={styles.closeButton} onPress={() => setShowImageModal(false)}>
                 <Ionicons name="close-circle" size={36} color="#fff" />
               </TouchableOpacity>
-              <Image source={profileData?.profile_image ? { uri: profileData.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.fullImage} resizeMode="contain" />
+              <Image source={studentIdentity?.profile_image ? { uri: studentIdentity.profile_image } : require("@/assets/images/unnamed.jpg")} style={styles.fullImage} resizeMode="contain" />
               <ThemedText variant="semibold" style={styles.imageModalName}>
-                {profileData?.full_name}
+                {studentIdentity?.full_name}
               </ThemedText>
             </View>
           </TouchableOpacity>

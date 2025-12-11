@@ -4,8 +4,8 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../api/axios";
-import { ThemedText } from "../../components/ThemedText";
+import api from "../../../api/axios";
+import { ThemedText } from "../../../components/ThemedText";
 
 interface ClassInfo {
   id_class: number;

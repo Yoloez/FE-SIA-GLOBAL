@@ -1,47 +1,18 @@
+import { useStudentData } from "@/context/StudentDataContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import { ActivityIndicator, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
-import api from "../../api/axios";
 import CustomAlert from "../../components/CustomAlert";
 import { ThemedText } from "../../components/ThemedText";
 import { useAuth } from "../../context/AuthContext";
-
-// Interface disesuaikan dengan data dari API controller
-interface ScheduleItem {
-  id_schedule: number;
-  date: string;
-}
-
-interface ClassScheduleItem {
-  id_class: number;
-  code_class: string;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-  member_class: number;
-  is_active: boolean;
-  subject: {
-    id_subject: number;
-    name_subject: string;
-    code_subject: string;
-  };
-  academic_period: {
-    id_academic_period: number;
-    name: string;
-    is_active: boolean;
-  };
-  total_meetings: number;
-  schedules: ScheduleItem[];
-}
 
 export default function ScheduleScreen() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
-  const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { schedules, isLoadingSchedules } = useStudentData();
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
     title: "",
@@ -79,30 +50,6 @@ export default function ScheduleScreen() {
   const weekDates = generateWeekDates();
 
   const dayFullNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-  const fetchSchedules = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get("/student/schedules");
-      setSchedules(response.data.data || []);
-    } catch (error: any) {
-      console.error("Gagal memuat jadwal:", error.response?.data);
-      setAlertConfig({
-        visible: true,
-        title: "Error",
-        message: "Gagal memuat jadwal Anda.",
-        buttons: [{ text: "OK", onPress: () => {} }],
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchSchedules();
-    }, [fetchSchedules])
-  );
 
   // Navigate ke minggu sebelumnya
   const goToPreviousWeek = () => {
@@ -251,7 +198,7 @@ export default function ScheduleScreen() {
           </View>
 
           {/* Loading Indicator */}
-          {isLoading ? (
+          {isLoadingSchedules ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#DABC4E" />
               <ThemedText style={styles.loadingText}>Memuat jadwal...</ThemedText>
@@ -278,9 +225,7 @@ export default function ScheduleScreen() {
                       <ThemedText variant="bold" style={styles.scheduleTitle}>
                         {schedule.subject?.name_subject || "Subject Name"}
                       </ThemedText>
-                      <ThemedText style={styles.scheduleCode}>
-                        {schedule.code_class} • {schedule.subject?.code_subject}
-                      </ThemedText>
+                      <ThemedText style={styles.scheduleCode}>{schedule.code_class}</ThemedText>
 
                       <View style={styles.scheduleInfo}>
                         <View style={styles.infoRow}>
@@ -289,14 +234,24 @@ export default function ScheduleScreen() {
                         </View>
                         <View style={styles.infoRow}>
                           <Ionicons name="calendar-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <ThemedText style={styles.infoText}>
-                            {schedule.total_meetings} {schedule.total_meetings === 1 ? "Meeting" : "Meetings"}
-                          </ThemedText>
+                          <ThemedText style={styles.infoText}>{schedule.total_meetings} Pertemuan</ThemedText>
                         </View>
                         <View style={styles.infoRow}>
                           <Ionicons name="people-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
-                          <ThemedText style={styles.infoText}>{schedule.member_class} Students</ThemedText>
+                          <ThemedText style={styles.infoText}>{schedule.member_class} Mahasiswa</ThemedText>
                         </View>
+                        {schedule.lecturer_name && (
+                          <View style={styles.infoRow}>
+                            <Ionicons name="person-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                            <ThemedText style={styles.infoText}>{schedule.lecturer_name}</ThemedText>
+                          </View>
+                        )}
+                        {schedule.room && (
+                          <View style={styles.infoRow}>
+                            <Ionicons name="location-outline" size={16} color="#1a1a1a" style={styles.infoIcon} />
+                            <ThemedText style={styles.infoText}>{schedule.room}</ThemedText>
+                          </View>
+                        )}
                       </View>
                     </View>
                   </ImageBackground>

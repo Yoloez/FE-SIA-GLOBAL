@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { ThemedText } from "./ThemedText";
 
 type ContentCardProps = {
   label?: string;
@@ -12,7 +13,9 @@ type ContentCardProps = {
 const ContentCard: React.FC<ContentCardProps> = ({ label = "Label", title = "SVPL", contents = ["Konten Tambahan 1", "Konten Tambahan 2"] }) => {
   return (
     <View style={styles.contentSection}>
-      <Text style={styles.sectionLabel}>{label}</Text>
+      <ThemedText variant="bold" style={styles.sectionLabel}>
+        {label}
+      </ThemedText>
       <View style={styles.contentCard}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={styles.titleText}>{title}</Text>
@@ -36,8 +39,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionLabel: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
     color: "white",
     marginBottom: 8,
   },

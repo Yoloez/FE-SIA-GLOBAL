@@ -6,8 +6,6 @@ export default function ProfilLayout() {
       screenOptions={{
         headerShown: false,
       }}
-    >
-      <Stack.Screen name="index" />
-    </Stack>
+    />
   );
 }

@@ -1,4 +1,5 @@
 import api from "@/api/axios";
+import CustomAlert from "@/components/CustomAlert";
 import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -6,11 +7,13 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../../context/AuthContext";
+import { useLecturerData } from "../../context/LecturerDataContext";
 
 export default function EditProfilScreen() {
   const { user } = useAuth();
+  const { refreshProfile } = useLecturerData();
   const router = useRouter();
 
   // State untuk form
@@ -26,6 +29,19 @@ export default function EditProfilScreen() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+
+  // State untuk show/hide password
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showNewPasswordConfirmation, setShowNewPasswordConfirmation] = useState(false);
+
+  // CustomAlert state
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as "success" | "error" | "info",
+  });
 
   // Fungsi untuk mengambil data profil saat ini
   const fetchProfile = useCallback(async () => {
@@ -43,7 +59,12 @@ export default function EditProfilScreen() {
       setPosition(data.position || "");
     } catch (error) {
       console.error("Fetch profile error:", error);
-      Alert.alert("Error", "Gagal memuat data profil.");
+      setAlertConfig({
+        visible: true,
+        title: "Error",
+        message: "Gagal memuat data profil.",
+        type: "error",
+      });
     } finally {
       setIsFetching(false);
     }
@@ -61,7 +82,12 @@ export default function EditProfilScreen() {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
-        Alert.alert("Permission Denied", "Izinkan akses ke galeri untuk mengganti foto profil.");
+        setAlertConfig({
+          visible: true,
+          title: "Izin Ditolak",
+          message: "Izinkan akses ke galeri untuk mengganti foto profil.",
+          type: "error",
+        });
         return;
       }
 
@@ -94,7 +120,12 @@ export default function EditProfilScreen() {
       }
     } catch (error) {
       console.error("Error picking image:", error);
-      Alert.alert("Error", "Gagal memilih gambar.");
+      setAlertConfig({
+        visible: true,
+        title: "Error",
+        message: "Gagal memilih gambar.",
+        type: "error",
+      });
     }
   };
 
@@ -102,35 +133,65 @@ export default function EditProfilScreen() {
   const handleSave = async () => {
     // Validasi input
     if (!fullName.trim()) {
-      Alert.alert("Validasi", "Nama lengkap tidak boleh kosong.");
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Nama lengkap tidak boleh kosong.",
+        type: "error",
+      });
       return;
     }
 
     if (!email.trim()) {
-      Alert.alert("Validasi", "Email tidak boleh kosong.");
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Email tidak boleh kosong.",
+        type: "error",
+      });
       return;
     }
 
     // Validasi email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      Alert.alert("Validasi", "Format email tidak valid.");
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Format email tidak valid.",
+        type: "error",
+      });
       return;
     }
 
     // Validasi password jika diisi
     if (newPassword && !currentPassword) {
-      Alert.alert("Validasi", "Masukkan password saat ini untuk mengubah password.");
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Masukkan password saat ini untuk mengubah password.",
+        type: "error",
+      });
       return;
     }
 
     if (newPassword && newPassword !== newPasswordConfirmation) {
-      Alert.alert("Validasi", "Konfirmasi password baru tidak cocok.");
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Konfirmasi password baru tidak cocok.",
+        type: "error",
+      });
       return;
     }
 
     if (newPassword && newPassword.length < 8) {
-      Alert.alert("Validasi", "Password baru minimal 8 karakter.");
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Password baru minimal 8 karakter.",
+        type: "error",
+      });
       return;
     }
 
@@ -186,61 +247,71 @@ export default function EditProfilScreen() {
         setProfileImage(response.data.data.profile_image_url);
       }
 
-      // Refresh user context jika ada
-      // if (refreshUser) {
-      //   try {
-      //     await refreshUser();
-      //   } catch (refreshError) {
-      //     console.log("Refresh user error:", refreshError);
-      //   }
-      // }
+      // Refresh profile data dari context
+      await refreshProfile();
 
-      Alert.alert("Sukses", "Profil berhasil diperbarui.", [
-        {
-          text: "OK",
-          onPress: () => {
-            // Clear password fields
-            setCurrentPassword("");
-            setNewPassword("");
-            setNewPasswordConfirmation("");
-            setImageFile(null);
+      setAlertConfig({
+        visible: true,
+        title: "Berhasil",
+        message: "Profil berhasil diperbarui.",
+        type: "success",
+      });
 
-            router.back();
-          },
-        },
-      ]);
+      // Clear password fields
+      setCurrentPassword("");
+      setNewPassword("");
+      setNewPasswordConfirmation("");
+      setImageFile(null);
+
+      // Redirect setelah alert ditutup
+      setTimeout(() => {
+        router.back();
+      }, 1500);
     } catch (error) {
       console.error("Update profile error:", error);
 
       if (axios.isAxiosError(error)) {
-        const message = error.response?.data?.message || "Terjadi kesalahan saat memperbarui profil.";
-        const errors = error.response?.data?.errors;
+        const errorData = error.response?.data;
+        let errorMessage = errorData?.message || "Terjadi kesalahan saat memperbarui profil.";
+        const errors = errorData?.errors;
         const status = error.response?.status;
 
         console.error("Error response:", {
           status,
-          message,
+          message: errorMessage,
           errors,
-          data: error.response?.data,
+          data: errorData,
         });
 
-        if (status === 422) {
-          // Validation error
-          if (errors) {
-            const errorMessages = Object.values(errors).flat().join("\n");
-            Alert.alert("Validasi Gagal", errorMessages);
-          } else {
-            Alert.alert("Gagal", message);
-          }
-        } else if (status === 403) {
-          Alert.alert("Akses Ditolak", message);
-        } else if (status === 500) {
-          Alert.alert("Error Server", "Terjadi kesalahan di server. Silakan coba lagi atau hubungi administrator.");
-        } else {
-          Alert.alert("Error", message);
+        // Handle validation errors
+        if (errors) {
+          const errorMessages = Object.values(errors).flat();
+          errorMessage = errorMessages.join("\n");
         }
+
+        let title = "Gagal";
+        if (status === 422) {
+          title = "Validasi Gagal";
+        } else if (status === 403) {
+          title = "Akses Ditolak";
+        } else if (status === 500) {
+          title = "Error Server";
+          errorMessage = "Terjadi kesalahan di server. Silakan coba lagi atau hubungi administrator.";
+        }
+
+        setAlertConfig({
+          visible: true,
+          title,
+          message: errorMessage,
+          type: "error",
+        });
       } else {
-        Alert.alert("Error", "Terjadi kesalahan yang tidak terduga.");
+        setAlertConfig({
+          visible: true,
+          title: "Error",
+          message: "Terjadi kesalahan yang tidak terduga.",
+          type: "error",
+        });
       }
     } finally {
       setIsLoading(false);
@@ -294,16 +365,16 @@ export default function EditProfilScreen() {
                 {/* NIP/Employee ID */}
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>NIP/ID Pegawai:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={employeeIdNumber} onChangeText={setEmployeeIdNumber} placeholder="Masukkan NIP" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
+                  <View style={[styles.infoBox, styles.disabledBox]}>
+                    <TextInput style={[styles.infoText, styles.disabledText]} value={employeeIdNumber} editable={false} placeholder="Belum diisi" placeholderTextColor="rgba(255, 255, 255, 0.3)" />
                   </View>
                 </View>
 
                 {/* Posisi/Jabatan */}
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Posisi/Jabatan:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={position} onChangeText={setPosition} placeholder="Masukkan posisi" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
+                  <View style={[styles.infoBox, styles.disabledBox]}>
+                    <TextInput style={[styles.infoText, styles.disabledText]} value={position} editable={false} placeholder="Belum diisi" placeholderTextColor="rgba(255, 255, 255, 0.3)" />
                   </View>
                 </View>
 
@@ -312,22 +383,45 @@ export default function EditProfilScreen() {
 
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Password Saat Ini:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry placeholder="Masukkan password saat ini" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
+                  <View style={styles.passwordBox}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      secureTextEntry={!showCurrentPassword}
+                      placeholder="Masukkan password saat ini"
+                      placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    />
+                    <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)} style={styles.eyeIcon}>
+                      <Ionicons name={showCurrentPassword ? "eye-off" : "eye"} size={20} color="rgba(255, 255, 255, 0.6)" />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Password Baru:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry placeholder="Minimal 8 karakter" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
+                  <View style={styles.passwordBox}>
+                    <TextInput style={styles.passwordInput} value={newPassword} onChangeText={setNewPassword} secureTextEntry={!showNewPassword} placeholder="Minimal 8 karakter" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
+                    <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={styles.eyeIcon}>
+                      <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={20} color="rgba(255, 255, 255, 0.6)" />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Konfirmasi Password Baru:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry placeholder="Konfirmasi password baru" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
+                  <View style={styles.passwordBox}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={newPasswordConfirmation}
+                      onChangeText={setNewPasswordConfirmation}
+                      secureTextEntry={!showNewPasswordConfirmation}
+                      placeholder="Konfirmasi password baru"
+                      placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    />
+                    <TouchableOpacity onPress={() => setShowNewPasswordConfirmation(!showNewPasswordConfirmation)} style={styles.eyeIcon}>
+                      <Ionicons name={showNewPasswordConfirmation ? "eye-off" : "eye"} size={20} color="rgba(255, 255, 255, 0.6)" />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -344,6 +438,9 @@ export default function EditProfilScreen() {
             </KeyboardAvoidingView>
           </View>
         </View>
+
+        {/* CustomAlert */}
+        <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -475,5 +572,32 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
+  },
+  passwordBox: {
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    borderRadius: 10,
+    paddingLeft: 12,
+    paddingRight: 12,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  passwordInput: {
+    flex: 1,
+    color: "#ffffff",
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+  eyeIcon: {
+    padding: 8,
+  },
+  disabledBox: {
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: "rgba(255, 255, 255, 0.5)",
   },
 });

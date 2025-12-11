@@ -1,4 +1,5 @@
 import api from "@/api/axios";
+import CustomAlert from "@/components/CustomAlert";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
@@ -8,9 +9,11 @@ import React, { useCallback, useLayoutEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "../../../components/ThemedText";
 import { useAuth } from "../../../context/AuthContext";
+import { useStudentData } from "../../../context/StudentDataContext";
 
 export default function EditProfilScreen() {
   const { user } = useAuth();
+  const { refreshProfile } = useStudentData();
   const router = useRouter();
   const navigation = useNavigation();
 
@@ -54,6 +57,19 @@ export default function EditProfilScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
+  // State untuk show/hide password
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showNewPasswordConfirmation, setShowNewPasswordConfirmation] = useState(false);
+
+  // CustomAlert state
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as "success" | "error" | "info",
+  });
+
   // Fungsi untuk mengambil data profil saat ini
   const fetchProfile = useCallback(async () => {
     setIsFetching(true);
@@ -64,7 +80,12 @@ export default function EditProfilScreen() {
       setEmail(data.email);
       setProfileImage(data.profile_image);
     } catch (error) {
-      Alert.alert("Error", "Gagal memuat data profil.");
+      setAlertConfig({
+        visible: true,
+        title: "Error",
+        message: "Gagal memuat data profil.",
+        type: "error",
+      });
     } finally {
       setIsFetching(false);
     }
@@ -112,6 +133,28 @@ export default function EditProfilScreen() {
 
   // Fungsi untuk menyimpan perubahan
   const handleSave = async () => {
+    // Validasi konfirmasi password
+    if (newPassword && newPassword !== newPasswordConfirmation) {
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Password baru dan konfirmasi password tidak cocok.",
+        type: "error",
+      });
+      return;
+    }
+
+    // Validasi jika mengisi password baru harus mengisi current password
+    if (newPassword && !currentPassword) {
+      setAlertConfig({
+        visible: true,
+        title: "Validasi Gagal",
+        message: "Masukkan password saat ini untuk mengubah password.",
+        type: "error",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const formData = new FormData();
@@ -139,16 +182,37 @@ export default function EditProfilScreen() {
         },
       });
 
-      Alert.alert("Sukses", "Profil berhasil diperbarui.", [
-        {
-          text: "OK",
-          onPress: () => router.push("/profil"),
-        },
-      ]);
+      // Refresh profile data dari context
+      await refreshProfile();
+
+      setAlertConfig({
+        visible: true,
+        title: "Berhasil",
+        message: "Profil berhasil diperbarui.",
+        type: "success",
+      });
+
+      // Redirect setelah alert ditutup
+      setTimeout(() => {
+        router.back();
+      }, 1500);
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const message = error.response?.data?.message || "Terjadi kesalahan.";
-        Alert.alert("Gagal", message);
+        const errorData = error.response?.data;
+        let errorMessage = errorData?.message || "Terjadi kesalahan.";
+
+        // Handle validation errors
+        if (errorData?.errors) {
+          const errors = Object.values(errorData.errors).flat();
+          errorMessage = errors.join("\n");
+        }
+
+        setAlertConfig({
+          visible: true,
+          title: "Gagal",
+          message: errorMessage,
+          type: "error",
+        });
       }
     } finally {
       setIsLoading(false);
@@ -205,20 +269,29 @@ export default function EditProfilScreen() {
                 </ThemedText>
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Password Saat Ini:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
+                  <View style={styles.passwordBox}>
+                    <TextInput style={styles.passwordInput} value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry={!showCurrentPassword} />
+                    <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)} style={styles.eyeIcon}>
+                      <Ionicons name={showCurrentPassword ? "eye-off" : "eye"} size={20} color="rgba(255, 255, 255, 0.6)" />
+                    </TouchableOpacity>
                   </View>
                 </View>
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Password Baru:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+                  <View style={styles.passwordBox}>
+                    <TextInput style={styles.passwordInput} value={newPassword} onChangeText={setNewPassword} secureTextEntry={!showNewPassword} />
+                    <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={styles.eyeIcon}>
+                      <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={20} color="rgba(255, 255, 255, 0.6)" />
+                    </TouchableOpacity>
                   </View>
                 </View>
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Konfirmasi Password Baru:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry />
+                  <View style={styles.passwordBox}>
+                    <TextInput style={styles.passwordInput} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} secureTextEntry={!showNewPasswordConfirmation} />
+                    <TouchableOpacity onPress={() => setShowNewPasswordConfirmation(!showNewPasswordConfirmation)} style={styles.eyeIcon}>
+                      <Ionicons name={showNewPasswordConfirmation ? "eye-off" : "eye"} size={20} color="rgba(255, 255, 255, 0.6)" />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -228,7 +301,7 @@ export default function EditProfilScreen() {
                     <ActivityIndicator color="#1a1a1a" />
                   ) : (
                     <ThemedText variant="semibold" style={styles.settingButtonText}>
-                      Save Changes
+                      Simpan Perubahan
                     </ThemedText>
                   )}
                 </TouchableOpacity>
@@ -241,6 +314,9 @@ export default function EditProfilScreen() {
             </KeyboardAvoidingView>
           </View>
         </View>
+
+        {/* CustomAlert */}
+        <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -408,5 +484,25 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#ffffff",
     fontSize: 16,
+  },
+  passwordBox: {
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    borderRadius: 10,
+    paddingLeft: 12,
+    paddingRight: 12,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  passwordInput: {
+    flex: 1,
+    color: "#ffffff",
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+  eyeIcon: {
+    padding: 8,
   },
 });

@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   cardContent: {
     backgroundColor: "transparent",
     borderRadius: 12,
-    padding: 18,
+    padding: 10,
   },
   cardTitle: {
     lineHeight: 18,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "rgba(255, 255, 255, 0.5)",
     borderRadius: 12,
-    marginTop: 8,
+    // marginTop: 8,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
   },
@@ -724,7 +724,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "rgba(255, 255, 255, 0.5)",
     borderRadius: 8,
-    marginTop: 8,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
   },

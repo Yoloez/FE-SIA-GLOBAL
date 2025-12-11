@@ -9,7 +9,7 @@ import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type TabType = "lecturers" | "students";
@@ -258,146 +258,148 @@ export default function ClassDetailScreen({ viewMode, classId, onBack, onNavigat
   return (
     <LinearGradient colors={["#015023", "#1C352D"]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea}>
-        {/* Header Modern */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => onBack?.()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={28} color="#fff" />
-          </TouchableOpacity>
-          <View style={styles.headerInfo}>
-            <ThemedText variant="bold" style={styles.headerTitle} numberOfLines={1}>
-              {classDetails?.code_class || "Kelas"}
-            </ThemedText>
-            <ThemedText style={styles.headerSubtitle} numberOfLines={1}>
-              {classDetails?.subject?.name_subject || ""}
-            </ThemedText>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={0}>
+          {/* Header Modern */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => onBack?.()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={28} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <ThemedText variant="bold" style={styles.headerTitle} numberOfLines={1}>
+                {classDetails?.code_class || "Kelas"}
+              </ThemedText>
+              <ThemedText style={styles.headerSubtitle} numberOfLines={1}>
+                {classDetails?.subject?.name_subject || ""}
+              </ThemedText>
+            </View>
+            <View style={styles.headerSpacer} />
           </View>
-          <View style={styles.headerSpacer} />
-        </View>
 
-        {/* Class Stats Card */}
-        {classDetails && (
-          <View style={styles.statsCard}>
-            <View style={styles.statItem}>
-              <Ionicons name="school-outline" size={18} color="#015023" />
-              <View style={styles.statTextContainer}>
-                <ThemedText variant="medium" style={styles.statLabel}>
-                  Kapasitas
-                </ThemedText>
-                <ThemedText variant="bold" style={styles.statValue}>
-                  {classDetails.member_class}
-                </ThemedText>
+          {/* Class Stats Card */}
+          {classDetails && (
+            <View style={styles.statsCard}>
+              <View style={styles.statItem}>
+                <Ionicons name="school-outline" size={18} color="#015023" />
+                <View style={styles.statTextContainer}>
+                  <ThemedText variant="medium" style={styles.statLabel}>
+                    Kapasitas
+                  </ThemedText>
+                  <ThemedText variant="bold" style={styles.statValue}>
+                    {classDetails.member_class}
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Ionicons name="people-outline" size={18} color="#015023" />
+                <View style={styles.statTextContainer}>
+                  <ThemedText variant="medium" style={styles.statLabel}>
+                    Mahasiswa
+                  </ThemedText>
+                  <ThemedText variant="bold" style={styles.statValue}>
+                    {classDetails.students?.length || 0}
+                  </ThemedText>
+                </View>
               </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Ionicons name="people-outline" size={18} color="#015023" />
-              <View style={styles.statTextContainer}>
-                <ThemedText variant="medium" style={styles.statLabel}>
-                  Mahasiswa
-                </ThemedText>
-                <ThemedText variant="bold" style={styles.statValue}>
-                  {classDetails.students?.length || 0}
-                </ThemedText>
-              </View>
+          )}
+
+          {/* Generate Schedule Button */}
+          <View style={styles.generateButtonContainer}>
+            <TouchableOpacity onPress={() => setShowGenerateModal(true)} style={styles.generateButton}>
+              <Ionicons name="calendar-outline" size={20} color="#015023" />
+              <ThemedText variant="bold" style={styles.generateButtonText}>
+                Generate Jadwal
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Tab Navigation */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              onPress={() => {
+                setActiveTab("lecturers");
+                setSearchQuery("");
+              }}
+              style={[styles.tab, activeTab === "lecturers" && styles.activeTab]}
+            >
+              <Ionicons name="person-circle-outline" size={20} color={activeTab === "lecturers" ? "#015023" : "#9ca3af"} />
+              <ThemedText variant="semibold" style={[styles.tabText, activeTab === "lecturers" && styles.activeTabText]}>
+                Dosen ({classDetails?.lecturers?.length || 0})
+              </ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setActiveTab("students");
+                setSearchQuery("");
+              }}
+              style={[styles.tab, activeTab === "students" && styles.activeTab]}
+            >
+              <Ionicons name="people-outline" size={20} color={activeTab === "students" ? "#015023" : "#9ca3af"} />
+              <ThemedText variant="semibold" style={[styles.tabText, activeTab === "students" && styles.activeTabText]}>
+                Mahasiswa ({classDetails?.students?.length || 0})
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Search Bar - Always visible when there's data */}
+          {totalData.length > 0 && (
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+              <TextInput style={styles.searchInput} placeholder="Cari nama atau email..." placeholderTextColor="#9ca3af" value={searchQuery} onChangeText={setSearchQuery} />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <Ionicons name="close-circle" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              ) : null}
             </View>
+          )}
+
+          {/* Members List */}
+          {currentData.length > 0 ? (
+            <FlatList
+              data={currentData}
+              renderItem={renderMemberItem}
+              keyExtractor={(item, index) => `${activeTab}-${item.id_user_si}-${index}`}
+              contentContainerStyle={styles.listContainer}
+              scrollEnabled={true}
+              showsVerticalScrollIndicator={false}
+              maxToRenderPerBatch={10}
+              windowSize={10}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name={activeTab === "lecturers" ? "person-circle-outline" : "people-outline"} size={48} color="rgba(255, 255, 255, 0.3)" />
+              <ThemedText variant="semibold" style={styles.emptyText}>
+                {searchQuery ? "Tidak ditemukan" : `Belum ada ${activeTab === "lecturers" ? "dosen" : "mahasiswa"}`}
+              </ThemedText>
+              {!searchQuery && <ThemedText style={styles.emptySubtext}>Tambahkan {activeTab === "lecturers" ? "dosen" : "mahasiswa"} untuk kelas ini</ThemedText>}
+            </View>
+          )}
+
+          {/* Action Button */}
+          <View style={styles.actionBar}>
+            <TouchableOpacity
+              onPress={() => {
+                const role = activeTab === "lecturers" ? "dosen" : "mahasiswa";
+                onNavigateAssignMember?.(role);
+              }}
+              style={styles.addButton}
+            >
+              <Ionicons name="add-circle" size={24} color="#015023" />
+              <ThemedText variant="bold" style={styles.addButtonText}>
+                Tambah {activeTab === "lecturers" ? "Dosen" : "Mahasiswa"}
+              </ThemedText>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Generate Schedule Button */}
-        <View style={styles.generateButtonContainer}>
-          <TouchableOpacity onPress={() => setShowGenerateModal(true)} style={styles.generateButton}>
-            <Ionicons name="calendar-outline" size={20} color="#015023" />
-            <ThemedText variant="bold" style={styles.generateButtonText}>
-              Generate Jadwal
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+          {/* Generate Schedule Modal */}
+          <GenerateScheduleModal visible={showGenerateModal} onClose={() => setShowGenerateModal(false)} onGenerate={handleGenerateSchedule} />
 
-        {/* Tab Navigation */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            onPress={() => {
-              setActiveTab("lecturers");
-              setSearchQuery("");
-            }}
-            style={[styles.tab, activeTab === "lecturers" && styles.activeTab]}
-          >
-            <Ionicons name="person-circle-outline" size={20} color={activeTab === "lecturers" ? "#015023" : "#9ca3af"} />
-            <ThemedText variant="semibold" style={[styles.tabText, activeTab === "lecturers" && styles.activeTabText]}>
-              Dosen ({classDetails?.lecturers?.length || 0})
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {
-              setActiveTab("students");
-              setSearchQuery("");
-            }}
-            style={[styles.tab, activeTab === "students" && styles.activeTab]}
-          >
-            <Ionicons name="people-outline" size={20} color={activeTab === "students" ? "#015023" : "#9ca3af"} />
-            <ThemedText variant="semibold" style={[styles.tabText, activeTab === "students" && styles.activeTabText]}>
-              Mahasiswa ({classDetails?.students?.length || 0})
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar - Always visible when there's data */}
-        {totalData.length > 0 && (
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-            <TextInput style={styles.searchInput} placeholder="Cari nama atau email..." placeholderTextColor="#9ca3af" value={searchQuery} onChangeText={setSearchQuery} />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <Ionicons name="close-circle" size={20} color="#9ca3af" />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        )}
-
-        {/* Members List */}
-        {currentData.length > 0 ? (
-          <FlatList
-            data={currentData}
-            renderItem={renderMemberItem}
-            keyExtractor={(item, index) => `${activeTab}-${item.id_user_si}-${index}`}
-            contentContainerStyle={styles.listContainer}
-            scrollEnabled={true}
-            showsVerticalScrollIndicator={false}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-          />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name={activeTab === "lecturers" ? "person-circle-outline" : "people-outline"} size={48} color="rgba(255, 255, 255, 0.3)" />
-            <ThemedText variant="semibold" style={styles.emptyText}>
-              {searchQuery ? "Tidak ditemukan" : `Belum ada ${activeTab === "lecturers" ? "dosen" : "mahasiswa"}`}
-            </ThemedText>
-            {!searchQuery && <ThemedText style={styles.emptySubtext}>Tambahkan {activeTab === "lecturers" ? "dosen" : "mahasiswa"} untuk kelas ini</ThemedText>}
-          </View>
-        )}
-
-        {/* Action Button */}
-        <View style={styles.actionBar}>
-          <TouchableOpacity
-            onPress={() => {
-              const role = activeTab === "lecturers" ? "dosen" : "mahasiswa";
-              onNavigateAssignMember?.(role);
-            }}
-            style={styles.addButton}
-          >
-            <Ionicons name="add-circle" size={24} color="#015023" />
-            <ThemedText variant="bold" style={styles.addButtonText}>
-              Tambah {activeTab === "lecturers" ? "Dosen" : "Mahasiswa"}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Generate Schedule Modal */}
-        <GenerateScheduleModal visible={showGenerateModal} onClose={() => setShowGenerateModal(false)} onGenerate={handleGenerateSchedule} />
-
-        {/* CustomAlert */}
-        <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} />
+          {/* CustomAlert */}
+          <CustomAlert visible={alertConfig.visible} title={alertConfig.title} message={alertConfig.message} type={alertConfig.type} onClose={() => setAlertConfig({ ...alertConfig, visible: false })} />
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
   );

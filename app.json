@@ -34,7 +34,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/logo-ugn.png",
-          "imageWidth": 200,
+          "imageWidth": 140,
           "resizeMode": "contain",
           "backgroundColor": "#015023",
           "dark": {

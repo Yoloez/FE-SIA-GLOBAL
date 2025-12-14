@@ -1,8 +1,11 @@
 import { ThemedText } from "@/components/ThemedText";
 import { Urbanist_400Regular, Urbanist_600SemiBold, useFonts } from "@expo-google-fonts/urbanist";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import * as Device from "expo-device";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
@@ -27,6 +30,94 @@ export default function LoginScreen() {
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertButtons, setAlertButtons] = useState<any[]>([]);
+
+  const NOTIF_PERMISSION_KEY = "notifications_permission_status";
+  const EXPO_PUSH_TOKEN_KEY = "expo_push_token";
+
+  const registerPushToken = async () => {
+    try {
+      const token = await Notifications.getExpoPushTokenAsync({
+        projectId: "c2a79862-e78e-4ed9-8265-6fdb5c7fcfe6", // Your Expo project ID from app.json
+      });
+
+      console.log("Expo Push Token:", token.data);
+      await AsyncStorage.setItem(EXPO_PUSH_TOKEN_KEY, token.data);
+
+      // Get device information
+      const deviceId = Device.osBuildId || Device.osInternalBuildId || undefined;
+      const deviceName = Device.deviceName || Device.modelName || undefined;
+
+      // Send token to backend
+      try {
+        await api.post("/device-tokens/register", {
+          expo_push_token: token.data,
+          device_id: deviceId,
+          device_name: deviceName,
+          platform: Platform.OS,
+        });
+        console.log("Push token registered to backend");
+      } catch (backendError) {
+        console.log("Failed to register token to backend:", backendError);
+        // Token is still stored locally, can retry later
+      }
+
+      return token.data;
+    } catch (error) {
+      console.log("Failed to get push token:", error);
+      return null;
+    }
+  };
+
+  const requestNotificationPermissionIfNeeded = async () => {
+    try {
+      const existing = await Notifications.getPermissionsAsync();
+      if (existing.status === "granted") {
+        await AsyncStorage.setItem(NOTIF_PERMISSION_KEY, "granted");
+        // Register push token if already granted
+        await registerPushToken();
+        return;
+      }
+
+      // Show explanation modal before requesting system permission
+      return new Promise<void>((resolve) => {
+        setAlertTitle("Izinkan Notifikasi?");
+        setAlertMessage("Kami membutuhkan izin notifikasi untuk memberi pemberitahuan jadwal, presensi, dan informasi akademik meskipun aplikasi tidak berjalan.");
+        setAlertButtons([
+          {
+            text: "Nanti",
+            onPress: async () => {
+              await AsyncStorage.setItem(NOTIF_PERMISSION_KEY, "denied");
+              setAlertVisible(false);
+              resolve();
+            },
+          },
+          {
+            text: "Izinkan",
+            onPress: async () => {
+              try {
+                const result = await Notifications.requestPermissionsAsync();
+                const status = result.status;
+                await AsyncStorage.setItem(NOTIF_PERMISSION_KEY, status);
+
+                // Register push token if permission granted
+                if (status === "granted") {
+                  await registerPushToken();
+                }
+              } catch (e) {
+                console.log("Permission request error:", e);
+              } finally {
+                setAlertVisible(false);
+                resolve();
+              }
+            },
+          },
+        ]);
+        setAlertVisible(true);
+      });
+    } catch (e) {
+      console.log("Permission check error:", e);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -63,6 +154,12 @@ export default function LoginScreen() {
       console.log("USER DATA TRANSFORMED:", transformedUser);
 
       await login(transformedUser, accessToken);
+
+      // After successful login, prompt for notification permission once
+      const stored = await AsyncStorage.getItem(NOTIF_PERMISSION_KEY);
+      if (!stored || stored === "undetermined") {
+        await requestNotificationPermissionIfNeeded();
+      }
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Login Error:", error.response ? error.response.data : error.message);

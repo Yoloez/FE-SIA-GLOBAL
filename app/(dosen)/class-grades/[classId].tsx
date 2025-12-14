@@ -11,10 +11,22 @@ import { ThemedText } from "../../../components/ThemedText";
 interface Student {
   id_user_si: number;
   name: string;
-  email: string;
-  grade: { grade: number; letter: string; ip_skor: number } | null;
+  nim: string;
+  email?: string;
+  grade: { id_grades: number; grade: number | null } | null;
   id_subject: number;
+  id_class: number;
   selectedGrade: string;
+  originalGrade: string; // untuk tracking perubahan
+  gradeLetter: string; // huruf nilai berdasarkan konversi
+}
+
+interface GradeConversion {
+  id_grades: number;
+  min_grade: number;
+  max_grade: number;
+  letter: string;
+  ip_skor: number;
 }
 
 export default function GradeInputScreen() {
@@ -24,6 +36,7 @@ export default function GradeInputScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [classInfo, setClassInfo] = useState({ name: "", code: "", studentCount: 0 });
+  const [gradeConversions, setGradeConversions] = useState<GradeConversion[]>([]);
 
   // CustomAlert states
   const [alertConfig, setAlertConfig] = useState({
@@ -32,6 +45,29 @@ export default function GradeInputScreen() {
     message: "",
     buttons: [] as { text: string; onPress: () => void; style?: "cancel" | "destructive" }[],
   });
+
+  // Fungsi untuk konversi nilai ke huruf
+  const convertGradeToLetter = useCallback(
+    (numericGrade: number): string => {
+      if (!gradeConversions.length) return "-";
+
+      const conversion = gradeConversions.find((conv) => numericGrade >= conv.min_grade && numericGrade <= conv.max_grade);
+
+      return conversion ? conversion.letter : "-";
+    },
+    [gradeConversions]
+  );
+
+  // Fetch grade conversions
+  const fetchGradeConversions = useCallback(async () => {
+    try {
+      const response = await api.get("/grade-conversions");
+      const conversionsData = response.data.data;
+      setGradeConversions(conversionsData);
+    } catch (error) {
+      console.error("Error fetching grade conversions:", error);
+    }
+  }, []);
 
   const fetchStudents = useCallback(async () => {
     setIsLoading(true);
@@ -53,11 +89,21 @@ export default function GradeInputScreen() {
       }
 
       setStudents(
-        studentsArray.map((student: any) => ({
-          ...student,
-          email: student.nim || student.email || "",
-          selectedGrade: student.grade ? student.grade.grade.toString() : "",
-        }))
+        studentsArray.map((student: any) => {
+          const existingGrade = student.grade && student.grade.grade !== null && student.grade.grade !== undefined ? student.grade.grade.toString() : "";
+          const numericGrade = existingGrade ? parseFloat(existingGrade) : 0;
+          const gradeLetter = existingGrade ? convertGradeToLetter(numericGrade) : "-";
+
+          console.log("Student:", student.name, "Grade Object:", student.grade, "Existing Grade:", existingGrade, "Letter:", gradeLetter);
+
+          return {
+            ...student,
+            nim: student.nim || student.email || "",
+            selectedGrade: existingGrade,
+            originalGrade: existingGrade, // Track nilai awal
+            gradeLetter: gradeLetter,
+          };
+        })
       );
 
       // Gunakan informasi kelas dari class_info di response
@@ -82,11 +128,17 @@ export default function GradeInputScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [classId]);
+  }, [classId, convertGradeToLetter]);
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    fetchGradeConversions();
+  }, [fetchGradeConversions]);
+
+  useEffect(() => {
+    if (gradeConversions.length > 0) {
+      fetchStudents();
+    }
+  }, [gradeConversions, fetchStudents]);
 
   const handleGradeChange = (studentId: number, grade: string) => {
     // Validasi input: hanya angka 0-100
@@ -99,19 +151,32 @@ export default function GradeInputScreen() {
       finalValue = "100";
     }
 
-    setStudents((prevStudents) => prevStudents.map((student) => (student.id_user_si === studentId ? { ...student, selectedGrade: finalValue } : student)));
-    setHasChanges(true);
+    // Konversi ke huruf secara real-time
+    const gradeLetter = finalValue ? convertGradeToLetter(parseInt(finalValue)) : "-";
+
+    setStudents((prevStudents) => {
+      const updatedStudents = prevStudents.map((student) => (student.id_user_si === studentId ? { ...student, selectedGrade: finalValue, gradeLetter: gradeLetter } : student));
+
+      // Cek apakah ada perubahan dari nilai original
+      const hasAnyChanges = updatedStudents.some((student) => student.selectedGrade !== student.originalGrade);
+      setHasChanges(hasAnyChanges);
+
+      return updatedStudents;
+    });
   };
 
   const handleSaveAll = async () => {
-    // Filter students yang ada perubahan nilai
-    const studentsToSave = students.filter((student) => student.selectedGrade && student.selectedGrade !== "");
+    // Filter students yang ada perubahan nilai dari nilai original
+    const studentsToSave = students.filter((student) => {
+      // Hanya save jika ada perubahan dari nilai original
+      return student.selectedGrade !== student.originalGrade && student.selectedGrade !== "";
+    });
 
     if (studentsToSave.length === 0) {
       setAlertConfig({
         visible: true,
         title: "Tidak Ada Perubahan",
-        message: "Belum ada nilai yang diinput.",
+        message: "Belum ada nilai yang diubah atau diinput.",
         buttons: [{ text: "OK", onPress: () => {} }],
       });
       return;
@@ -136,10 +201,11 @@ export default function GradeInputScreen() {
     setIsSaving(true);
 
     try {
-      // Save all grades
+      // Save all grades - gunakan id_class bukan id_subject
       const savePromises = studentsToSave.map((student) =>
         api.post("/lecturer/grades", {
           id_user_si: student.id_user_si,
+          id_class: student.id_class,
           id_subject: student.id_subject,
           grade: parseInt(student.selectedGrade),
         })
@@ -150,17 +216,22 @@ export default function GradeInputScreen() {
       // Update state dengan data terbaru dari response
       setStudents((prevStudents) =>
         prevStudents.map((student) => {
-          const responseIndex = studentsToSave.findIndex((s) => s.id_user_si === student.id_user_si);
-          if (responseIndex !== -1) {
+          const savedStudent = studentsToSave.find((s) => s.id_user_si === student.id_user_si);
+          if (savedStudent) {
+            const responseIndex = studentsToSave.findIndex((s) => s.id_user_si === student.id_user_si);
             const responseData = responses[responseIndex].data.data;
+            const newGradeValue = responseData.score?.toString() || savedStudent.selectedGrade;
+            const newGradeLetter = convertGradeToLetter(parseFloat(newGradeValue));
+
             return {
               ...student,
               grade: {
-                grade: responseData.score,
-                letter: responseData.letter,
-                ip_skor: responseData.ip,
+                id_grades: responseData.id_grades || (student.grade?.id_grades ?? 0),
+                grade: parseFloat(newGradeValue),
               },
-              selectedGrade: "",
+              selectedGrade: newGradeValue,
+              originalGrade: newGradeValue, // Update original grade setelah save
+              gradeLetter: newGradeLetter, // Update grade letter setelah save
             };
           }
           return student;
@@ -171,12 +242,13 @@ export default function GradeInputScreen() {
 
       setAlertConfig({
         visible: true,
-        title: "Sukses!",
-        message: `${studentsToSave.length} nilai berhasil disimpan.`,
+        title: "Berhasil!",
+        message: `${studentsToSave.length} nilai berhasil disimpan/diperbarui.`,
         buttons: [{ text: "OK", onPress: () => {} }],
       });
     } catch (error: any) {
       const message = error.response?.data?.message || "Gagal menyimpan nilai.";
+      console.error("Error saving grades:", error);
       setAlertConfig({
         visible: true,
         title: "Gagal",
@@ -188,45 +260,50 @@ export default function GradeInputScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: Student }) => (
-    <ImageBackground source={require("../../../assets/images/batik.png")} style={styles.studentCard} imageStyle={styles.cardImage} resizeMode="cover">
-      <View style={styles.cardContent}>
-        <View style={styles.studentLeft}>
-          <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={28} color="#015023" />
-          </View>
-          <View style={styles.studentInfo}>
-            <ThemedText variant="bold" style={styles.studentName}>
-              {item.name}
-            </ThemedText>
-            <ThemedText style={styles.studentId}>{item.email}</ThemedText>
-          </View>
-        </View>
+  const renderItem = ({ item }: { item: Student }) => {
+    const hasGrade = item.grade && typeof item.grade.grade === "number";
+    const displayGrade = hasGrade ? Math.round(item.grade as any) : null;
 
-        <View style={styles.actionsContainer}>
-          {/* Display Nilai yang sudah tersimpan */}
-          <View style={styles.gradeDisplayContainer}>
-            {item.grade ? (
-              <View style={styles.gradeDisplayContent}>
-                <ThemedText variant="bold" style={styles.gradeDisplayLetter}>
-                  {item.grade.letter}
-                </ThemedText>
-              </View>
-            ) : (
-              <ThemedText variant="medium" style={styles.gradeDisplayText}>
-                --
+    return (
+      <ImageBackground source={require("../../../assets/images/batik.png")} style={styles.studentCard} imageStyle={styles.cardImage} resizeMode="cover">
+        <View style={styles.cardContent}>
+          <View style={styles.studentLeft}>
+            {/* <View style={styles.avatarContainer}>
+              <Ionicons name="person" size={28} color="#015023" />
+            </View> */}
+            <View style={styles.studentInfo}>
+              <ThemedText variant="bold" style={styles.studentName}>
+                {item.name}
               </ThemedText>
-            )}
+              <ThemedText style={styles.studentId}>{item.nim}</ThemedText>
+            </View>
           </View>
 
-          {/* Input Nilai Angka */}
-          <View style={styles.inputWrapper}>
-            <TextInput style={styles.gradeInput} value={item.selectedGrade} onChangeText={(text) => handleGradeChange(item.id_user_si, text)} keyboardType="numeric" placeholder="0-100" placeholderTextColor="#999" maxLength={3} />
+          <View style={styles.actionsContainer}>
+            {/* Display Nilai Angka yang sudah tersimpan */}
+            <View style={styles.gradeDisplayContainer}>
+              {displayGrade !== null ? (
+                <View style={styles.gradeDisplayContent}>
+                  <ThemedText variant="bold" style={styles.gradeDisplayScore}>
+                    {item.gradeLetter}
+                  </ThemedText>
+                </View>
+              ) : (
+                <ThemedText variant="medium" style={styles.gradeDisplayText}>
+                  --
+                </ThemedText>
+              )}
+            </View>
+
+            {/* Input Nilai Angka */}
+            <View style={styles.inputWrapper}>
+              <TextInput style={styles.gradeInput} value={item.selectedGrade} onChangeText={(text) => handleGradeChange(item.id_user_si, text)} keyboardType="numeric" placeholder="0-100" placeholderTextColor="#999" maxLength={3} />
+            </View>
           </View>
         </View>
-      </View>
-    </ImageBackground>
-  );
+      </ImageBackground>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -393,13 +470,14 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     borderRadius: 16,
-    opacity: 0.7,
+    opacity: 0.9,
   },
   cardContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 14,
+    paddingVertical: 16,
   },
   studentLeft: {
     flexDirection: "row",
@@ -445,7 +523,7 @@ const styles = StyleSheet.create({
   gradeDisplayContent: {
     alignItems: "center",
   },
-  gradeDisplayLetter: {
+  gradeDisplayScore: {
     fontSize: 16,
     color: "#015023",
   },

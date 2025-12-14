@@ -64,7 +64,7 @@ export default function GradesScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPeriod]);
+  }, []);
 
   const fetchAttendanceClasses = useCallback(async () => {
     setIsLoadingAttendance(true);
@@ -108,29 +108,44 @@ export default function GradesScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchGrades();
-      if (activeTab === "plan") {
-        fetchAttendanceClasses();
-      }
-    }, [fetchGrades, fetchAttendanceClasses, activeTab])
+      fetchAttendanceClasses();
+    }, [fetchGrades, fetchAttendanceClasses])
   );
 
-  // Get unique academic periods
+  // Get unique academic periods from both grades and attendance classes
   const academicPeriods = useMemo<AcademicPeriod[]>(() => {
     const periodsMap = new Map<string, string>();
+
+    // Add periods from grades
     grades.forEach((item) => {
       const period = item.academic_period || "Lainnya";
       if (!periodsMap.has(period)) {
         periodsMap.set(period, period);
       }
     });
+
+    // Add periods from attendance classes
+    attendanceClasses.forEach((item) => {
+      const period = item.academic_period_name || "Lainnya";
+      if (!periodsMap.has(period)) {
+        periodsMap.set(period, period);
+      }
+    });
+
     return Array.from(periodsMap.entries()).map(([id, name]) => ({ id, name }));
-  }, [grades]);
+  }, [grades, attendanceClasses]);
 
   // Filter grades by selected academic period
   const filteredData = useMemo(() => {
     if (selectedPeriod === null) return grades;
     return grades.filter((item) => item.academic_period === selectedPeriod);
   }, [grades, selectedPeriod]);
+
+  // Filter attendance classes by selected academic period
+  const filteredAttendanceData = useMemo(() => {
+    if (selectedPeriod === null) return attendanceClasses;
+    return attendanceClasses.filter((item) => item.academic_period_name === selectedPeriod);
+  }, [attendanceClasses, selectedPeriod]);
 
   // Get selected period name
   const selectedPeriodName = useMemo(() => {
@@ -319,7 +334,7 @@ export default function GradesScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={() => router.push("/(mahasiswa)")}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
@@ -445,7 +460,7 @@ export default function GradesScreen() {
           </View>
         ) : (
           <FlatList
-            data={attendanceClasses}
+            data={filteredAttendanceData}
             renderItem={renderAttendanceCard}
             keyExtractor={(item) => item.id_class.toString()}
             contentContainerStyle={styles.gradesList}
@@ -456,7 +471,7 @@ export default function GradesScreen() {
                 <ThemedText variant="semibold" style={styles.emptyText}>
                   No classes available
                 </ThemedText>
-                <ThemedText style={styles.emptySubtext}>You are not enrolled in any classes yet</ThemedText>
+                <ThemedText style={styles.emptySubtext}>{selectedPeriod ? "No classes available for this period" : "You are not enrolled in any classes yet"}</ThemedText>
               </View>
             }
           />

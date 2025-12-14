@@ -92,7 +92,7 @@ const ProfilDosen = () => {
             <ThemedText style={styles.retryButtonText}>Coba Lagi</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.forceLogoutButton} onPress={() => forceLogout()}>
-            <ThemedText style={styles.forceLogoutButtonText}>🔴 FORCE LOGOUT</ThemedText>
+            <ThemedText style={styles.forceLogoutButtonText}>FORCE LOGOUT</ThemedText>
           </TouchableOpacity>
         </LinearGradient>
       </View>
@@ -113,7 +113,7 @@ const ProfilDosen = () => {
             <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowImageModal(true)} activeOpacity={0.8}>
               <Image source={lecturerProfile.profile_image ? { uri: lecturerProfile.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} defaultSource={require("../../assets/images/unnamed.jpg")} />
               <View style={styles.avatarOverlay}>
-                <Ionicons name="expand-outline" size={24} color="#fff" />
+                <Ionicons name="expand-outline" size={18} color="#fff" />
               </View>
             </TouchableOpacity>
 

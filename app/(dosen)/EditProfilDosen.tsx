@@ -335,7 +335,9 @@ export default function EditProfilScreen() {
         <StatusBar barStyle="light-content" backgroundColor="#1a5f3f" />
         <View style={styles.content}>
           <View style={styles.profileCard}>
-            <ThemedText style={styles.profileTitle}>Edit Profile</ThemedText>
+            <ThemedText variant="semibold" style={styles.profileTitle}>
+              Edit Profile
+            </ThemedText>
 
             <View style={styles.avatarContainer}>
               <Image source={profileImage ? { uri: profileImage } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} />
@@ -358,7 +360,7 @@ export default function EditProfilScreen() {
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Email: *</ThemedText>
                   <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="Masukkan email" placeholderTextColor="rgba(255, 255, 255, 0.5)" />
+                    <TextInput style={[styles.infoText, styles.disabledText]} value={email} editable={false} keyboardType="email-address" autoCapitalize="none" placeholder="Masukkan email" placeholderTextColor="rgba(255, 255, 255, 0.3)" />
                   </View>
                 </View>
 
@@ -468,7 +470,7 @@ const styles = StyleSheet.create({
   profileCard: {
     borderRadius: 0,
     padding: 30,
-    paddingTop: 35,
+    paddingTop: 40,
     paddingBottom: 40,
     flex: 1,
   },

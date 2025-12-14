@@ -259,8 +259,8 @@ export default function EditProfilScreen() {
 
                 <View style={styles.infoContainer}>
                   <ThemedText style={styles.label}>Email:</ThemedText>
-                  <View style={styles.infoBox}>
-                    <TextInput style={styles.infoText} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                  <View style={[styles.infoBox, styles.disabledBox]}>
+                    <TextInput style={[styles.infoText, styles.disabledText]} value={email} editable={false} keyboardType="email-address" autoCapitalize="none" />
                   </View>
                 </View>
 
@@ -305,7 +305,7 @@ export default function EditProfilScreen() {
                     </ThemedText>
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={isLoading}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => router.push("/(mahasiswa)/profil")} disabled={isLoading}>
                   <ThemedText variant="semibold" style={styles.cancelButtonText}>
                     Batal
                   </ThemedText>
@@ -327,7 +327,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 0,
     paddingTop: 0,
-    // paddingBottom: 10,
     backgroundColor: "transparent",
   },
   containerLoading: {
@@ -363,7 +362,7 @@ const styles = StyleSheet.create({
   profileCard: {
     borderRadius: 0,
     padding: 30,
-    paddingTop: 35,
+    paddingTop: 45,
     paddingBottom: 40,
     flex: 1,
   },
@@ -418,6 +417,13 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     paddingVertical: 10,
+  },
+  disabledBox: {
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: "rgba(255, 255, 255, 0.5)",
   },
   settingButton: {
     backgroundColor: "#DABC4E",

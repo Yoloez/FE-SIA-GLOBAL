@@ -259,7 +259,7 @@ export default function ScheduleScreen() {
               ) : (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="calendar-outline" size={48} color="#ffffff" />
-                  <ThemedText style={styles.emptyText}>Tidak ada jadwal untuk hari ini</ThemedText>
+                  <ThemedText style={styles.emptyText}>Tidak ada jadwal kelas</ThemedText>
                 </View>
               )}
             </View>

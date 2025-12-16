@@ -44,3 +44,6 @@ app-example
 
 # Firebase service account (sensitive - keep ignored)
 sia-ugn-mobile-firebase-adminsdk-*.json
+
+./icon-app.zip
+./icon-app

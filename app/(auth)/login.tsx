@@ -36,41 +36,48 @@ export default function LoginScreen() {
 
   const registerPushToken = async () => {
     try {
+      console.log("🔄 Getting Expo Push Token...");
       const token = await Notifications.getExpoPushTokenAsync({
-        projectId: "c2a79862-e78e-4ed9-8265-6fdb5c7fcfe6", // Your Expo project ID from app.json
+        projectId: "e1d2b90f-3cad-4f8a-bb98-ecff8f68a39f", // Your Expo project ID from app.json
       });
 
-      console.log("Expo Push Token:", token.data);
+      console.log("✅ Expo Push Token obtained:", token.data);
       await AsyncStorage.setItem(EXPO_PUSH_TOKEN_KEY, token.data);
 
       // Get device information
       const deviceId = Device.osBuildId || Device.osInternalBuildId || undefined;
       const deviceName = Device.deviceName || Device.modelName || undefined;
 
+      console.log("📱 Device Info:", { deviceId, deviceName, platform: Platform.OS });
+
       // Send token to backend
       try {
+        console.log("📤 Registering push token to backend...");
         await api.post("/device-tokens/register", {
           expo_push_token: token.data,
           device_id: deviceId,
           device_name: deviceName,
           platform: Platform.OS,
         });
-        console.log("Push token registered to backend");
+        console.log("✅ Push token successfully registered to backend");
       } catch (backendError) {
-        console.log("Failed to register token to backend:", backendError);
+        console.log("⚠️ Failed to register token to backend:", backendError);
         // Token is still stored locally, can retry later
       }
 
       return token.data;
     } catch (error) {
-      console.log("Failed to get push token:", error);
+      console.log("❌ Failed to get push token:", error);
       return null;
     }
   };
 
   const requestNotificationPermissionIfNeeded = async () => {
     try {
+      // Check existing permission status
       const existing = await Notifications.getPermissionsAsync();
+      console.log("📱 Current notification permission status:", existing.status);
+
       if (existing.status === "granted") {
         await AsyncStorage.setItem(NOTIF_PERMISSION_KEY, "granted");
         // Register push token if already granted
@@ -80,12 +87,15 @@ export default function LoginScreen() {
 
       // Show explanation modal before requesting system permission
       return new Promise<void>((resolve) => {
-        setAlertTitle("Izinkan Notifikasi?");
-        setAlertMessage("Kami membutuhkan izin notifikasi untuk memberi pemberitahuan jadwal, presensi, dan informasi akademik meskipun aplikasi tidak berjalan.");
+        setAlertTitle("🔔 Aktifkan Notifikasi");
+        setAlertMessage(
+          "Agar Anda tidak ketinggalan informasi penting seperti:\n\n" + "• Jadwal kuliah dan perubahan\n" + "• Pengumuman akademik\n" + "• Reminder presensi\n" + "• Pesan dari dosen/mahasiswa\n\n" + "Izinkan aplikasi mengirim notifikasi?"
+        );
         setAlertButtons([
           {
-            text: "Nanti",
+            text: "Nanti Saja",
             onPress: async () => {
+              console.log("❌ User menolak permission notifikasi");
               await AsyncStorage.setItem(NOTIF_PERMISSION_KEY, "denied");
               setAlertVisible(false);
               resolve();
@@ -94,19 +104,39 @@ export default function LoginScreen() {
           {
             text: "Izinkan",
             onPress: async () => {
+              setAlertVisible(false);
               try {
+                console.log("🔑 Requesting notification permission...");
                 const result = await Notifications.requestPermissionsAsync();
                 const status = result.status;
+                console.log("📋 Permission result:", status);
+
                 await AsyncStorage.setItem(NOTIF_PERMISSION_KEY, status);
 
                 // Register push token if permission granted
                 if (status === "granted") {
+                  console.log("✅ Permission granted, registering push token...");
                   await registerPushToken();
+
+                  // Show success message
+                  setAlertTitle("✅ Notifikasi Aktif");
+                  setAlertMessage("Notifikasi berhasil diaktifkan. Anda akan menerima pemberitahuan penting.");
+                  setAlertButtons([
+                    {
+                      text: "OK",
+                      onPress: () => {
+                        setAlertVisible(false);
+                        resolve();
+                      },
+                    },
+                  ]);
+                  setAlertVisible(true);
+                } else {
+                  console.log("⚠️ Permission denied or restricted");
+                  resolve();
                 }
               } catch (e) {
-                console.log("Permission request error:", e);
-              } finally {
-                setAlertVisible(false);
+                console.log("❌ Permission request error:", e);
                 resolve();
               }
             },
@@ -115,7 +145,7 @@ export default function LoginScreen() {
         setAlertVisible(true);
       });
     } catch (e) {
-      console.log("Permission check error:", e);
+      console.log("❌ Permission check error:", e);
     }
   };
 
@@ -155,10 +185,22 @@ export default function LoginScreen() {
 
       await login(transformedUser, accessToken);
 
-      // After successful login, prompt for notification permission once
+      // After successful login, always prompt for notification permission if not granted
+      const existing = await Notifications.getPermissionsAsync();
       const stored = await AsyncStorage.getItem(NOTIF_PERMISSION_KEY);
-      if (!stored || stored === "undetermined") {
+
+      console.log("📱 Checking notification permission...");
+      console.log("System permission status:", existing.status);
+      console.log("Stored permission status:", stored);
+
+      // Show prompt if: not granted OR user never made a decision
+      if (existing.status !== "granted") {
+        console.log("🔔 Showing notification permission prompt...");
         await requestNotificationPermissionIfNeeded();
+      } else {
+        // Already granted, just register token
+        console.log("✅ Notification already granted, registering token...");
+        await registerPushToken();
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {

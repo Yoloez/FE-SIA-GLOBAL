@@ -15,7 +15,7 @@
       "icon": "./assets/images/logo-ugn.png",
       "adaptiveIcon": {
         "backgroundColor": "#015023",
-        "foregroundImage": "./assets/images/logo-ugn.png"
+        "foregroundImage": "./assets/images/icon-app.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -34,7 +34,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/logo-ugn.png",
-          "imageWidth": 250,
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#015023",
           "dark": {

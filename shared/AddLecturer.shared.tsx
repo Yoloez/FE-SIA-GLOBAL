@@ -1,11 +1,12 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Program {
@@ -258,30 +259,40 @@ export default function CreateLecturerScreen({ viewMode, onBack, onSuccess }: Ad
                 <Ionicons name="person-add" size={40} color="#015023" />
               )}
             </View>
-            <Text style={styles.iconLabel}>{profileImage ? "Ubah Foto" : "Tambah Foto"}</Text>
+            <ThemedText variant="bold" style={styles.iconLabel}>
+              {profileImage ? "Ubah Foto" : "Tambah Foto"}
+            </ThemedText>
           </TouchableOpacity>
 
           {/* Form */}
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name:</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Name:
+              </ThemedText>
               <TextInput style={styles.input} placeholder="Masukkan nama lengkap" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username:</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Username:
+              </ThemedText>
               <TextInput style={styles.input} placeholder="Masukkan username" placeholderTextColor="rgba(255,255,255,0.5)" value={username} onChangeText={setUsername} autoCapitalize="none" />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email:</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Email:
+              </ThemedText>
               <TextInput style={styles.input} placeholder="Masukkan email" placeholderTextColor="rgba(255,255,255,0.5)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             </View>
 
-            <Text style={styles.label}>Program Studi</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Program Studi
+            </ThemedText>
             <View style={styles.pickerContainer}>
               <Picker selectedValue={selectedProgram} onValueChange={(itemValue) => setSelectedProgram(itemValue)}>
-                <Picker.Item label="-- Pilih Program Studi --" value={null} />
+                <Picker.Item style={{ color: "white" }} label="-- Pilih Program Studi --" value={null} />
                 {programs.map((program) => (
                   <Picker.Item key={program.id_program} label={program.name} value={program.id_program} />
                 ))}
@@ -289,18 +300,28 @@ export default function CreateLecturerScreen({ viewMode, onBack, onSuccess }: Ad
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password:</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Password:
+              </ThemedText>
               <TextInput style={styles.input} placeholder="Masukkan password" placeholderTextColor="rgba(255,255,255,0.5)" value={password} onChangeText={setPassword} secureTextEntry />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password:</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Confirm Password:
+              </ThemedText>
               <TextInput style={styles.input} placeholder="Konfirmasi password" placeholderTextColor="rgba(255,255,255,0.5)" value={passwordConfirmation} onChangeText={setPasswordConfirmation} secureTextEntry />
             </View>
 
             {/* Save Button */}
             <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleCreateLecturer} disabled={isLoading} activeOpacity={0.8}>
-              {isLoading ? <ActivityIndicator color="#015023" /> : <Text style={styles.buttonText}>Save</Text>}
+              {isLoading ? (
+                <ActivityIndicator color="#015023" />
+              ) : (
+                <ThemedText variant="bold" style={styles.buttonText}>
+                  Save
+                </ThemedText>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -365,7 +386,6 @@ const styles = StyleSheet.create({
   iconLabel: {
     fontSize: 16,
     color: "#fff",
-    fontWeight: "500",
   },
   form: {
     width: "100%",
@@ -377,7 +397,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#fff",
     marginBottom: 8,
-    fontWeight: "500",
   },
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -407,7 +426,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#015023",
     fontSize: 18,
-    fontWeight: "bold",
   },
   keyboardView: {
     flex: 1,

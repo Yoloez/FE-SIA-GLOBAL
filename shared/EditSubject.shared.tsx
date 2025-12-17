@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
 interface EditSubjectProps {
   viewMode: "admin" | "manager";
@@ -99,17 +100,23 @@ export default function EditSubject({ viewMode, subjectId, initialData, onBack, 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <Text style={styles.label}>Course Name</Text>
+        <ThemedText variant="semibold" style={styles.label}>
+          Course Name
+        </ThemedText>
         <TextInput style={styles.input} placeholder="Masukkan nama mata kuliah" placeholderTextColor="#d5e6db" value={subjectName} onChangeText={setSubjectName} editable={!isLoading} />
 
-        <Text style={styles.label}>Subject Code</Text>
+        <ThemedText variant="semibold" style={styles.label}>
+          Subject Code
+        </ThemedText>
         <TextInput style={styles.input} placeholder="Masukkan kode mata kuliah" placeholderTextColor="#d5e6db" value={subjectCode} onChangeText={setSubjectCode} editable={!isLoading} />
 
-        <Text style={styles.label}>SKS</Text>
+        <ThemedText variant="semibold" style={styles.label}>
+          SKS
+        </ThemedText>
         <TextInput style={styles.input} placeholder="Masukkan jumlah SKS" placeholderTextColor="#d5e6db" value={subjectSks} onChangeText={setSubjectSks} keyboardType="numeric" editable={!isLoading} />
 
         <TouchableOpacity style={[styles.saveBtn, isLoading && styles.saveBtnDisabled]} onPress={handleSave} disabled={isLoading}>
-          <Text style={styles.saveText}>{isLoading ? "Menyimpan..." : "Save"}</Text>
+          <ThemedText style={styles.saveText}>{isLoading ? "Menyimpan..." : "Save"}</ThemedText>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -119,7 +126,7 @@ export default function EditSubject({ viewMode, subjectId, initialData, onBack, 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a5c3a",
+    backgroundColor: "#015023",
   },
   scrollView: {
     paddingHorizontal: 20,
@@ -129,7 +136,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginTop: 18,
     marginBottom: 6,
-    fontWeight: "500",
   },
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.15)",
@@ -153,7 +159,6 @@ const styles = StyleSheet.create({
   },
   saveText: {
     color: "#1a5c3a",
-    fontWeight: "700",
     fontSize: 16,
   },
 });

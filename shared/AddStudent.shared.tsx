@@ -1,8 +1,9 @@
+import { ThemedText } from "@/components/ThemedText";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../api/axios";
 
@@ -165,7 +166,7 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#D4AF37" />
-          <Text style={styles.loadingText}>Memuat data...</Text>
+          <ThemedText style={styles.loadingText}>Memuat data...</ThemedText>
         </View>
       </SafeAreaView>
     );
@@ -181,14 +182,18 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
               <TouchableOpacity onPress={() => onBack?.()} style={styles.backButton} disabled={isLoading}>
                 <Ionicons name="arrow-back" size={24} color="#ffffff" />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Tambah Mahasiswa Baru</Text>
+              <ThemedText style={styles.headerTitle}>Tambah Mahasiswa Baru</ThemedText>
             </View>
 
             {/* Form */}
-            <Text style={styles.label}>Nama Lengkap</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Nama Lengkap
+            </ThemedText>
             <TextInput style={styles.input} placeholder="Nama sesuai ijazah" placeholderTextColor="rgba(255,255,255,0.5)" value={name} onChangeText={setName} editable={!isLoading} maxLength={100} />
 
-            <Text style={styles.label}>Username</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Username
+            </ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Username unik"
@@ -201,7 +206,9 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
               maxLength={50}
             />
 
-            <Text style={styles.label}>Email</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Email
+            </ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Email aktif"
@@ -215,10 +222,14 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
               maxLength={100}
             />
 
-            <Text style={styles.label}>Nomor Induk Mahasiswa (NIM)</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Nomor Induk Mahasiswa (NIM)
+            </ThemedText>
             <TextInput style={styles.input} placeholder="Contoh: 24/123456/SV/12345" placeholderTextColor="rgba(255,255,255,0.5)" value={registrationNumber} onChangeText={setRegistrationNumber} editable={!isLoading} maxLength={50} />
 
-            <Text style={styles.label}>Program Studi</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Program Studi
+            </ThemedText>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={selectedProgram}
@@ -237,7 +248,9 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
               </Picker>
             </View>
 
-            <Text style={styles.label}>Password</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Password
+            </ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Minimal 8 karakter"
@@ -251,7 +264,9 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
               autoCorrect={false}
             />
 
-            <Text style={styles.label}>Konfirmasi Password</Text>
+            <ThemedText variant="bold" style={styles.label}>
+              Konfirmasi Password
+            </ThemedText>
             <TextInput
               style={styles.input}
               placeholder="Ulangi password"
@@ -269,11 +284,13 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
               {isLoading ? (
                 <View style={styles.loadingButton}>
                   <ActivityIndicator size="small" color="#1a5230" />
-                  <Text style={styles.loadingButtonText}>Memproses...</Text>
+                  <ThemedText style={styles.loadingButtonText}>Memproses...</ThemedText>
                 </View>
               ) : (
                 <TouchableOpacity style={styles.button} onPress={handleCreateStudent} activeOpacity={0.8}>
-                  <Text style={styles.buttonText}>Tambah Mahasiswa</Text>
+                  <ThemedText variant="semibold" style={styles.buttonText}>
+                    Tambah Mahasiswa
+                  </ThemedText>
                 </TouchableOpacity>
               )}
             </View>
@@ -285,7 +302,7 @@ export default function CreateStudentScreen({ viewMode, onBack, onSuccess }: Add
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#1a5230" },
+  safeArea: { flex: 1, backgroundColor: "#015023" },
   container: { paddingBottom: 40 },
   loadingContainer: {
     flex: 1,
@@ -311,7 +328,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "600",
     color: "#ffffff",
   },
 
@@ -335,13 +351,11 @@ const styles = StyleSheet.create({
   addText: {
     fontSize: 16,
     color: "#ffffff",
-    fontWeight: "500",
   },
 
   // Style form
   label: {
     fontSize: 16,
-    fontWeight: "600",
     color: "#ffffff",
     marginBottom: 8,
     paddingHorizontal: 20,
@@ -392,7 +406,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#1a5230",
     fontSize: 18,
-    fontWeight: "700",
   },
   loadingButton: {
     backgroundColor: "#D4AF37",
@@ -406,7 +419,6 @@ const styles = StyleSheet.create({
   loadingButtonText: {
     color: "#1a5230",
     fontSize: 18,
-    fontWeight: "700",
     marginLeft: 10,
   },
 });

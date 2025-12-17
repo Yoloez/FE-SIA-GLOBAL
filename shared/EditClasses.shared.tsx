@@ -1,8 +1,9 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { handleApiError } from "@/utils/errorHandler";
 import { Picker } from "@react-native-picker/picker";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface EditClassScreenProps {
@@ -220,7 +221,9 @@ export default function EditClassScreen({ viewMode, classId, initialData, onBack
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FFD43B" />
-          <Text style={styles.loadingText}>Memuat data...</Text>
+          <ThemedText variant="bold" style={styles.loadingText}>
+            Memuat data...
+          </ThemedText>
         </View>
       </SafeAreaView>
     );
@@ -233,13 +236,17 @@ export default function EditClassScreen({ viewMode, classId, initialData, onBack
           <View style={styles.formContainer}>
             {/* Kode Kelas */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Kode Kelas *</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Kode Kelas *
+              </ThemedText>
               <TextInput style={styles.input} value={codeClass} onChangeText={setCodeClass} placeholder="Contoh: A, B, C" placeholderTextColor="#999" editable={!isLoading} />
             </View>
 
             {/* Mata Kuliah */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Mata Kuliah *</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Mata Kuliah *
+              </ThemedText>
               <View style={styles.pickerContainer}>
                 <Picker selectedValue={subjectId} onValueChange={(value) => setSubjectId(value)} style={styles.picker} enabled={!isLoading}>
                   <Picker.Item label="Pilih Mata Kuliah" value="" />
@@ -252,7 +259,9 @@ export default function EditClassScreen({ viewMode, classId, initialData, onBack
 
             {/* Periode Akademik */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Periode Akademik *</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Periode Akademik *
+              </ThemedText>
               <View style={styles.pickerContainer}>
                 <Picker selectedValue={periodId} onValueChange={(value) => setPeriodId(value)} style={styles.picker} enabled={!isLoading}>
                   <Picker.Item label="Pilih Periode" value="" />
@@ -265,7 +274,9 @@ export default function EditClassScreen({ viewMode, classId, initialData, onBack
 
             {/* Hari */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Hari *</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Hari *
+              </ThemedText>
               <View style={styles.pickerContainer}>
                 <Picker selectedValue={dayOfWeek} onValueChange={(value) => setDayOfWeek(value)} style={styles.picker} enabled={!isLoading}>
                   {DAY_OPTIONS.map((day) => (
@@ -278,26 +289,38 @@ export default function EditClassScreen({ viewMode, classId, initialData, onBack
             {/* Waktu Mulai & Selesai */}
             <View style={styles.timeRow}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-                <Text style={styles.label}>Waktu Mulai *</Text>
+                <ThemedText variant="bold" style={styles.label}>
+                  Waktu Mulai *
+                </ThemedText>
                 <TextInput style={styles.input} value={startTime} onChangeText={setStartTime} placeholder="08:00" placeholderTextColor="#999" editable={!isLoading} />
               </View>
 
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Waktu Selesai *</Text>
+                <ThemedText variant="bold" style={styles.label}>
+                  Waktu Selesai *
+                </ThemedText>
                 <TextInput style={styles.input} value={endTime} onChangeText={setEndTime} placeholder="10:00" placeholderTextColor="#999" editable={!isLoading} />
               </View>
             </View>
 
             {/* Kapasitas */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Kapasitas Mahasiswa *</Text>
+              <ThemedText variant="bold" style={styles.label}>
+                Kapasitas Mahasiswa *
+              </ThemedText>
               <TextInput style={styles.input} value={memberClass} onChangeText={setMemberClass} placeholder="Contoh: 40" placeholderTextColor="#999" keyboardType="numeric" editable={!isLoading} />
             </View>
           </View>
 
           {/* Update Button */}
           <TouchableOpacity style={[styles.updateButton, isLoading && styles.updateButtonDisabled]} onPress={handleUpdate} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#015023" /> : <Text style={styles.updateButtonText}>Update Kelas</Text>}
+            {isLoading ? (
+              <ActivityIndicator color="#015023" />
+            ) : (
+              <ThemedText variant="bold" style={styles.updateButtonText}>
+                Update Kelas
+              </ThemedText>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -338,7 +361,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     marginBottom: 8,
-    fontWeight: "600",
   },
   input: {
     backgroundColor: "#F5EFD3",
@@ -378,7 +400,6 @@ const styles = StyleSheet.create({
   updateButtonText: {
     color: "#015023",
     fontSize: 16,
-    fontWeight: "700",
   },
   keyboardView: {
     flex: 1,

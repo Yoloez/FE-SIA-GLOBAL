@@ -1,9 +1,10 @@
 import api from "@/api/axios";
+import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface CreateSubjectScreenProps {
@@ -91,22 +92,30 @@ export default function CreateSubjectScreen({ viewMode, onBack, onSuccess }: Cre
           <TouchableOpacity onPress={() => onBack?.()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Tambah Mata Kuliah</Text>
+          <ThemedText variant="bold" style={styles.headerTitle}>
+            Tambah Mata Kuliah
+          </ThemedText>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
-          <Text style={styles.label}>Nama Mata Kuliah:</Text>
+          <ThemedText variant="semibold" style={styles.label}>
+            Nama Mata Kuliah:
+          </ThemedText>
           <TextInput style={styles.input} placeholder="Contoh: Pemrograman Web Lanjut" placeholderTextColor="#rgba(255,255,255,0.5)" value={nameSubject} onChangeText={setNameSubject} />
 
-          <Text style={styles.label}>Kode Mata Kuliah:</Text>
+          <ThemedText variant="semibold" style={styles.label}>
+            Kode Mata Kuliah:
+          </ThemedText>
           <TextInput style={styles.input} placeholder="Contoh IF-212" placeholderTextColor="#rgba(255,255,255,0.5)" value={codeSubject} onChangeText={setCodeSubject} autoCapitalize="characters" />
 
-          <Text style={styles.label}>Jumlah SKS:</Text>
+          <ThemedText variant="semibold" style={styles.label}>
+            Jumlah SKS:
+          </ThemedText>
           <TextInput style={styles.input} placeholder="Contoh 3" placeholderTextColor="#rgba(255,255,255,0.5)" value={sks} onChangeText={setSks} keyboardType="numeric" />
 
           <TouchableOpacity style={styles.saveButton} onPress={handleCreateSubject} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#1a5230" /> : <Text style={styles.saveButtonText}>Save</Text>}
+            {isLoading ? <ActivityIndicator color="#1a5230" /> : <ThemedText style={styles.saveButtonText}>Save</ThemedText>}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -117,7 +126,7 @@ export default function CreateSubjectScreen({ viewMode, onBack, onSuccess }: Cre
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#1a5230",
+    backgroundColor: "#015023",
   },
   container: {
     flexGrow: 1,
@@ -135,7 +144,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "600",
     color: "#ffffff",
   },
   addIconContainer: {
@@ -157,7 +165,6 @@ const styles = StyleSheet.create({
   addText: {
     fontSize: 16,
     color: "#ffffff",
-    fontWeight: "500",
   },
   form: {
     paddingHorizontal: 20,
@@ -167,7 +174,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#ffffff",
     marginBottom: 10,
-    fontWeight: "400",
   },
   input: {
     backgroundColor: "rgba(255, 255, 255, 0.05)",
@@ -198,6 +204,5 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#1a5230",
     fontSize: 18,
-    fontWeight: "700",
   },
 });

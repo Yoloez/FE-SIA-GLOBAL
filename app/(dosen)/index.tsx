@@ -73,7 +73,7 @@ export default function HomeScreen() {
                 </>
               ) : (
                 <>
-                  <Image source={lecturerProfile?.profile_image ? { uri: lecturerProfile.profile_image } : require("../../assets/images/kairi.png")} style={styles.avatar} defaultSource={require("../../assets/images/kairi.png")} />
+                  <Image source={lecturerProfile?.profile_image ? { uri: lecturerProfile.profile_image } : require("../../assets/images/unnamed.jpg")} style={styles.avatar} defaultSource={require("../../assets/images/unnamed.jpg")} />
                   <View style={styles.profileInfo}>
                     <ThemedText style={styles.userName} numberOfLines={1}>
                       {lecturerProfile?.full_name || lecturerProfile?.name || "Dosen"}

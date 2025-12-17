@@ -20,9 +20,12 @@ export default function SubjectsLayout() {
         }}
       />
       <Stack.Screen
-        name="edit"
+        name="Edit Mata Kuliah"
         options={{
-          headerShown: false,
+          headerShown: true,
+          headerTitleAlign: "center",
+          headerStyle: { backgroundColor: "#015023" },
+          headerTintColor: "#fff",
         }}
       />
     </Stack>
